@@ -25,20 +25,20 @@ test('C1: raindrops-thunder.json parsea con HP 15/20, BPM 60, sala C', () => {
   assert.strictEqual(c.setup.bars, 1);
 });
 
-test('C2: loop es 4 defend + 1 hole', () => {
+test('C2: loop es 1 hole + 4 defend (agujero primero)', () => {
   const c = load();
   assert.strictEqual(c.loop.length, 5);
-  assert.deepStrictEqual(c.loop.map((b) => b.kind), ['defend', 'defend', 'defend', 'defend', 'hole']);
-  assert.strictEqual(c.loop[4].notes.length, 0);
-  assert.strictEqual(c.loop[0].notes.length, 4);
-  assert.strictEqual(c.loop[0].notes[0].pitch, 'C4');
+  assert.deepStrictEqual(c.loop.map((b) => b.kind), ['hole', 'defend', 'defend', 'defend', 'defend']);
+  assert.strictEqual(c.loop[0].notes.length, 0);
+  assert.strictEqual(c.loop[1].notes.length, 4);
+  assert.strictEqual(c.loop[1].notes[0].pitch, 'C4');
 });
 
 test('C3: beatsPerBar 4/4 → 4', () => {
   assert.strictEqual(Chart.beatsPerBar(load()), 4);
 });
 
-test('C4: bar 0 = setup listen-only; bars 1–4 defend; bar 5 hole; bar 6 vuelve a defend 0', () => {
+test('C4: bar 0 = setup; bar 1 hole; bars 2–5 defend; bar 6 vuelve al hole', () => {
   const c = load();
   const b0 = Chart.barAt(c, 0);
   assert.strictEqual(b0.kind, 'setup');
@@ -46,28 +46,30 @@ test('C4: bar 0 = setup listen-only; bars 1–4 defend; bar 5 hole; bar 6 vuelve
   assert.strictEqual(b0.startBeat, 0);
 
   const b1 = Chart.barAt(c, 1);
-  assert.strictEqual(b1.kind, 'defend');
+  assert.strictEqual(b1.kind, 'hole');
   assert.strictEqual(b1.i, 0);
   assert.strictEqual(b1.startBeat, 4);
 
-  const b4 = Chart.barAt(c, 4);
-  assert.strictEqual(b4.kind, 'defend');
-  assert.strictEqual(b4.i, 3);
+  const b2 = Chart.barAt(c, 2);
+  assert.strictEqual(b2.kind, 'defend');
+  assert.strictEqual(b2.i, 1);
+  assert.strictEqual(b2.notes[0].pitch, 'C4');
 
   const b5 = Chart.barAt(c, 5);
-  assert.strictEqual(b5.kind, 'hole');
-  assert.strictEqual(b5.startBeat, 20);
+  assert.strictEqual(b5.kind, 'defend');
+  assert.strictEqual(b5.i, 4);
 
   const b6 = Chart.barAt(c, 6);
-  assert.strictEqual(b6.kind, 'defend');
+  assert.strictEqual(b6.kind, 'hole');
   assert.strictEqual(b6.i, 0);
   assert.strictEqual(b6.cycle, 1);
+  assert.strictEqual(b6.startBeat, 24);
 });
 
-test('C5: upcoming desde 0 devuelve setup + primeros 3 del loop', () => {
+test('C5: upcoming desde 0 devuelve setup + hole + primeros 2 defend', () => {
   const c = load();
   const u = Chart.upcoming(c, 0, 4);
-  assert.deepStrictEqual(u.map((b) => b.kind), ['setup', 'defend', 'defend', 'defend']);
+  assert.deepStrictEqual(u.map((b) => b.kind), ['setup', 'hole', 'defend', 'defend']);
 });
 
 test('C6: chart inválido lanza ChartError', () => {
@@ -78,6 +80,6 @@ test('C6: chart inválido lanza ChartError', () => {
 
 test('C7: notas del segundo defend son C D E E', () => {
   const c = load();
-  const pitches = c.loop[1].notes.map((n) => n.pitch);
+  const pitches = c.loop[2].notes.map((n) => n.pitch);
   assert.deepStrictEqual(pitches, ['C4', 'D4', 'E4', 'E4']);
 });

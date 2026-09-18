@@ -77,7 +77,7 @@
         if (bar.kind === 'hole') {
           ctx.font = '600 11px sans-serif';
           ctx.fillStyle = 'rgba(192,132,252,0.7)';
-          ctx.fillText('silencio', x0 + 8, h / 2);
+          ctx.fillText('improvisa', x0 + 8, h / 2);
         }
 
         var notes = bar.notes || [];
