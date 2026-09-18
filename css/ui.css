@@ -1,0 +1,315 @@
+/* css/ui.css — piano-magic M0. Sin fuentes/CDN. */
+:root {
+  --bg: #0b0d10;
+  --fg: #e8eaf0;
+  --dim: #8a93a3;
+  --accent: #4ade80;
+  --accent-warm: #f59e0b;
+  --danger: #f87171;
+  --panel: #14181f;
+  --line: #232a35;
+  --setup: #38bdf8;
+  --defend: #4ade80;
+  --hole: #c084fc;
+  --player: #4ade80;
+  --boss: #fb7185;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  max-width: 390px;
+  margin: 0 auto;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px 4px;
+  gap: 8px;
+}
+
+header h1 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+#songTitle {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 1;
+  text-align: right;
+}
+
+#hud {
+  padding: 6px 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hp-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hp-row .label { color: var(--dim); }
+.hp-row .val { text-align: right; font-variant-numeric: tabular-nums; }
+
+.track {
+  position: relative;
+  height: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.track > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 5px;
+  transition: width 120ms linear;
+}
+
+#playerHpBar { background: var(--player); }
+#bossHpBar { background: var(--boss); }
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+#roomBadge, #bpmBadge, #phaseBadge {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+#phaseBadge.setup { color: var(--setup); }
+#phaseBadge.defend { color: var(--defend); }
+#phaseBadge.hole { color: var(--hole); }
+
+.beats {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.beats i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+  display: block;
+}
+
+.beats i.on { background: var(--accent-warm); transform: scale(1.15); }
+.beats i.pulse { background: var(--fg); }
+
+#buffs {
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--accent-warm);
+  font-weight: 600;
+}
+
+#tapeWrap {
+  position: relative;
+  margin: 0 10px;
+  background: #0e1218;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 168px;
+  flex: 0 0 auto;
+}
+
+#tape {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#feedback {
+  min-height: 28px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 12px 0;
+  color: var(--accent);
+}
+
+#feedback.miss { color: var(--danger); }
+#feedback.setup { color: var(--setup); }
+
+#hint {
+  font-size: 12px;
+  color: var(--dim);
+  text-align: center;
+  padding: 4px 16px 8px;
+  line-height: 1.35;
+}
+
+#keys {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 10px 8px;
+  flex-wrap: wrap;
+}
+
+.key {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  border-radius: 10px;
+  min-width: 42px;
+  padding: 8px 6px 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.key .k {
+  font-size: 11px;
+  color: var(--dim);
+  font-weight: 700;
+}
+
+.key .p {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.key.down, .key:active {
+  background: var(--accent);
+  color: #05130a;
+  border-color: var(--accent);
+}
+
+.key.down .k, .key:active .k { color: #05130a; }
+
+.key.black {
+  background: #1b2230;
+}
+
+footer {
+  margin-top: auto;
+  padding: 8px 16px calc(12px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#btnStart, #btnRestart {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #05130a;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 14px 40px;
+  min-width: 200px;
+  cursor: pointer;
+}
+
+#btnStart:active, #btnRestart:active { opacity: 0.85; }
+#btnStart.hidden { display: none; }
+
+#midiStatus {
+  font-size: 11px;
+  color: var(--dim);
+  min-height: 14px;
+}
+
+#version {
+  font-size: 11px;
+  color: var(--dim);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.82);
+  z-index: 20;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+#overlay.visible { display: flex; }
+
+#overlayMsg {
+  font-size: 28px;
+  font-weight: 800;
+  text-align: center;
+}
+
+#overlayMsg.win { color: var(--accent); }
+#overlayMsg.lose { color: var(--danger); }
+
+#error {
+  display: none;
+  margin: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+#error.visible { display: block; }
