@@ -1,6 +1,6 @@
 // js/combat/director.js — setup → loop 4 Defend + 1 hole hasta KO.
-// Resuelve al cerrar ventana Defend / fallo de agujero. Pura (reloj inyectable).
-// UMD: module.exports + window.CombatDirector.
+// Defend = copia (Perfect/Partial/Fail). Hole = SpellEngine (ataque/buff/cura).
+// Pura (reloj inyectable). UMD: module.exports + window.CombatDirector.
 'use strict';
 
 (function (root, factory) {
@@ -16,7 +16,7 @@
 })(typeof self !== 'undefined' ? self : this, function (Chart, Spell, Translator) {
   'use strict';
 
-  var VERSION = '0.1.0';
+  var VERSION = '0.1.1';
 
   function clamp(n, lo, hi) {
     if (n < lo) return lo;
@@ -49,7 +49,7 @@
     var freezeBeat = 0;
 
     function roomElement() {
-      return Spell.elementForDegree(1);
+      return Spell.elementForKey(chart.roomKey);
     }
 
     function currentBeat(t) {
@@ -80,13 +80,13 @@
       if (meta.kind === 'setup' || meta.listenOnly) {
         result = Spell.resolveSetup();
       } else if (meta.kind === 'hole') {
-        result = Spell.resolveHole(notes);
+        result = Spell.resolveHole(notes, chart.roomKey, { buffs: buffs });
       } else {
         result = Spell.resolveDefend(notes, meta.notes, chart.roomKey, { buffs: buffs });
       }
 
       applyResult(result);
-      lastResolve = Object.assign({ barIndex: barIndex, kind: meta.kind, phase: meta.kind }, result);
+      lastResolve = Object.assign({ barIndex: barIndex, kind: result.kind, phase: meta.kind }, result);
       lastFeedback = feedbackText(lastResolve);
       resolvedBar = barIndex;
 
@@ -110,7 +110,8 @@
     }
 
     function decayBuffs(kind) {
-      if (kind === 'setup') return;
+      // ATQ+ cuenta ventanas de agujero (donde hay DPS), no copias Defend.
+      if (kind !== 'hole') return;
       var next = [];
       for (var i = 0; i < buffs.length; i++) {
         var b = buffs[i];
@@ -137,10 +138,14 @@
     function feedbackText(r) {
       if (!r) return '';
       if (r.kind === 'setup') return 'Escucha · sin daño';
-      if (r.kind === 'hole-clear') return 'Agujero limpio';
-      if (r.kind === 'hole-miss') return 'Agujero · −' + r.playerDamage + ' HP';
-      if (r.kind === 'defend-miss') return 'Fallo · −' + r.playerDamage + ' HP';
-      if (r.ok && r.spell) {
+      if (r.kind === 'hole-idle') {
+        if (r.extras) return 'Agujero · sin gesto';
+        return 'Agujero · libre';
+      }
+      if (r.kind === 'defend-fail') return 'Fallo · −' + r.playerDamage + ' HP';
+      if (r.kind === 'defend-partial') return 'Parcial · −' + r.playerDamage + ' HP';
+      if (r.kind === 'defend-perfect') return 'Perfecto';
+      if (r.kind === 'hole-spell' && r.spell) {
         var el = r.spell.element ? r.spell.element.icon : '';
         if (r.spell.action === 'attack') return 'Ataque ' + el + ' · −' + r.bossDamage + ' jefe';
         if (r.spell.action === 'heal') return 'Cura · +' + r.heal + ' HP';

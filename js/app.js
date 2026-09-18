@@ -2,7 +2,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.0';
+  var VERSION = '0.1.1';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
 
   var director = null;
