@@ -1,0 +1,16 @@
+{
+  "id": "raindrops-thunder",
+  "title": "Raindrops, Thunder",
+  "bpm": 60,
+  "timeSig": [4, 4],
+  "roomKey": "C",
+  "setup": { "listenOnly": true, "bars": 1 },
+  "loop": [
+    { "i": 0, "kind": "defend", "notes": [{"pitch":"C4","beat":0,"dur":1},{"pitch":"C4","beat":1,"dur":1},{"pitch":"C4","beat":2,"dur":1},{"pitch":"C4","beat":3,"dur":1}] },
+    { "i": 1, "kind": "defend", "notes": [{"pitch":"C4","beat":0,"dur":1},{"pitch":"D4","beat":1,"dur":1},{"pitch":"E4","beat":2,"dur":1},{"pitch":"E4","beat":3,"dur":1}] },
+    { "i": 2, "kind": "defend", "notes": [{"pitch":"E4","beat":0,"dur":1},{"pitch":"D4","beat":1,"dur":1},{"pitch":"C4","beat":2,"dur":1},{"pitch":"C4","beat":3,"dur":1}] },
+    { "i": 3, "kind": "defend", "notes": [{"pitch":"C4","beat":0,"dur":1},{"pitch":"E4","beat":1,"dur":1},{"pitch":"C4","beat":2,"dur":1},{"pitch":"E4","beat":3,"dur":1}] },
+    { "i": 4, "kind": "hole", "notes": [] }
+  ],
+  "hp": { "player": 15, "boss": 20 }
+}

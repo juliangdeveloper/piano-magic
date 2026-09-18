@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b0d10">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0d10'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-size='36'%3E%E2%99%A9%3C/text%3E%3C/svg%3E">
+  <title>piano-magic — Raindrops, Thunder</title>
+  <link rel="stylesheet" href="css/ui.css?v=0.1.0">
+</head>
+<body>
+  <header>
+    <h1>piano-magic</h1>
+    <div id="songTitle">Raindrops, Thunder</div>
+  </header>
+
+  <section id="hud">
+    <div class="hp-row">
+      <span class="label">Jugador</span>
+      <div class="track"><span id="playerHpBar"></span></div>
+      <span class="val" id="playerHpVal">15</span>
+    </div>
+    <div class="hp-row">
+      <span class="label">Jefe</span>
+      <div class="track"><span id="bossHpBar"></span></div>
+      <span class="val" id="bossHpVal">20</span>
+    </div>
+    <div class="meta-row">
+      <span id="roomBadge">🌍 C · Tierra</span>
+      <span id="bpmBadge">♩=60</span>
+      <span id="phaseBadge" class="idle">Listo</span>
+    </div>
+    <div class="meta-row">
+      <div class="beats" id="beats" aria-label="Metrónomo">
+        <i></i><i></i><i></i><i></i>
+      </div>
+      <span id="buffs"></span>
+    </div>
+  </section>
+
+  <div id="tapeWrap">
+    <canvas id="tape" width="360" height="168" aria-label="Cinta de compases"></canvas>
+  </div>
+
+  <div id="feedback">Sala en C · drone C / toca libre en el setup</div>
+  <div id="hint">A = C4 · S = D4 · D = E4 · F G H J K = F G A B C5 · W E T Y U = negras. En el agujero, silencio.</div>
+
+  <div id="keys" aria-label="Teclado">
+    <button type="button" class="key" data-pitch="C4"><span class="k">A</span><span class="p">C4</span></button>
+    <button type="button" class="key" data-pitch="D4"><span class="k">S</span><span class="p">D4</span></button>
+    <button type="button" class="key" data-pitch="E4"><span class="k">D</span><span class="p">E4</span></button>
+    <button type="button" class="key" data-pitch="F4"><span class="k">F</span><span class="p">F4</span></button>
+    <button type="button" class="key" data-pitch="G4"><span class="k">G</span><span class="p">G4</span></button>
+    <button type="button" class="key" data-pitch="A4"><span class="k">H</span><span class="p">A4</span></button>
+    <button type="button" class="key" data-pitch="B4"><span class="k">J</span><span class="p">B4</span></button>
+  </div>
+
+  <div id="error"></div>
+
+  <footer>
+    <button id="btnStart" type="button">Empezar</button>
+    <div id="midiStatus">Teclado A S D = C4 D4 E4</div>
+    <span id="version">v0.1.0</span>
+  </footer>
+
+  <div id="overlay">
+    <div id="overlayMsg"></div>
+    <button id="btnRestart" type="button">Reiniciar</button>
+  </div>
+
+  <script src="js/instrument/translator.js?v=0.1.0"></script>
+  <script src="js/spell/engine.js?v=0.1.0"></script>
+  <script src="js/combat/chart.js?v=0.1.0"></script>
+  <script src="js/combat/director.js?v=0.1.0"></script>
+  <script src="js/ui/tape.js?v=0.1.0"></script>
+  <script src="js/ui/hud.js?v=0.1.0"></script>
+  <script src="js/app.js?v=0.1.0"></script>
+</body>
+</html>
