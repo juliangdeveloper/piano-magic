@@ -82,11 +82,25 @@
       }
 
       if (feedback) {
-        feedback.textContent = state.feedback || (state.running ? '' : 'Sala en C · drone C / toca libre en el setup');
+        var reIdle = state.roomElement || {};
+        var idleMsg = 'Sala en ' + (state.roomKey || 'C') + ' · ' + (reIdle.label || 'Agua') + ' · drone C / toca libre en el setup';
+        feedback.textContent = state.feedback || (state.running ? '' : idleMsg);
         feedback.className = '';
         if (state.lastResolve) {
           if (state.lastResolve.kind === 'setup') feedback.className = 'setup';
+          if (state.lastResolve.kind === 'defend-partial') feedback.className = 'partial';
           if (!state.lastResolve.ok) feedback.className = 'miss';
+        }
+      }
+
+      var hint = el(ids.hint || 'hint');
+      if (hint) {
+        if (state.phase === 'hole') {
+          hint.textContent = 'Agujero: improvisa · mayor (C D E) = ataque · menor (C Eb G) = mejora · pentatónica (C D E G A) = cura. Tocar no resta HP.';
+        } else if (state.phase === 'defend') {
+          hint.textContent = 'Defiende: copia la cinta. A = C4 · S = D4 · D = E4. Perfecto / Parcial / Fallo — sin DPS al jefe.';
+        } else {
+          hint.textContent = 'Tras la escucha: agujero (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Agujero: F G H J K + W E T Y U. Sala C = Agua.';
         }
       }
     }
