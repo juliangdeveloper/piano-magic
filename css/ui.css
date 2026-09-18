@@ -183,6 +183,7 @@ header h1 {
 }
 
 #feedback.miss { color: var(--danger); }
+#feedback.partial { color: var(--accent-warm); }
 #feedback.setup { color: var(--setup); }
 
 #hint {
@@ -195,9 +196,16 @@ header h1 {
 
 #keys {
   display: flex;
-  justify-content: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding: 4px 10px 8px;
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
@@ -207,8 +215,8 @@ header h1 {
   background: var(--panel);
   color: var(--fg);
   border-radius: 10px;
-  min-width: 42px;
-  padding: 8px 6px 6px;
+  min-width: 36px;
+  padding: 7px 5px 5px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
