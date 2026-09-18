@@ -13,6 +13,7 @@
   var lastClickBeat = -1;
   var heldKeys = {};
   var midiStatus = '';
+  var tickTimer = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -75,10 +76,18 @@
 
     if (state.ended) {
       showOutcome(state);
-      runningLoop = false;
+      stopLoop();
       return;
     }
     if (runningLoop) requestAnimationFrame(render);
+  }
+
+  function stopLoop() {
+    runningLoop = false;
+    if (tickTimer) {
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
   }
 
   function showOutcome(state) {
@@ -107,9 +116,15 @@
     ensureAudio();
     hideOutcome();
     lastClickBeat = -1;
+    stopLoop();
     director.start(performance.now());
     runningLoop = true;
     $('btnStart').className = 'hidden';
+    // Intervalo de lógica: rAF se duerme en background/headless.
+    tickTimer = setInterval(function () {
+      if (!runningLoop) return;
+      render();
+    }, 50);
     requestAnimationFrame(render);
   }
 
