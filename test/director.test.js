@@ -66,15 +66,16 @@ test('D2: tocar en setup no cambia HP', () => {
   assert.strictEqual(s.bossHp, 20);
   assert.ok(s.lastResolve);
   assert.strictEqual(s.lastResolve.kind, 'setup');
-  assert.strictEqual(s.phase, 'defend');
+  assert.strictEqual(s.phase, 'hole');
 });
 
 test('D3: defend perfecto no hace daño al jefe ni al jugador', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000);
-  playBar(ctx, 4000, ['C4', 'C4', 'C4', 'C4']);
-  const s = ctx.dir.tick(8000);
+  ctx.dir.tick(4000); // setup → hole
+  ctx.dir.tick(8000); // hole idle → first defend
+  playBar(ctx, 8000, ['C4', 'C4', 'C4', 'C4']);
+  const s = ctx.dir.tick(12000);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.playerHp, 15);
   assert.strictEqual(s.lastResolve.kind, 'defend-perfect');
@@ -88,8 +89,9 @@ test('D3: defend perfecto no hace daño al jefe ni al jugador', () => {
 test('D4: defend fallido hace 3 al jugador, 0 al jefe', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000);
-  const s = ctx.dir.tick(8000);
+  ctx.dir.tick(4000); // setup → hole
+  ctx.dir.tick(8000); // hole idle → first defend
+  const s = ctx.dir.tick(12000);
   assert.strictEqual(s.playerHp, 12);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.lastResolve.kind, 'defend-fail');
@@ -99,37 +101,34 @@ test('D4: defend fallido hace 3 al jugador, 0 al jefe', () => {
 test('D5: agujero en silencio no daña; improvisar mayor pega al jefe, no al jugador', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000);
-  ctx.dir.tick(8000);
-  ctx.dir.tick(12000);
-  ctx.dir.tick(16000);
-  ctx.dir.tick(20000);
-  let s = ctx.dir.tick(20000);
+  ctx.dir.tick(4000); // setup → hole
+  let s = ctx.dir.tick(4000);
   assert.strictEqual(s.phase, 'hole');
-  assert.strictEqual(s.playerHp, 3);
-  s = ctx.dir.tick(24000);
+  assert.strictEqual(s.playerHp, 15);
+  s = ctx.dir.tick(8000);
   assert.strictEqual(s.lastResolve.kind, 'hole-idle');
-  assert.strictEqual(s.playerHp, 3);
+  assert.strictEqual(s.playerHp, 15);
   assert.strictEqual(s.bossHp, 20);
+  assert.strictEqual(s.phase, 'defend');
 
   const ctx2 = make();
   ctx2.dir.start(0);
-  ctx2.dir.tick(20000);
-  playBar(ctx2, 20000, ['C4', 'D4', 'E4']);
-  s = ctx2.dir.tick(24000);
+  ctx2.dir.tick(4000);
+  playBar(ctx2, 4000, ['C4', 'D4', 'E4']);
+  s = ctx2.dir.tick(8000);
   assert.strictEqual(s.lastResolve.kind, 'hole-spell');
   assert.strictEqual(s.lastResolve.spell.action, 'attack');
   assert.strictEqual(s.lastResolve.playerDamage, 0);
-  assert.strictEqual(s.playerHp, 3);
+  assert.strictEqual(s.playerHp, 15);
   assert.strictEqual(s.bossHp, 18);
   assert.strictEqual(s.outcome, null);
 });
 
-test('D6: el loop se repite tras el hole', () => {
+test('D6: el loop se repite: tras un ciclo vuelve el agujero', () => {
   const ctx = make();
   ctx.dir.start(0);
-  const s = ctx.dir.tick(24000); // after hole, bar 6 = defend i=0
-  assert.strictEqual(s.phase, 'defend');
+  const s = ctx.dir.tick(24000); // after hole+4 defend, bar 6 = hole cycle 1
+  assert.strictEqual(s.phase, 'hole');
   assert.strictEqual(s.currentBar.loopIndex, 0);
   assert.strictEqual(s.barIndex, 6);
 });
@@ -140,12 +139,12 @@ test('D7: 10 agujeros mayor (C D E) con defends perfectos derrotan al jefe (20 H
   ctx.dir.tick(4000);
   for (let cycle = 0; cycle < 10; cycle++) {
     const base = 4000 + cycle * 20000;
+    playBar(ctx, base, ['C4', 'D4', 'E4']);
+    ctx.dir.tick(base + 4000);
     for (let i = 0; i < 4; i++) {
-      playBar(ctx, base + i * 4000, DEFEND_NOTES[i]);
-      ctx.dir.tick(base + (i + 1) * 4000);
+      playBar(ctx, base + 4000 + i * 4000, DEFEND_NOTES[i]);
+      ctx.dir.tick(base + 8000 + i * 4000);
     }
-    playBar(ctx, base + 16000, ['C4', 'D4', 'E4']);
-    ctx.dir.tick(base + 20000);
   }
   const s = ctx.dir.snapshot(ctx.now());
   assert.strictEqual(s.bossHp, 0);
@@ -157,7 +156,7 @@ test('D7: 10 agujeros mayor (C D E) con defends perfectos derrotan al jefe (20 H
 test('D8: reset / start otra vez restaura HP y fase', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(8000);
+  ctx.dir.tick(12000);
   assert.ok(ctx.dir.snapshot().playerHp < 15);
   ctx.dir.reset();
   const s = ctx.dir.start(0);
@@ -190,9 +189,10 @@ test('D10: chart parseado coincide con el archivo canónico', () => {
 test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000);
-  playBar(ctx, 4000, ['C4', 'C4']);
-  const s = ctx.dir.tick(8000);
+  ctx.dir.tick(4000); // setup → hole
+  ctx.dir.tick(8000); // hole idle → first defend
+  playBar(ctx, 8000, ['C4', 'C4']);
+  const s = ctx.dir.tick(12000);
   assert.strictEqual(s.lastResolve.grade, 'partial');
   assert.strictEqual(s.lastResolve.kind, 'defend-partial');
   assert.strictEqual(s.bossHp, 20);
@@ -202,25 +202,19 @@ test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
 test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
   const ctx = make();
   ctx.dir.start(0);
-  // perfect first 4 defends so HP stays 15
-  ctx.dir.tick(4000);
-  for (let i = 0; i < 4; i++) {
-    playBar(ctx, 4000 + i * 4000, DEFEND_NOTES[i]);
-    ctx.dir.tick(8000 + i * 4000);
-  }
-  playBar(ctx, 20000, ['C4', 'Eb4', 'G4']);
-  let s = ctx.dir.tick(24000);
+  ctx.dir.tick(4000); // setup → hole
+  playBar(ctx, 4000, ['C4', 'Eb4', 'G4']);
+  let s = ctx.dir.tick(8000);
   assert.strictEqual(s.lastResolve.spell.action, 'buff');
   assert.strictEqual(s.bossHp, 20);
   assert.ok(s.buffs.length >= 1);
 
-  // second loop: perfect defends, then major hole
   for (let i = 0; i < 4; i++) {
-    playBar(ctx, 24000 + i * 4000, DEFEND_NOTES[i]);
-    ctx.dir.tick(28000 + i * 4000);
+    playBar(ctx, 8000 + i * 4000, DEFEND_NOTES[i]);
+    ctx.dir.tick(12000 + i * 4000);
   }
-  playBar(ctx, 40000, ['C4', 'D4', 'E4']);
-  s = ctx.dir.tick(44000);
+  playBar(ctx, 24000, ['C4', 'D4', 'E4']);
+  s = ctx.dir.tick(28000);
   assert.strictEqual(s.lastResolve.spell.action, 'attack');
   assert.strictEqual(s.lastResolve.bossDamage, 3);
   assert.strictEqual(s.bossHp, 17);

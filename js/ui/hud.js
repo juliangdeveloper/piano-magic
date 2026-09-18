@@ -100,7 +100,7 @@
         } else if (state.phase === 'defend') {
           hint.textContent = 'Defiende: copia la cinta. A = C4 · S = D4 · D = E4. Perfecto / Parcial / Fallo — sin DPS al jefe.';
         } else {
-          hint.textContent = 'A S D = C4 D4 E4 (defiende). Agujero: F G H J K + W E T Y U para mayor / menor / pent. Sala C = Agua.';
+          hint.textContent = 'Tras la escucha: agujero (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Agujero: F G H J K + W E T Y U. Sala C = Agua.';
         }
       }
     }
