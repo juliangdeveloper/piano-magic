@@ -14,6 +14,7 @@
   var heldKeys = {};
   var midiStatus = '';
   var tickTimer = null;
+  var midiReady = false;
 
   function $(id) { return document.getElementById(id); }
 
@@ -114,6 +115,10 @@
   function startFight() {
     if (!director) return;
     ensureAudio();
+    if (!midiReady) {
+      midiReady = true;
+      setupMidi();
+    }
     hideOutcome();
     lastClickBeat = -1;
     stopLoop();
@@ -248,7 +253,6 @@
     document.addEventListener('keyup', onKeyUp);
     $('btnStart').addEventListener('click', startFight);
     $('btnRestart').addEventListener('click', restartFight);
-    setupMidi();
 
     fetch(CHART_URL).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
