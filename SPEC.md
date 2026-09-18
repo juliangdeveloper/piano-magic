@@ -7,7 +7,7 @@ Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CD
 ## Combate (bloqueado)
 
 - HP jugador **15** / jefe **20**.
-- Flujo: **setup listen** (BPM + elemento de sala, sin daño) → bucle **4 Defend + 1 agujero** hasta KO. El agujero va **al final** del loop (no hole-first).
+- Flujo: **setup listen** (BPM + elemento de sala, sin daño) → bucle **1 agujero + 4 Defend** hasta KO. El agujero va **primero** en el loop.
 - Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases.
 - HUD: HP de ambos, icono/nombre de sala (12 claves → elemento), BPM/metrónomo, feedback de resolución, buffs activos.
 - Sin barra de skills fantástica ni HP inflado.
@@ -18,7 +18,7 @@ Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CD
 
 - `bpm` 60, `timeSig` [4, 4], `roomKey` `"C"`.
 - `setup`: `{ listenOnly: true, bars: 1 }` — 1 compás. Tocar libre / drone C no hace daño.
-- `loop`: 4 `defend` (notas C/D/E del chart) + 1 `hole` (notas vacías). **No reordenar.**
+- `loop`: 1 `hole` (notas vacías) + 4 `defend` (mismas notas C/D/E). Agujero **primero**.
 - La cinta recorre setup y después el `loop` sin huecos hasta que jugador o jefe llega a 0 HP.
 
 ## InstrumentTranslator (stub M0)
@@ -164,7 +164,7 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 
 1. Abrir `index.html` (servidor estático): cinta + HUD de Raindrops, Thunder. Sala C = **Agua**.
 2. Setup: 1 compás listen-only a BPM del chart (60), `roomKey` C, sin daño.
-3. Loop 4 defend + 1 hole (agujero al final); teclado A/S/D = C4/D4/E4; teclado ampliado para gestos en el agujero.
+3. Loop 1 hole + 4 defend (agujero primero); teclado A/S/D = C4/D4/E4; teclado ampliado para gestos en el agujero.
 4. Defend: solo Perfect/Partial/Fail. Cero daño al jefe, cero buff/cura por modo.
 5. Agujero: mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.

@@ -1,4 +1,4 @@
-// js/combat/director.js — setup → loop 4 Defend + 1 hole hasta KO.
+// js/combat/director.js — setup → loop 1 hole + 4 Defend hasta KO.
 // Defend = copia (Perfect/Partial/Fail). Hole = SpellEngine (ataque/buff/cura).
 // Pura (reloj inyectable). UMD: module.exports + window.CombatDirector.
 'use strict';

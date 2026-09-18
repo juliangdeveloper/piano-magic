@@ -11,7 +11,7 @@ Versión **0.1.1** (M0.1).
 Jefe M0: **Raindrops, Thunder**. HP jugador 15 / jefe 20. BPM 60, sala C = **Agua**.
 
 1. Un compás de **escucha** (sin daño; drone C / toca libre).
-2. Bucle **4 Defiende + 1 Agujero** hasta KO (el agujero va al final del loop).
+2. Bucle **1 Agujero + 4 Defiende** hasta KO (el agujero va primero en el loop).
 3. En Defiende, copia las notas de la cinta (`A` `S` `D` = C4 D4 E4). Perfect / Parcial / Fallo — no hay DPS al jefe.
 4. En el **agujero**, improvisa: **mayor → ataque**, **menor → mejora**, **pentatónica → cura**. Tocar no resta HP; el silencio es válido.
 
