@@ -1,18 +1,17 @@
-/* css/ui.css — piano-magic M0. Sin fuentes/CDN. */
+/* css/ui.css — piano-magic v0.1.2. Sin fuentes ni CDN. */
 :root {
-  --bg: #0b0d10;
-  --fg: #e8eaf0;
-  --dim: #8a93a3;
-  --accent: #4ade80;
-  --accent-warm: #f59e0b;
-  --danger: #f87171;
-  --panel: #14181f;
-  --line: #232a35;
-  --setup: #38bdf8;
-  --defend: #4ade80;
-  --hole: #c084fc;
-  --player: #4ade80;
-  --boss: #fb7185;
+  --bg0: #10243f;
+  --bg1: #1c3d68;
+  --fg: #f6f1e6;
+  --dim: #c5d4ea;
+  --gold: #e2c27a;
+  --gold-deep: #a67c32;
+  --ink: #2a2118;
+  --parchment: #efe6d2;
+  --danger: #e15b5b;
+  --setup: #7ec8ff;
+  --defend: #8ddeaf;
+  --hole: #d7b4f5;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -28,162 +27,370 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  background:
+    radial-gradient(90% 55% at 50% 8%, rgba(186, 214, 242, 0.55), transparent 58%),
+    radial-gradient(70% 40% at 50% 22%, #3d6ea8 0%, transparent 62%),
+    linear-gradient(180deg, #8eafd4 0%, #2a4f86 28%, #17325c 62%, #0c1c36 100%);
+}
+
 body {
-  background: var(--bg);
   color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
-  max-width: 390px;
-  margin: 0 auto;
-  height: 100vh;
-  height: 100dvh;
-  padding-top: var(--safe-top);
-  padding-bottom: var(--safe-bottom);
-  padding-left: var(--safe-left);
-  padding-right: var(--safe-right);
+  font-family: Georgia, "Iowan Old Style", Palatino, "Palatino Linotype", serif;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
 }
 
-header {
+#frame {
+  max-width: 960px;
+  margin: 0 auto;
+  height: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+#scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 6px;
+}
+
+.utility {
+  grid-area: util;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 0;
+}
+
+.wordmark {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 241, 230, 0.72);
+  margin-right: auto;
+}
+
+#btnKeyboard, #btnHelp {
+  appearance: none;
+  border: 1px solid rgba(226, 194, 122, 0.85);
+  background: rgba(8, 18, 36, 0.35);
+  color: var(--fg);
+  border-radius: 999px;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#btnKeyboard {
+  font-size: 13px;
+  padding: 6px 12px;
+  min-height: 36px;
+}
+
+#btnKeyboard.on {
+  background: rgba(226, 194, 122, 0.28);
+  color: #fff8e6;
+}
+
+#btnHelp {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+#stageTop {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.3fr) auto;
+  grid-template-areas:
+    "util util util"
+    "room boss bpm";
+  align-items: start;
+  gap: 2px 12px;
+  padding: 2px 12px 0;
+}
+
+.room-card { grid-area: room; display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.boss-card { grid-area: boss; text-align: center; position: relative; z-index: 1; }
+.bpm-orb { grid-area: bpm; justify-self: end; padding-top: 2px; }
+
+#roomIcon {
+  width: 68px;
+  height: auto;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+}
+
+.room-emoji {
+  font-size: 32px;
+  width: 68px;
+  text-align: center;
+}
+
+.room-title {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  padding: 10px 14px 4px;
   gap: 8px;
 }
 
-header h1 {
+#roomName {
+  font-size: 26px;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+#roomKeyTag {
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--dim);
+}
+
+.player-hp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  min-width: 150px;
+}
+
+.hp-k {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.player-hp .track {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(6, 16, 32, 0.35);
+  border: 1px solid rgba(226, 194, 122, 0.75);
+  overflow: hidden;
+  min-width: 64px;
+}
+
+#playerHpBar {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(180deg, #b9dcff, #2f6fdd);
+}
+
+.player-hp .val, .boss-hp-num, #bpmVal, #version, #midiStatus, .key, #phaseBadge {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.player-hp .val {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 52px;
 }
 
 #songTitle {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
-  flex: 1;
-  text-align: right;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  margin-bottom: 2px;
 }
 
-#hud {
-  padding: 6px 14px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hp-row {
-  display: grid;
-  grid-template-columns: 64px 1fr 36px;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.hp-row .label { color: var(--dim); }
-.hp-row .val { text-align: right; font-variant-numeric: tabular-nums; }
-
-.track {
+.boss-hp {
   position: relative;
-  height: 10px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  overflow: hidden;
+  z-index: 2;
+  width: min(420px, 100%);
+  margin: 0 auto -12px;
 }
 
-.track > span {
+.boss-hp img {
   display: block;
-  height: 100%;
-  width: 0%;
-  border-radius: 5px;
-  transition: width 120ms linear;
+  width: 100%;
+  height: auto;
 }
 
-#playerHpBar { background: var(--player); }
-#bossHpBar { background: var(--boss); }
+.boss-hp-num {
+  position: absolute;
+  right: 7%;
+  top: 18%;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  font-variant-numeric: tabular-nums;
+}
 
-.meta-row {
+.boss-hp-mask {
+  position: absolute;
+  top: 22%;
+  height: 36%;
+  right: 8%;
+  width: 0;
+  background: rgba(6, 12, 28, 0.62);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+#bossPortrait {
+  width: min(300px, 78%);
+  height: auto;
+  max-height: 148px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35));
+  position: relative;
+  z-index: 1;
+}
+
+.bpm-orb {
+  width: 86px;
+  text-align: center;
+}
+
+.bpm-k {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #e7f2ff;
+  margin-bottom: 2px;
+}
+
+.orb-face {
+  position: relative;
+  transition: transform 80ms linear;
+}
+
+.bpm-orb.pulse .orb-face { transform: scale(1.08); }
+
+.orb-face img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(140, 200, 255, 0.65));
+}
+
+#bpmVal {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--dim);
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 8px #9ad0ff, 0 1px 2px #021018;
 }
 
-#roomBadge, #bpmBadge, #phaseBadge {
-  background: var(--panel);
-  border: 1px solid var(--line);
+.beats {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.beats i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  display: block;
+}
+
+.beats i.on { background: var(--gold); }
+.beats i.pulse { background: #fff; transform: scale(1.2); }
+
+#tapeFrame {
+  position: relative;
+  height: 200px;
+  margin: 2px 10px 8px;
+  overflow: hidden;
+  background: url("../assets/ui/tape-frame.png?v=0.1.2") center / 100% 100% no-repeat;
+}
+
+#tape {
+  position: absolute;
+  left: 10.5%;
+  top: 42%;
+  width: 87%;
+  height: 50%;
+  display: block;
+}
+
+.gesture-legend, .buff-live {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.buff-live:empty { display: none; }
+.buff-live { padding-top: 6px; }
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(8, 18, 36, 0.38);
+  border: 1px solid rgba(226, 194, 122, 0.55);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 2px 12px 2px 2px;
   color: var(--fg);
-  font-weight: 600;
   font-size: 12px;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.chip img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.chip.live {
+  background: rgba(226, 194, 122, 0.22);
+}
+
+#statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px 0;
+}
+
+#phaseBadge {
+  border: 1px solid rgba(226, 194, 122, 0.7);
+  background: rgba(8, 18, 36, 0.35);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  flex: 0 0 auto;
 }
 
 #phaseBadge.setup { color: var(--setup); }
 #phaseBadge.defend { color: var(--defend); }
 #phaseBadge.hole { color: var(--hole); }
 
-.beats {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-
-.beats i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--line);
-  display: block;
-}
-
-.beats i.on { background: var(--accent-warm); transform: scale(1.15); }
-.beats i.pulse { background: var(--fg); }
-
-#buffs {
-  min-height: 18px;
-  font-size: 12px;
-  color: var(--accent-warm);
-  font-weight: 600;
-}
-
-#tapeWrap {
-  position: relative;
-  margin: 0 10px;
-  background: #0e1218;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  height: 168px;
-  flex: 0 0 auto;
-}
-
-#tape {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 #feedback {
-  min-height: 28px;
-  text-align: center;
   font-size: 14px;
   font-weight: 700;
-  padding: 8px 12px 0;
-  color: var(--accent);
+  text-align: center;
+  color: #f3e2b0;
+  min-height: 1.2em;
 }
 
-#feedback.miss { color: var(--danger); }
-#feedback.partial { color: var(--accent-warm); }
+#feedback.miss { color: #ffb4b4; }
+#feedback.partial { color: #ffd27a; }
 #feedback.setup { color: var(--setup); }
 
 #hint {
@@ -192,104 +399,123 @@ header h1 {
   text-align: center;
   padding: 4px 16px 8px;
   line-height: 1.35;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-#keys {
+footer {
+  flex: 0 0 auto;
+  padding: 4px 12px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px 8px;
 }
 
-.key-row {
+#btnStart, #btnRestart, #tutNext {
+  appearance: none;
+  border: 1px solid #f8e7b8;
+  border-radius: 999px;
+  background: linear-gradient(#f6e2ad, #d7a84a);
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 12px 36px;
+  min-width: 180px;
+  min-height: 46px;
+  cursor: pointer;
+}
+
+#btnStart:active, #btnRestart:active, #tutNext:active { filter: brightness(0.95); }
+#btnStart.hidden { display: none; }
+
+#midiStatus, #version {
+  font-size: 11px;
+  color: var(--dim);
+  text-align: center;
+}
+
+#keys {
+  flex: 0 0 auto;
+  padding: 6px 8px calc(8px + var(--safe-bottom));
+  background: rgba(7, 14, 28, 0.78);
+  border-top: 1px solid rgba(226, 194, 122, 0.45);
+}
+
+#keys[hidden] { display: none !important; }
+
+.piano {
+  position: relative;
   display: flex;
-  justify-content: center;
-  gap: 4px;
-  flex-wrap: wrap;
+  height: 118px;
+  max-width: 720px;
+  margin: 0 auto;
+  touch-action: none;
 }
 
 .key {
   appearance: none;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--fg);
-  border-radius: 10px;
-  min-width: 36px;
-  padding: 7px 5px 5px;
+  border: none;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: flex-end;
+  gap: 1px;
+  padding-bottom: 6px;
+  touch-action: none;
 }
 
-.key .k {
-  font-size: 11px;
-  color: var(--dim);
-  font-weight: 700;
+.key.white {
+  flex: 1 1 0;
+  height: 100%;
+  margin: 0 2px;
+  background: linear-gradient(#fffdf8, #e7dcc6);
+  color: #1c2430;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #b7a88a;
+  box-shadow: inset 0 -3px 0 rgba(90, 70, 40, 0.15);
+  z-index: 1;
+  min-width: 0;
 }
-
-.key .p {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.key.down, .key:active {
-  background: var(--accent);
-  color: #05130a;
-  border-color: var(--accent);
-}
-
-.key.down .k, .key:active .k { color: #05130a; }
 
 .key.black {
-  background: #1b2230;
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  width: 10.5%;
+  height: 62%;
+  background: linear-gradient(#3a4458, #121722);
+  color: #f6f1e6;
+  border-radius: 0 0 7px 7px;
+  border: 1px solid #0a0d14;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  padding-bottom: 4px;
 }
 
-footer {
-  margin-top: auto;
-  padding: 8px 16px calc(12px + var(--safe-bottom));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+.key.black[data-key="w"] { left: calc(12.5% - 5.25%); }
+.key.black[data-key="e"] { left: calc(25% - 5.25%); }
+.key.black[data-key="t"] { left: calc(50% - 5.25%); }
+.key.black[data-key="y"] { left: calc(62.5% - 5.25%); }
+.key.black[data-key="u"] { left: calc(75% - 5.25%); }
+
+.key .k { font-size: 13px; font-weight: 800; line-height: 1; }
+.key .p { font-size: 10px; font-weight: 700; opacity: 0.8; line-height: 1.1; }
+.key.black .k { font-size: 12px; }
+.key.black .p { font-size: 9px; }
+
+.key.white.down, .key.white:active {
+  background: linear-gradient(#fff4cc, #e7c56a);
 }
-
-#btnStart, #btnRestart {
-  appearance: none;
-  border: none;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #05130a;
-  font-size: 17px;
-  font-weight: 700;
-  padding: 14px 40px;
-  min-width: 200px;
-  cursor: pointer;
-}
-
-#btnStart:active, #btnRestart:active { opacity: 0.85; }
-#btnStart.hidden { display: none; }
-
-#midiStatus {
-  font-size: 11px;
-  color: var(--dim);
-  min-height: 14px;
-}
-
-#version {
-  font-size: 11px;
-  color: var(--dim);
-  opacity: 0.7;
-  font-variant-numeric: tabular-nums;
+.key.black.down, .key.black:active {
+  background: linear-gradient(#6a5430, #2a2114);
 }
 
 #overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(8, 10, 14, 0.82);
+  background: rgba(8, 12, 24, 0.82);
   z-index: 20;
   align-items: center;
   justify-content: center;
@@ -301,23 +527,131 @@ footer {
 #overlay.visible { display: flex; }
 
 #overlayMsg {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   text-align: center;
 }
 
-#overlayMsg.win { color: var(--accent); }
-#overlayMsg.lose { color: var(--danger); }
+#overlayMsg.win { color: #b6f0c8; }
+#overlayMsg.lose { color: #ffb4b4; }
 
 #error {
   display: none;
   margin: 12px;
   padding: 12px;
-  background: var(--panel);
+  background: rgba(8, 16, 32, 0.85);
   border: 1px solid var(--danger);
   border-radius: 10px;
-  color: var(--danger);
+  color: #ffb4b4;
   font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 #error.visible { display: block; }
+
+#tutorial[hidden] { display: none !important; }
+
+.tut-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent;
+}
+
+.tut-spot {
+  position: fixed;
+  z-index: 41;
+  border-radius: 16px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px rgba(242, 214, 140, 0.95),
+    0 0 22px rgba(150, 210, 255, 0.45),
+    0 0 0 9999px rgba(6, 12, 28, 0.62);
+}
+
+.tut-card {
+  position: fixed;
+  z-index: 42;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 24px));
+  background: #f6edd9;
+  color: var(--ink);
+  border: 2px solid #c6a15a;
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.tut-kicker {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a6230;
+  font-weight: 700;
+}
+
+#tutText {
+  font-size: 18px;
+  line-height: 1.35;
+  margin-top: 4px;
+}
+
+.tut-progress {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #7a6548;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.tut-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+#tutSkip {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: #6d5436;
+  font-family: Georgia, serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 6px;
+  text-decoration: underline;
+}
+
+#tutNext {
+  min-width: 120px;
+  font-size: 16px;
+  padding: 8px 18px;
+  min-height: 42px;
+}
+
+@media (max-width: 640px) {
+  #stageTop {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "util util"
+      "room bpm"
+      "boss boss";
+  }
+  #roomName { font-size: 22px; }
+  #roomIcon { width: 56px; }
+  #bossPortrait { max-height: 124px; }
+  #songTitle { font-size: 16px; }
+  #tapeFrame { height: 172px; }
+  .piano { height: 124px; }
+  .boss-hp-num { font-size: 12px; top: 14%; }
+}
+
+@media (max-height: 700px) {
+  #bossPortrait { max-height: 96px; }
+  #tapeFrame { height: 142px; }
+  #hint { display: none; }
+  .chip img { width: 32px; height: 32px; }
+}

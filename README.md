@@ -4,7 +4,7 @@ Combate con piano (un jefe). Página estática para GitHub Pages, sin CDN ni red
 
 La detección de micrófono/pitch vive en el repo aparte [`piano-game`](https://github.com/juliangdeveloper/piano-game). **Este juego no depende de él** (ni CDN, ni fetch). M0 usa teclado QWERTY + Web MIDI.
 
-Versión **0.1.1** (M0.1).
+Versión **0.1.2**. El combate (agujero, Defend, 12 elementos, HP 15/20) es el de **0.1.1**.
 
 ## Jugar
 
@@ -16,6 +16,10 @@ Jefe M0: **Raindrops, Thunder**. HP jugador 15 / jefe 20. BPM 60, sala C = **Agu
 4. En el **agujero**, improvisa: **mayor → ataque**, **menor → mejora**, **pentatónica → cura**. Tocar no resta HP; el silencio es válido.
 
 El elemento sale de la **clave** (12 del círculo de quintas), no de grados I–VII. ×sala = pasos más cortos entre la tónica improvisada y la sala.
+
+La primera visita muestra un tutorial (Siguiente / Saltar). **?** lo vuelve a abrir. `localStorage.seenTutorial` recuerda que ya se vio.
+
+**Teclado** en el HUD muestra un piano abajo (A–K blancas, W E T Y U negras), las mismas notas que el QWERTY. En pantallas estrechas o táctiles empieza encendido; la elección queda en `localStorage.onscreenKeyboard`.
 
 ```
 python3 -m http.server 8000
@@ -43,8 +47,10 @@ js/combat/chart.js           chart JSON
 js/combat/director.js        setup + loop hasta KO
 js/ui/tape.js                cinta continua
 js/ui/hud.js
+js/ui/tutorial.js
 js/app.js
 charts/raindrops-thunder.json
+assets/ui/                   cromo del mockup (sin CDN)
 test/
 SPEC.md
 ```
