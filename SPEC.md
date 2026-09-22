@@ -1,4 +1,6 @@
-# piano-magic — SPEC v0.1.1 (M0.1)
+# piano-magic — SPEC v0.1.2 (M0.2 UI)
+
+Producto **0.1.2**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, agujero primero, Defend solo copia, 12 elementos, ×sala). Esta versión cambia cromo, tutorial y teclado en pantalla.
 
 Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN, sin mic/YIN. 100% client-side.
 
@@ -122,12 +124,15 @@ KO: `bossHp === 0` → victoria; `playerHp === 0` → derrota. Overlay + **Reini
 
 ## UI
 
-- `index.html` + `css/ui.css` — móvil-ish ~390px, fondo oscuro, etiquetas en español.
-- `js/ui/tape.js` — canvas, playhead fijo a la izquierda, notas y compases se desplazan.
-- `js/ui/hud.js` — HP, sala (elemento de la clave), BPM, pulsos de metrónomo, feedback, buffs.
-- `js/app.js` — fetch same-origin del JSON, teclado, MIDI, synth local (oscilador), rAF.
+- `index.html` + `css/ui.css` — español, fondo azul, columna hasta ~960px. Sin CDN.
+- Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, retrato del jefe, barra HP, marco de la cinta, ficha de nota, ranura de hueco, tres iconos de buff. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan).
+- `js/ui/tape.js` — canvas sobre el pergamino: playhead fijo, fichas, hueco, números de compás reales.
+- `js/ui/hud.js` — HP **15/20** (actual / máximo), sala, BPM, metrónomo, feedback, chip ATQ+.
+- `js/ui/tutorial.js` — primera visita. Spotlight, **Siguiente** / **Saltar**, `localStorage.seenTutorial`. El botón **?** lo repite. Sin la clave es primera visita y se muestra; un save legado `pmSave` sin la clave cuenta como visto (hoy no hay saves).
+- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, synth local, rAF.
+- Teclado en pantalla: botón **Teclado** en el HUD. Por defecto activo en viewport estrecho (≤700px), puntero grueso o táctil; si no, apagado. La última elección queda en `localStorage.onscreenKeyboard` (`on` / `off`). Las teclas usan `InstrumentTranslator.KEY_MAP` (A–K blancas, W E T Y U negras) y el mismo `noteOn` / `noteOff` que el teclado físico.
 
-Versión **0.1.1**: `VERSION`, `package.json`, query `?v=0.1.1` en scripts/CSS.
+Versión **0.1.2**: `VERSION`, `package.json`, query `?v=0.1.2` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1.
 
 ## Tests
 
@@ -153,7 +158,9 @@ js/combat/director.js
 js/combat/chart.js
 js/ui/tape.js
 js/ui/hud.js
+js/ui/tutorial.js
 charts/raindrops-thunder.json
+assets/ui/
 test/
 SPEC.md README.md package.json VERSION .nojekyll
 ```
@@ -169,5 +176,7 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 5. Agujero: mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.
 7. `npm test` verde.
-8. Versión **0.1.1**.
+8. Versión de producto **0.1.2** (`?v=0.1.2`). Combate sigue en **0.1.1**.
 9. GitHub Pages desde la raíz de `main` (ver README). `.nojekyll` en la raíz.
+10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). `seenTutorial` persiste.
+11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate.
