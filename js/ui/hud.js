@@ -1,4 +1,4 @@
-// js/ui/hud.js — HP, sala, BPM/metrónomo, feedback, buffs.
+// js/ui/hud.js — HP 15/20, sala, BPM, feedback, buffs. Cromo del mockup.
 // UMD: module.exports + window.Hud.
 'use strict';
 
@@ -20,6 +20,10 @@
     lose: 'Derrota'
   };
 
+  var BUFF_ICON = {
+    atk: 'assets/ui/buff-icon-2.png?v=0.1.2'
+  };
+
   function el(id) {
     return (typeof document === 'undefined') ? null : document.getElementById(id);
   }
@@ -35,11 +39,15 @@
       if (!state) return;
       var title = el(ids.songTitle || 'songTitle');
       var playerBar = el(ids.playerHpBar || 'playerHpBar');
-      var bossBar = el(ids.bossHpBar || 'bossHpBar');
+      var bossMask = el(ids.bossHpMask || 'bossHpMask');
       var playerVal = el(ids.playerHpVal || 'playerHpVal');
       var bossVal = el(ids.bossHpVal || 'bossHpVal');
-      var room = el(ids.roomBadge || 'roomBadge');
-      var bpm = el(ids.bpmBadge || 'bpmBadge');
+      var roomName = el(ids.roomName || 'roomName');
+      var roomKey = el(ids.roomKeyTag || 'roomKeyTag');
+      var roomIcon = el(ids.roomIcon || 'roomIcon');
+      var roomEmoji = el(ids.roomEmoji || 'roomEmoji');
+      var bpm = el(ids.bpmVal || 'bpmVal');
+      var orb = el(ids.bpmOrb || 'bpmOrb');
       var phase = el(ids.phaseBadge || 'phaseBadge');
       var beats = el(ids.beats || 'beats');
       var buffs = el(ids.buffs || 'buffs');
@@ -48,14 +56,29 @@
       setText(title, state.title || '');
       var pPct = state.playerHpMax ? (100 * state.playerHp / state.playerHpMax) : 0;
       var bPct = state.bossHpMax ? (100 * state.bossHp / state.bossHpMax) : 0;
-      if (playerBar) playerBar.style.width = Math.max(0, pPct) + '%';
-      if (bossBar) bossBar.style.width = Math.max(0, bPct) + '%';
-      setText(playerVal, String(state.playerHp));
-      setText(bossVal, String(state.bossHp));
+      if (playerBar) playerBar.style.width = Math.max(0, Math.min(100, pPct)) + '%';
+      if (bossMask) {
+        var miss = Math.max(0, Math.min(1, 1 - (bPct / 100)));
+        bossMask.style.width = (miss * 70) + '%';
+      }
+      setText(playerVal, state.playerHp + ' / ' + state.playerHpMax);
+      setText(bossVal, state.bossHp + ' / ' + state.bossHpMax);
 
       var re = state.roomElement || {};
-      setText(room, (re.icon || '') + ' ' + (state.roomKey || 'C') + ' · ' + (re.label || ''));
-      setText(bpm, '♩=' + state.bpm);
+      setText(roomName, re.label || '');
+      setText(roomKey, state.roomKey || 'C');
+      var agua = (re.id || 'agua') === 'agua';
+      if (roomIcon) roomIcon.hidden = !agua;
+      if (roomEmoji) {
+        roomEmoji.hidden = agua;
+        if (!agua) roomEmoji.textContent = re.icon || '';
+      }
+
+      setText(bpm, String(state.bpm));
+      if (orb) {
+        var pulsing = !!(state.running && (state.beat % 1) < 0.18);
+        orb.classList.toggle('pulse', pulsing);
+      }
 
       var ph = state.phase || 'idle';
       setText(phase, PHASE_LABEL[ph] || ph);
@@ -67,17 +90,31 @@
         var pulse = (state.beat % 1) < 0.18;
         for (var i = 0; i < dots.length; i++) {
           dots[i].className = '';
-          if (i === beatIn) dots[i].className = pulse ? 'on pulse' : 'on';
+          if (state.running && i === beatIn) dots[i].className = pulse ? 'on pulse' : 'on';
         }
       }
 
       if (buffs) {
-        if (!state.buffs || !state.buffs.length) {
+        var list = state.buffs || [];
+        var sig = list.map(function (b) {
+          return (b.id || '') + ':' + b.remaining;
+        }).join('|');
+        if (buffs.getAttribute('data-sig') !== sig) {
+          buffs.setAttribute('data-sig', sig);
           buffs.textContent = '';
-        } else {
-          buffs.textContent = state.buffs.map(function (b) {
-            return (b.label || b.id) + ' (' + b.remaining + ')';
-          }).join(' · ');
+          for (var bi = 0; bi < list.length; bi++) {
+            var b = list[bi];
+            var chip = document.createElement('div');
+            chip.className = 'chip live';
+            var img = document.createElement('img');
+            img.src = BUFF_ICON[b.id] || BUFF_ICON.atk;
+            img.alt = '';
+            var span = document.createElement('span');
+            span.textContent = (b.label || b.id) + ' · ' + b.remaining;
+            chip.appendChild(img);
+            chip.appendChild(span);
+            buffs.appendChild(chip);
+          }
         }
       }
 

@@ -1,13 +1,16 @@
-// js/app.js — orquestación M0: cinta + HUD + teclado/MIDI + combate.
+// js/app.js — cinta, HUD, tutorial, teclado físico y en pantalla.
+// El teclado en pantalla usa el mismo KEY_MAP → noteOn → InstrumentTranslator que el QWERTY.
 'use strict';
 
 (function () {
-  var VERSION = '0.1.1';
+  var VERSION = '0.1.2';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
+  var KB_KEY = 'onscreenKeyboard';
 
   var director = null;
   var tape = null;
   var hud = null;
+  var tutorial = null;
   var audioCtx = null;
   var runningLoop = false;
   var lastClickBeat = -1;
@@ -15,6 +18,7 @@
   var midiStatus = '';
   var tickTimer = null;
   var midiReady = false;
+  var tutorialBooted = false;
 
   function $(id) { return document.getElementById(id); }
 
@@ -59,6 +63,15 @@
 
   function metronomeClick(strong) {
     beep(strong ? 1320 : 880, 0.04, 'square', strong ? 0.07 : 0.04);
+  }
+
+  function pitchForKey(key) {
+    if (!key || !window.InstrumentTranslator) return null;
+    return InstrumentTranslator.KEY_MAP[String(key).toLowerCase()] || null;
+  }
+
+  function tutorialOpen() {
+    return !!(tutorial && tutorial.isOpen());
   }
 
   function render() {
@@ -112,8 +125,14 @@
     if (overlay) overlay.className = '';
   }
 
+  function refreshTape() {
+    if (!tape || !director) return;
+    tape.resize();
+    tape.render(director.snapshot(performance.now()));
+  }
+
   function startFight() {
-    if (!director) return;
+    if (!director || tutorialOpen()) return;
     ensureAudio();
     if (!midiReady) {
       midiReady = true;
@@ -125,7 +144,6 @@
     director.start(performance.now());
     runningLoop = true;
     $('btnStart').className = 'hidden';
-    // Intervalo de lógica: rAF se duerme en background/headless.
     tickTimer = setInterval(function () {
       if (!runningLoop) return;
       render();
@@ -134,12 +152,13 @@
   }
 
   function restartFight() {
-    if (!director) return;
+    if (!director || tutorialOpen()) return;
     director.reset();
     startFight();
   }
 
-  function noteOn(pitch, src) {
+  function noteOn(pitch) {
+    if (tutorialOpen()) return;
     if (!pitch || heldKeys[pitch]) return;
     heldKeys[pitch] = true;
     playPitch(pitch);
@@ -155,45 +174,124 @@
   }
 
   function markKey(pitch, down) {
-    var btn = document.querySelector('.key[data-pitch="' + pitch + '"]');
+    var btn = document.querySelector('#piano .key[data-pitch="' + pitch + '"]');
     if (!btn) return;
     if (down) btn.classList.add('down');
     else btn.classList.remove('down');
   }
 
   function onKeyDown(ev) {
+    if (tutorialOpen()) return;
     if (ev.repeat) return;
-    var pitch = InstrumentTranslator.KEY_MAP[String(ev.key).toLowerCase()];
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var pitch = pitchForKey(ev.key);
     if (!pitch) return;
     ev.preventDefault();
-    noteOn(pitch, 'kbd');
+    noteOn(pitch);
   }
 
   function onKeyUp(ev) {
-    var pitch = InstrumentTranslator.KEY_MAP[String(ev.key).toLowerCase()];
+    var pitch = pitchForKey(ev.key);
     if (!pitch) return;
     ev.preventDefault();
     noteOff(pitch);
   }
 
+  function shortPitch(pitch) {
+    return String(pitch).replace(/4$/, '');
+  }
+
+  function buildPiano() {
+    var piano = $('piano');
+    if (!piano || !window.InstrumentTranslator) return;
+    piano.textContent = '';
+    var blacks = { W: true, E: true, T: true, Y: true, U: true };
+    var labels = InstrumentTranslator.KEY_LABELS;
+    for (var i = 0; i < labels.length; i++) {
+      var item = labels[i];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'key ' + (blacks[item.key] ? 'black' : 'white');
+      btn.setAttribute('data-key', item.key.toLowerCase());
+      var pitch = pitchForKey(item.key);
+      if (pitch) btn.setAttribute('data-pitch', pitch);
+      btn.setAttribute('aria-label', item.key + ' ' + item.pitch);
+      var k = document.createElement('span');
+      k.className = 'k';
+      k.textContent = item.key;
+      var p = document.createElement('span');
+      p.className = 'p';
+      p.textContent = shortPitch(item.pitch);
+      btn.appendChild(k);
+      btn.appendChild(p);
+      piano.appendChild(btn);
+    }
+  }
+
   function bindOnscreenKeys() {
-    var keys = document.querySelectorAll('.key');
+    var keys = document.querySelectorAll('#piano .key');
     keys.forEach(function (btn) {
-      var pitch = btn.getAttribute('data-pitch');
+      var pointers = {};
       btn.addEventListener('pointerdown', function (e) {
+        if (tutorialOpen()) return;
         e.preventDefault();
-        btn.setPointerCapture(e.pointerId);
-        noteOn(pitch, 'ui');
+        try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+        var pitch = pitchForKey(btn.getAttribute('data-key'));
+        pointers[e.pointerId] = pitch;
+        noteOn(pitch);
       });
-      btn.addEventListener('pointerup', function () { noteOff(pitch); });
-      btn.addEventListener('pointercancel', function () { noteOff(pitch); });
+      function release(e) {
+        var pitch = pointers[e.pointerId];
+        if (!pitch) return;
+        delete pointers[e.pointerId];
+        noteOff(pitch);
+      }
+      btn.addEventListener('pointerup', release);
+      btn.addEventListener('pointercancel', release);
+      btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     });
+  }
+
+  function defaultKeyboardOn() {
+    var narrow = false;
+    var coarse = false;
+    try {
+      narrow = window.matchMedia('(max-width: 700px)').matches;
+      coarse = window.matchMedia('(pointer: coarse)').matches;
+    } catch (e) {}
+    var touch = (navigator.maxTouchPoints || 0) > 0;
+    return !!(narrow || coarse || touch);
+  }
+
+  function readKeyboardPref() {
+    try {
+      var v = localStorage.getItem(KB_KEY);
+      if (v === 'on') return true;
+      if (v === 'off') return false;
+    } catch (e) {}
+    return defaultKeyboardOn();
+  }
+
+  function applyKeyboard(on, persist) {
+    var dock = $('keys');
+    if (dock) dock.hidden = !on;
+    document.body.classList.toggle('kb-on', !!on);
+    var btn = $('btnKeyboard');
+    if (btn) {
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.classList.toggle('on', !!on);
+      btn.textContent = on ? 'Teclado: sí' : 'Teclado';
+    }
+    if (persist) {
+      try { localStorage.setItem(KB_KEY, on ? 'on' : 'off'); } catch (e) {}
+    }
+    requestAnimationFrame(refreshTape);
   }
 
   function setupMidi() {
     var status = $('midiStatus');
     if (!navigator.requestMIDIAccess) {
-      midiStatus = 'MIDI no disponible · teclado A S D = C D E';
+      midiStatus = 'MIDI no disponible · teclado A–K y el teclado en pantalla';
       if (status) status.textContent = midiStatus;
       return;
     }
@@ -209,7 +307,7 @@
             var note = d[1];
             var vel = d.length > 2 ? d[2] : 0;
             var pitch = InstrumentTranslator.midiToName(note);
-            if (cmd === 0x90 && vel > 0) noteOn(pitch, 'midi');
+            if (cmd === 0x90 && vel > 0) noteOn(pitch);
             else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) noteOff(pitch);
           };
         });
@@ -229,13 +327,12 @@
       chart: chart,
       now: function () { return performance.now(); }
     });
-    tape = Tape.create($('tape'));
+    tape = Tape.create($('tape'), { version: VERSION });
     hud = Hud.create();
     var idle = director.snapshot(0);
     hud.render(idle);
     requestAnimationFrame(function () {
-      if (tape) tape.resize();
-      if (tape) tape.render(director ? director.snapshot(0) : idle);
+      refreshTape();
     });
     tape.render(idle);
     $('version').textContent = 'v' + VERSION;
@@ -243,22 +340,56 @@
       VERSION: VERSION,
       director: director,
       start: startFight,
-      restart: restartFight
+      restart: restartFight,
+      noteOn: noteOn,
+      noteOff: noteOff,
+      tutorial: tutorial,
+      setKeyboard: function (on) { applyKeyboard(!!on, true); },
+      keyboardOn: function () { return !$('keys').hidden; }
     };
+    maybeTutorial();
+  }
+
+  function maybeTutorial() {
+    if (tutorialBooted || !tutorial) return;
+    tutorialBooted = true;
+    tutorial.maybeStart();
   }
 
   function init() {
+    buildPiano();
     bindOnscreenKeys();
+    applyKeyboard(readKeyboardPref(), false);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
     $('btnStart').addEventListener('click', startFight);
     $('btnRestart').addEventListener('click', restartFight);
+    $('btnKeyboard').addEventListener('click', function () {
+      if (tutorialOpen()) return;
+      applyKeyboard($('keys').hidden, true);
+    });
+
+    tutorial = Tutorial.create({
+      onStep: function (step) {
+        if (step.showKeyboard) applyKeyboard(true, false);
+      },
+      onClose: function () {
+        applyKeyboard(readKeyboardPref(), false);
+        refreshTape();
+      }
+    });
+    $('btnHelp').addEventListener('click', function () {
+      tutorial.replay();
+    });
+
+    if (window.PianoMagic) window.PianoMagic.tutorial = tutorial;
 
     fetch(CHART_URL).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     }).then(boot).catch(function (err) {
       showError('No se pudo cargar el chart. Sirve la carpeta con un servidor estático (python -m http.server) — ' + err.message);
+      maybeTutorial();
     });
   }
 

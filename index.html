@@ -3,87 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#0b0d10">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0d10'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-size='36'%3E%E2%99%A9%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#163056">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23163056'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-size='36'%3E%E2%99%A9%3C/text%3E%3C/svg%3E">
   <title>piano-magic — Raindrops, Thunder</title>
-  <link rel="stylesheet" href="css/ui.css?v=0.1.1">
+  <link rel="stylesheet" href="css/ui.css?v=0.1.2">
 </head>
 <body>
-  <header>
-    <h1>piano-magic</h1>
-    <div id="songTitle">Raindrops, Thunder</div>
-  </header>
+  <div id="frame">
+    <div id="scroll">
+      <section id="stageTop">
+        <div class="utility">
+          <span class="wordmark">piano-magic</span>
+          <button id="btnKeyboard" type="button" aria-pressed="false">Teclado</button>
+          <button id="btnHelp" type="button" aria-label="Tutorial">?</button>
+        </div>
 
-  <section id="hud">
-    <div class="hp-row">
-      <span class="label">Jugador</span>
-      <div class="track"><span id="playerHpBar"></span></div>
-      <span class="val" id="playerHpVal">15</span>
-    </div>
-    <div class="hp-row">
-      <span class="label">Jefe</span>
-      <div class="track"><span id="bossHpBar"></span></div>
-      <span class="val" id="bossHpVal">20</span>
-    </div>
-    <div class="meta-row">
-      <span id="roomBadge">💧 C · Agua</span>
-      <span id="bpmBadge">♩=60</span>
-      <span id="phaseBadge" class="idle">Listo</span>
-    </div>
-    <div class="meta-row">
-      <div class="beats" id="beats" aria-label="Metrónomo">
-        <i></i><i></i><i></i><i></i>
+        <div id="roomCard" class="room-card">
+          <img id="roomIcon" src="assets/ui/room-water-icon.png?v=0.1.2" alt="">
+          <span id="roomEmoji" class="room-emoji" hidden></span>
+          <div class="room-copy">
+            <div class="room-title">
+              <span id="roomName">Agua</span>
+              <span id="roomKeyTag">C</span>
+            </div>
+            <div class="player-hp">
+              <span class="hp-k">HP</span>
+              <div class="track"><span id="playerHpBar"></span></div>
+              <span class="val" id="playerHpVal">15 / 15</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="bossCard" class="boss-card">
+          <h1 id="songTitle">Raindrops, Thunder</h1>
+          <div class="boss-hp" id="bossHpChrome">
+            <img src="assets/ui/hp-bar-style.png?v=0.1.2" alt="">
+            <span id="bossHpMask" class="boss-hp-mask"></span>
+            <span id="bossHpVal" class="boss-hp-num">20 / 20</span>
+          </div>
+          <img id="bossPortrait" src="assets/ui/boss-cloud.png?v=0.1.2" alt="Jefe">
+        </div>
+
+        <div id="bpmOrb" class="bpm-orb">
+          <span class="bpm-k">BPM</span>
+          <div class="orb-face">
+            <img src="assets/ui/bpm-orb.png?v=0.1.2" alt="">
+            <span id="bpmVal">60</span>
+          </div>
+          <div class="beats" id="beats" aria-label="Metrónomo">
+            <i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+      </section>
+
+      <div id="tapeFrame">
+        <canvas id="tape" width="720" height="120" aria-label="Cinta de compases"></canvas>
       </div>
-      <span id="buffs"></span>
+
+      <div id="gestureLegend" class="gesture-legend" aria-label="Gestos del agujero">
+        <div class="chip">
+          <img src="assets/ui/buff-icon-2.png?v=0.1.2" alt="">
+          <span>Mayor<br>ataque</span>
+        </div>
+        <div class="chip">
+          <img src="assets/ui/buff-icon-1.png?v=0.1.2" alt="">
+          <span>Menor<br>mejora</span>
+        </div>
+        <div class="chip">
+          <img src="assets/ui/buff-icon-3.png?v=0.1.2" alt="">
+          <span>Pentatónica<br>cura</span>
+        </div>
+      </div>
+      <div id="buffs" class="buff-live" aria-label="Mejoras activas"></div>
+
+      <div id="statusRow">
+        <span id="phaseBadge" class="idle">Listo</span>
+        <div id="feedback">Sala en C · Agua · drone C / toca libre en el setup</div>
+      </div>
+      <div id="hint">Tras la escucha: agujero (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Agujero: F G H J K + W E T Y U. Sala C = Agua.</div>
     </div>
-  </section>
 
-  <div id="tapeWrap">
-    <canvas id="tape" width="360" height="168" aria-label="Cinta de compases"></canvas>
-  </div>
+    <footer>
+      <button id="btnStart" type="button">Empezar</button>
+      <div id="midiStatus">Teclado A S D = C4 D4 E4 · agujero: teclado completo</div>
+      <span id="version">v0.1.2</span>
+    </footer>
 
-  <div id="feedback">Sala en C · Agua · drone C / toca libre en el setup</div>
-  <div id="hint">Tras la escucha: agujero (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Agujero: F G H J K + W E T Y U. Sala C = Agua.</div>
-
-  <div id="keys" aria-label="Teclado">
-    <div class="key-row">
-      <button type="button" class="key black" data-pitch="C#4"><span class="k">W</span><span class="p">C#</span></button>
-      <button type="button" class="key black" data-pitch="D#4"><span class="k">E</span><span class="p">Eb</span></button>
-      <button type="button" class="key black" data-pitch="F#4"><span class="k">T</span><span class="p">F#</span></button>
-      <button type="button" class="key black" data-pitch="G#4"><span class="k">Y</span><span class="p">Ab</span></button>
-      <button type="button" class="key black" data-pitch="A#4"><span class="k">U</span><span class="p">Bb</span></button>
-    </div>
-    <div class="key-row">
-      <button type="button" class="key" data-pitch="C4"><span class="k">A</span><span class="p">C4</span></button>
-      <button type="button" class="key" data-pitch="D4"><span class="k">S</span><span class="p">D4</span></button>
-      <button type="button" class="key" data-pitch="E4"><span class="k">D</span><span class="p">E4</span></button>
-      <button type="button" class="key" data-pitch="F4"><span class="k">F</span><span class="p">F4</span></button>
-      <button type="button" class="key" data-pitch="G4"><span class="k">G</span><span class="p">G4</span></button>
-      <button type="button" class="key" data-pitch="A4"><span class="k">H</span><span class="p">A4</span></button>
-      <button type="button" class="key" data-pitch="B4"><span class="k">J</span><span class="p">B4</span></button>
-      <button type="button" class="key" data-pitch="C5"><span class="k">K</span><span class="p">C5</span></button>
+    <div id="keys" hidden>
+      <div id="piano" class="piano" aria-label="Teclado en pantalla"></div>
     </div>
   </div>
 
   <div id="error"></div>
-
-  <footer>
-    <button id="btnStart" type="button">Empezar</button>
-    <div id="midiStatus">Teclado A S D = C4 D4 E4 · agujero: teclado completo</div>
-    <span id="version">v0.1.1</span>
-  </footer>
 
   <div id="overlay">
     <div id="overlayMsg"></div>
     <button id="btnRestart" type="button">Reiniciar</button>
   </div>
 
-  <script src="js/instrument/translator.js?v=0.1.1"></script>
-  <script src="js/spell/engine.js?v=0.1.1"></script>
-  <script src="js/combat/chart.js?v=0.1.1"></script>
-  <script src="js/combat/director.js?v=0.1.1"></script>
-  <script src="js/ui/tape.js?v=0.1.1"></script>
-  <script src="js/ui/hud.js?v=0.1.1"></script>
-  <script src="js/app.js?v=0.1.1"></script>
+  <div id="tutorial" hidden role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+    <div class="tut-blocker"></div>
+    <div class="tut-spot" id="tutSpot"></div>
+    <div class="tut-card" id="tutCard">
+      <p id="tutTitle" class="tut-kicker"></p>
+      <p id="tutText"></p>
+      <p id="tutProgress" class="tut-progress"></p>
+      <div class="tut-actions">
+        <button id="tutSkip" type="button">Saltar</button>
+        <button id="tutNext" type="button">Siguiente</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/instrument/translator.js?v=0.1.2"></script>
+  <script src="js/spell/engine.js?v=0.1.2"></script>
+  <script src="js/combat/chart.js?v=0.1.2"></script>
+  <script src="js/combat/director.js?v=0.1.2"></script>
+  <script src="js/ui/tape.js?v=0.1.2"></script>
+  <script src="js/ui/hud.js?v=0.1.2"></script>
+  <script src="js/ui/tutorial.js?v=0.1.2"></script>
+  <script src="js/app.js?v=0.1.2"></script>
 </body>
 </html>
