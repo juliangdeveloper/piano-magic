@@ -9,8 +9,21 @@ test('el Ataque marca los 4 beats y resalta solo el pulso actual', () => {
   const marks = Tape.attackBeatMarks(8, 4, 10.2);
   assert.strictEqual(marks.length, 4);
   assert.deepStrictEqual(marks.map((m) => m.label), ['1', '2', '3', '4']);
-  assert.deepStrictEqual(marks.map((m) => m.beat), [8, 9, 10, 11]);
+  assert.deepStrictEqual(marks.map((m) => m.beat), [8.5, 9.5, 10.5, 11.5]);
   assert.deepStrictEqual(marks.map((m) => m.current), [false, false, true, false]);
+});
+
+test('el 1 queda dentro del primer tiempo, no sobre la barra', () => {
+  const marks = Tape.attackBeatMarks(4, 4, 4);
+  assert.ok(marks[0].beat > 4, 'el 1 va después de la barra izquierda');
+  assert.ok(marks[3].beat < 8, 'el 4 va antes de la barra derecha');
+  assert.strictEqual(marks[0].beat, 4.5);
+  assert.deepStrictEqual(
+    marks.slice(1).map((m, i) => m.beat - marks[i].beat),
+    [1, 1, 1]
+  );
+  assert.strictEqual(marks[0].current, true);
+  assert.strictEqual(marks[0].label, '1');
 });
 
 test('el pulso en el borde pertenece al beat que empieza ahí', () => {

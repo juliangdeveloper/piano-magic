@@ -21,7 +21,7 @@
   };
 
   var BUFF_ICON = {
-    atk: 'assets/ui/buff-icon-2.png?v=0.1.5'
+    atk: 'assets/ui/buff-icon-2.png?v=0.1.6'
   };
 
   function el(id) {

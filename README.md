@@ -4,9 +4,9 @@ Combate con piano (un jefe). Página estática para GitHub Pages, sin CDN ni red
 
 El YIN monofónico está copiado de [`piano-game`](https://github.com/juliangdeveloper/piano-game) (`js/pitch.js`). **No hay dependencia en runtime** (ni CDN, ni fetch). El juego también usa teclado QWERTY, teclado en pantalla y Web MIDI.
 
-Versión **0.1.5**. El combate (ataque libre, Defend, 12 elementos, HP 15/20) es el de **0.1.1**. El id interno del compás de improvisación sigue siendo `hole`.
+Versión **0.1.6**. El combate (ataque libre, Defend, 12 elementos, HP 15/20) es el de **0.1.1**. El id interno del compás de improvisación sigue siendo `hole`.
 
-El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama limpio (sin marco detrás): las notas de Defiende vienen del chart y suenan al cruzar el playhead; lo que tocas en el **Ataque** y en **Defiende** se escribe ahí. En el Ataque, unos números `1 2 3 4` marcan el pulso encima del pentagrama. Un acierto casi o perfecto se funde con la nota del chart. **Pausa** congela cinta, combate y audio. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
+El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama limpio (sin marco detrás): las notas de Defiende vienen del chart y suenan al cruzar el playhead; lo que tocas en el **Ataque** y en **Defiende** se escribe ahí. En el Ataque, unos números `1 2 3 4` marcan el pulso encima del pentagrama, cada uno en el centro de su tiempo (el 1 no cae sobre la barra). Un acierto casi o perfecto se funde con la nota del chart. **Pausa** congela cinta, combate y audio. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
 
 ## Jugar
 
