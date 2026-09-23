@@ -1,6 +1,6 @@
-# piano-magic — SPEC v0.1.3 (pentagrama, sonido, retrato)
+# piano-magic — SPEC v0.1.4 (pausa, audio, fusión, ataques)
 
-Producto **0.1.3**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, agujero primero, Defend solo copia, 12 elementos, ×sala). Esta versión cambia el retrato del jefe (una sola imagen), el sonido del teclado y la cinta (pentagrama).
+Producto **0.1.4**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. Esta versión añade pausa, melodía audible del chart, notas del jugador en Defiende con fusión, y quita el marco detrás de la cinta.
 
 Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN, sin mic/YIN. 100% client-side.
 
@@ -9,8 +9,8 @@ Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CD
 ## Combate (bloqueado)
 
 - HP jugador **15** / jefe **20**.
-- Flujo: **setup listen** (BPM + elemento de sala, sin daño) → bucle **1 agujero + 4 Defend** hasta KO. El agujero va **primero** en el loop.
-- Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases. Las notas del chart van en pentagrama (clave de sol). En el agujero, los NoteOn se escriben en ese pentagrama en el beat en que suenan y siguen visibles mientras la cinta avanza.
+- Flujo: **setup listen** (BPM + elemento de sala, sin daño) → bucle **1 ataque (`hole`) + 4 Defend** hasta KO. El ataque va **primero** en el loop.
+- Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases. Las notas del chart van en pentagrama (clave de sol). En el Ataque, los NoteOn se escriben en ese pentagrama en el beat en que suenan y siguen visibles mientras la cinta avanza. En Defiende, los NoteOn del jugador también se escriben, con otro color y la plica hacia abajo, hasta fundirse con el blanco si el onset cae en la ventana.
 - HUD: HP de ambos, icono/nombre de sala (12 claves → elemento), BPM/metrónomo, feedback de resolución, buffs activos.
 - Sin barra de skills fantástica ni HP inflado.
 
@@ -20,8 +20,8 @@ Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CD
 
 - `bpm` 60, `timeSig` [4, 4], `roomKey` `"C"`.
 - `setup`: `{ listenOnly: true, bars: 1 }` — 1 compás. Tocar libre / drone C no hace daño.
-- `loop`: 1 `hole` (notas vacías) + 4 `defend` (mismas notas C/D/E). Agujero **primero**.
-- La cinta recorre setup y después el `loop` sin huecos hasta que jugador o jefe llega a 0 HP.
+- `loop`: 1 `hole` (notas vacías) + 4 `defend` (mismas notas C/D/E). El ataque **primero**.
+- La cinta recorre setup y después el `loop` sin saltos hasta que jugador o jefe llega a 0 HP.
 
 ## InstrumentTranslator (stub M0)
 
@@ -40,7 +40,7 @@ A=C4  S=D4  D=E4  F=F4  G=G4  H=A4  J=B4  K=C5
 W=C#4 E=Eb4 T=F#4 Y=Ab4 U=Bb4
 ```
 
-Defend usa **A / S / D** = C4 D4 E4. El resto del teclado es para improvisar en el agujero (gestos mayor / menor / pent).
+Defend usa **A / S / D** = C4 D4 E4. El resto del teclado es para improvisar en el Ataque (gestos mayor / menor / pent).
 
 ## SpellEngine v0.1.1
 
@@ -48,7 +48,7 @@ Defend usa **A / S / D** = C4 D4 E4. El resto del teclado es para improvisar en 
 
 `major` = ataque, `minor` = buff, `pentatonic` = cura.
 
-### Ventana de improvisación (agujero)
+### Ventana de improvisación (ataque / `hole`)
 
 - **Longitud:** todos los NoteOn del compás hole (1 barra = 4 beats a BPM del chart).
 - **Conjunto:** pitch classes únicas. Hace falta **≥ 2** clases distintas para un gesto; 1 nota o silencio = sin hechizo, sin daño.
@@ -106,9 +106,11 @@ En `kind: "defend"` **no** se resuelve SpellEngine (ni ataque, ni buff, ni cura;
 
 Ventana de hit: ±0.45 beats respecto del onset esperado.
 
-### Agujero ≠ silencio / no es penalización
+La fusión en pantalla reutiliza esa ventana y un subconjunto más cerrado (`PERFECT_WINDOW_BEATS` = 0.15): onset dentro de 0.15 → fusión fuerte (Perfect); dentro de 0.45 pero fuera de 0.15 → fusión suave (Partial); fuera de 0.45, o pitch distinto → Fail, sin fusión. `judgeNoteSync` no cambia el grado del compás ni el daño.
 
-En `kind: "hole"` el jugador **improvisa**. Tocar es el **DPS principal**. Tocar **no** resta HP al jugador. Silencio es válido (sin auto-castigo). El daño al jugador sale de fallar copias Defend.
+### Ataque ≠ silencio / no es penalización
+
+En `kind: "hole"` (etiqueta **Ataque**) el jugador **improvisa**. Tocar es el **DPS principal**. Tocar **no** resta HP al jugador. Silencio es válido (sin auto-castigo). El daño al jugador sale de fallar copias Defend.
 
 ## CombatDirector
 
@@ -125,14 +127,15 @@ KO: `bossHp === 0` → victoria; `playerHp === 0` → derrota. Overlay + **Reini
 ## UI
 
 - `index.html` + `css/ui.css` — español, fondo azul, columna hasta ~960px. Sin CDN.
-- Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, **un** retrato del jefe (`boss-portrait.png`: cara de la nube y rayos en la misma imagen, sin cortes horizontales), barra HP fina aparte (`hp-bar-style.png`, diamantes incluidos; no lleva rebanadas del cuerpo), marco de la cinta, clave de sol, tres iconos de buff. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan). `boss-cloud.png` es el recorte viejo y **no** se muestra.
-- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El agujero es un marco en el mismo pentagrama (no una ficha de letras). Las notas Defend salen del JSON del chart. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. Sin VexFlow y sin CDN: un ribbon que se desplaza no cabe en un formateador de compases estáticos, y el canvas pesa menos.
+- Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, **un** retrato del jefe (`boss-portrait.png`: cara de la nube y rayos en la misma imagen, sin cortes horizontales), barra HP fina aparte (`hp-bar-style.png`, diamantes incluidos; no lleva rebanadas del cuerpo), clave de sol, tres iconos de buff. `tape-frame.png` queda en assets pero **no** se pinta detrás de la cinta. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan). `boss-cloud.png` es el recorte viejo y **no** se muestra.
+- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El Ataque es un marco en el mismo pentagrama (no una ficha de letras). No hay imagen detrás del ribbon (`tape-frame.png` no se usa). Las notas Defend salen del JSON del chart. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. `defendNotes` se dibujan en azul (plica abajo) y, si el sync es perfect o partial, se funden con halo y chispas sobre el blanco. Fail queda en rojo, en su beat, con una cruz. Sin VexFlow y sin CDN.
 - `js/ui/hud.js` — HP **15/20** (actual / máximo), sala, BPM, metrónomo, feedback, chip ATQ+. Un `<img>` de retrato y, encima, la barra HP.
 - `js/ui/tutorial.js` — primera visita. El paso de sala dice **escala y tempo** (la sala sigue siendo el elemento del círculo de quintas por dentro). Spotlight, **Siguiente** / **Saltar**, `localStorage.seenTutorial`. El botón **?** lo repite. Sin la clave es primera visita y se muestra; un save legado `pmSave` sin la clave cuenta como visto (hoy no hay saves).
-- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, synth local (Web Audio, oscilador), rAF. Cada NoteOn — pantalla, teclado físico o MIDI — pasa por `InstrumentTranslator` y suena. Por defecto audible.
+- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, synth local (Web Audio, oscilador), rAF. Cada NoteOn — pantalla, teclado físico o MIDI — pasa por `InstrumentTranslator` y suena. El AudioContext se crea y se reanuda en el gesto (tap, tecla, Empezar, Siguiente), con un buffer mudo, y el oscilador arranca cuando el contexto está `running` (reintento corto si el primer turno aún estaba suspendido). `preventDefault` de la tecla en pantalla va **después** del NoteOn. Por defecto audible. En Defiende y en setup (si el chart trae notas) la melodía del chart suena al cruzar el playhead, más baja y en seno, por el mismo master. No suena en el Ataque libre.
+- **Pausa / Continuar** (y la tecla `P`) durante el combate. `director.pause` congela el beat; al continuar se desplaza `startTimeMs` por el tiempo en pausa, así no se resuelven compases de golpe. El AudioContext se suspende y se reanuda en ese clic. El tutorial y el overlay de victoria/derrota siguen igual: no se puede Empezar con el tutorial abierto, y al terminar se oculta Pausa.
 - Teclado en pantalla: botón **Teclado** en el HUD. Por defecto activo en viewport estrecho (≤700px), puntero grueso o táctil; si no, apagado. La última elección queda en `localStorage.onscreenKeyboard` (`on` / `off`). Las teclas usan `InstrumentTranslator.KEY_MAP` (A–K blancas, W E T Y U negras) y el mismo `noteOn` / `noteOff` que el teclado físico.
 
-Versión **0.1.3**: `VERSION`, `package.json`, query `?v=0.1.3` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot añade `ribbon` (compases con mirada atrás) e `improvNotes` (NoteOn del agujero, para la cinta). No cambia el daño.
+Versión **0.1.4**: `VERSION`, `package.json`, query `?v=0.1.4` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot añade `paused`, `ribbon`, `improvNotes` (NoteOn del ataque) y `defendNotes` (NoteOn de Defiende, con `sync` / `targetBeat`). No cambia el daño.
 
 ## Tests
 
@@ -171,14 +174,14 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 
 1. Abrir `index.html` (servidor estático): cinta + HUD de Raindrops, Thunder. Sala C = **Agua**.
 2. Setup: 1 compás listen-only a BPM del chart (60), `roomKey` C, sin daño.
-3. Loop 1 hole + 4 defend (agujero primero); teclado A/S/D = C4/D4/E4; teclado ampliado para gestos en el agujero.
+3. Loop 1 hole + 4 defend (ataque primero en la UI; kind `hole`); teclado A/S/D = C4/D4/E4; teclado ampliado para gestos en el Ataque.
 4. Defend: solo Perfect/Partial/Fail. Cero daño al jefe, cero buff/cura por modo.
-5. Agujero: mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
+5. Ataque (`hole`): mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.
 7. `npm test` verde.
-8. Versión de producto **0.1.3** (`?v=0.1.3`). Combate sigue en **0.1.1**.
+8. Versión de producto **0.1.4** (`?v=0.1.4`). Combate sigue en **0.1.1**.
 9. GitHub Pages desde la raíz de `main` (ver README). `.nojekyll` en la raíz.
 10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). El paso de sala dice escala y tempo. `seenTutorial` persiste.
 11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate y **suena** (Web Audio) en cada NoteOn. Igual el teclado físico y el MIDI.
 12. El jefe es un solo retrato (`boss-portrait.png`) más la barra HP aparte. HP en pantalla 15/20.
-13. La cinta es un pentagrama. Las notas Defend del chart se leen como cabezas. En el agujero, lo que se toca se escribe en el pentagrama y permanece al avanzar la cinta.
+13. La cinta es un pentagrama sin imagen detrás. Las notas Defend del chart se leen como cabezas y suenan al cruzar el playhead. En el Ataque, lo que se toca se escribe en el pentagrama y permanece al avanzar la cinta. En Defiende, la nota del jugador se escribe aparte y se funde si el timing es perfecto o parcial.

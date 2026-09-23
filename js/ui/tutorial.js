@@ -29,8 +29,8 @@
     {
       id: 'hueco',
       selector: '#tapeFrame',
-      title: 'Hueco',
-      body: 'Improvisas: mayor=ataque, menor=buff, pentatónica=cura.'
+      title: 'Ataque',
+      body: 'Improvisas: mayor=ataque, menor=mejora, pentatónica=cura.'
     },
     {
       id: 'defend',

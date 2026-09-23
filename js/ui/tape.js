@@ -1,6 +1,6 @@
 // js/ui/tape.js — pentagrama continuo sobre el pergamino.
 // Cabezas, plicas, alteraciones y líneas adicionales. Playhead fijo.
-// El agujero es un marco en el mismo pentagrama. Sin VexFlow ni CDN:
+// El ataque (kind hole) es un marco en el mismo pentagrama. Sin VexFlow ni CDN:
 // la cinta es un ribbon que se desplaza, no una partitura de compases estáticos.
 // UMD: module.exports + window.Tape.
 'use strict';
@@ -15,7 +15,7 @@
   'use strict';
 
   var KIND_INK = { setup: '#1d4e89', defend: '#1b6b42', hole: '#6d3d96' };
-  var KIND_LABEL = { setup: 'ESCUCHA', defend: 'DEFIENDE', hole: 'AGUJERO' };
+  var KIND_LABEL = { setup: 'ESCUCHA', defend: 'DEFIENDE', hole: 'ATAQUE' };
   var PARCHMENT = '#efe6d2';
   var INK = '#1c140c';
   // Fracción desde el tope del glifo (treble-clef.png) hasta la línea de Sol.
@@ -54,9 +54,47 @@
     return p ? p.step : null;
   }
 
+  /**
+   * Presentación de un NoteOn de Defend.
+   * perfect brilla más y funde más rápido que partial.
+   * fail no se funde: la nota queda en su beat.
+   * ageBeats es el tiempo de cinta desde el onset (la pausa lo congela).
+   */
+  function fuseVisual(sync, ageBeats) {
+    var age = (typeof ageBeats === 'number' && ageBeats > 0) ? ageBeats : 0;
+    if (sync !== 'perfect' && sync !== 'partial') {
+      return {
+        sync: 'fail',
+        lerp: 0,
+        glow: age < 0.18 ? 0.25 : 0,
+        sparkle: 0,
+        scale: 1,
+        showPlayer: true,
+        fused: false,
+        miss: true
+      };
+    }
+    var dur = sync === 'perfect' ? 0.26 : 0.42;
+    var linger = sync === 'perfect' ? 0.2 : 0.1;
+    var t = age >= dur ? 1 : age / dur;
+    var e = 1 - Math.pow(1 - t, 3);
+    var strength = sync === 'perfect' ? 1 : 0.48;
+    var glowT = age / (dur + linger);
+    return {
+      sync: sync,
+      lerp: e,
+      glow: glowT >= 1 ? 0 : (1 - glowT) * strength,
+      sparkle: t < 0.92 ? strength : 0,
+      scale: 1 + (sync === 'perfect' ? 0.42 : 0.16) * Math.sin(Math.PI * Math.min(1, t)),
+      showPlayer: t < 0.94,
+      fused: t >= 1,
+      miss: false
+    };
+  }
+
   function create(canvas, opts) {
     opts = opts || {};
-    var version = opts.version || '0.1.3';
+    var version = opts.version || '0.1.4';
     var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;
@@ -94,10 +132,10 @@
       c.stroke();
     }
 
-    function drawSharp(c, x, y, lineGap) {
+    function drawSharp(c, x, y, lineGap, color) {
       var h = lineGap * 1.25;
       var w = lineGap * 0.42;
-      c.strokeStyle = INK;
+      c.strokeStyle = color || INK;
       c.lineCap = 'round';
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.beginPath();
@@ -115,10 +153,10 @@
       c.stroke();
     }
 
-    function drawFlat(c, x, y, lineGap) {
+    function drawFlat(c, x, y, lineGap, color) {
       var h = lineGap * 1.35;
-      c.strokeStyle = INK;
-      c.fillStyle = INK;
+      c.strokeStyle = color || INK;
+      c.fillStyle = color || INK;
       c.lineWidth = Math.max(1.1, lineGap * 0.11);
       c.lineCap = 'round';
       c.beginPath();
@@ -131,10 +169,18 @@
       c.fill();
     }
 
-    function drawNote(c, x, step, bottomLine, lineGap) {
+    function drawNote(c, x, step, bottomLine, lineGap, style) {
+      style = style || {};
+      var color = style.color || INK;
+      var alpha = style.alpha == null ? 1 : style.alpha;
+      var scale = style.scale || 1;
+      var hollow = !!style.hollow;
+      var stemDown = !!style.stemDown;
       var y = yFor(step, bottomLine, lineGap);
-      var rx = Math.max(4, lineGap * 0.52);
-      var ry = Math.max(2.8, lineGap * 0.38);
+      var rx = Math.max(4, lineGap * 0.52) * scale;
+      var ry = Math.max(2.8, lineGap * 0.38) * scale;
+      c.save();
+      c.globalAlpha = alpha;
       c.strokeStyle = INK;
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.lineCap = 'butt';
@@ -145,9 +191,9 @@
       if (step >= 10) {
         for (ls = 10; ls <= step; ls += 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
       }
-      var up = step < 4;
+      var up = stemDown ? false : step < 4;
       var stemH = lineGap * 3.15;
-      c.strokeStyle = INK;
+      c.strokeStyle = color;
       c.lineWidth = Math.max(1, lineGap * 0.1);
       c.beginPath();
       if (up) {
@@ -161,10 +207,73 @@
       c.save();
       c.translate(x, y);
       c.rotate(-0.42);
-      c.fillStyle = INK;
       c.beginPath();
       c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-      c.fill();
+      if (hollow) {
+        c.fillStyle = 'rgba(255, 250, 240, 0.94)';
+        c.fill();
+        c.strokeStyle = color;
+        c.lineWidth = Math.max(1.5, lineGap * 0.14);
+        c.stroke();
+      } else {
+        c.fillStyle = color;
+        c.fill();
+      }
+      c.restore();
+      c.restore();
+    }
+
+    function drawHalo(c, x, y, lineGap, glow, strong) {
+      if (glow <= 0.02) return;
+      c.save();
+      c.globalAlpha = 0.3 + 0.7 * glow;
+      c.strokeStyle = strong ? '#ffe7a0' : '#f0b45a';
+      c.lineWidth = strong ? 3.2 : 1.8;
+      c.shadowColor = strong ? 'rgba(255, 220, 120, 0.98)' : 'rgba(230, 160, 60, 0.75)';
+      c.shadowBlur = lineGap * (strong ? 1.55 : 0.7);
+      c.beginPath();
+      c.arc(x, y, lineGap * (strong ? 1.05 : 0.78) * (0.85 + 0.2 * glow), 0, Math.PI * 2);
+      c.stroke();
+      if (strong) {
+        c.globalAlpha = 0.55 * glow;
+        c.fillStyle = '#fff6d0';
+        c.beginPath();
+        c.arc(x, y, lineGap * 0.28, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+    }
+
+    function drawSparkles(c, x, y, lineGap, amount, age) {
+      if (amount <= 0.04) return;
+      var n = amount > 0.7 ? 8 : 4;
+      var i;
+      for (i = 0; i < n; i++) {
+        var ang = (i / n) * Math.PI * 2 + age * 5.5;
+        var rad = lineGap * (0.9 + amount * 1.35) * (0.45 + (age % 0.25) * 2);
+        var sx = x + Math.cos(ang) * rad;
+        var sy = y + Math.sin(ang) * rad * 0.62;
+        c.fillStyle = amount > 0.7
+          ? 'rgba(255, 244, 190, ' + (0.95 * amount) + ')'
+          : 'rgba(255, 190, 100, ' + (0.75 * amount) + ')';
+        c.beginPath();
+        c.arc(sx, sy, Math.max(1.2, lineGap * (amount > 0.7 ? 0.14 : 0.09)), 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
+    function drawMiss(c, x, y, lineGap) {
+      var s = lineGap * 0.55;
+      c.save();
+      c.strokeStyle = '#b42323';
+      c.lineWidth = Math.max(1.6, lineGap * 0.12);
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x - s, y - s);
+      c.lineTo(x + s, y + s);
+      c.moveTo(x + s, y - s);
+      c.lineTo(x - s, y + s);
+      c.stroke();
       c.restore();
     }
 
@@ -290,11 +399,45 @@
         drawNote(ctx, nx, parts.step, bottomLine, lineGap);
       }
 
+      var defendPlayed = (state && state.defendNotes) || [];
+      for (i = 0; i < defendPlayed.length; i++) {
+        note = defendPlayed[i];
+        parts = pitchParts(note.pitch);
+        if (!parts) continue;
+        var age = beat - note.beat;
+        var vis = fuseVisual(note.sync, age);
+        var px = xAt(note.beat);
+        var tx = (typeof note.targetBeat === 'number') ? xAt(note.targetBeat) : px;
+        var ty = yFor(parts.step, bottomLine, lineGap);
+        if (vis.glow > 0.02 && typeof note.targetBeat === 'number') {
+          if (tx > clefRight - 8 && tx < w + 12) {
+            drawHalo(ctx, tx, ty, lineGap, vis.glow, note.sync === 'perfect');
+          }
+        }
+        if (vis.sparkle > 0.02 && typeof note.targetBeat === 'number') {
+          if (tx > -8 && tx < w + 12) drawSparkles(ctx, tx, ty, lineGap, vis.sparkle, age);
+        }
+        nx = px + (tx - px) * vis.lerp;
+        if (!vis.showPlayer || nx < clefRight - 2 || nx > w + 12) continue;
+        var col = vis.miss ? '#b42323' : (vis.lerp > 0.62 ? '#e2b15a' : '#1a4f8b');
+        var headAlpha = vis.miss ? 0.95 : Math.max(0.15, 1 - vis.lerp * 0.9);
+        if (parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ty, lineGap, col);
+        else if (parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ty, lineGap, col);
+        drawNote(ctx, nx, parts.step, bottomLine, lineGap, {
+          color: col,
+          hollow: !vis.miss,
+          alpha: headAlpha,
+          stemDown: true,
+          scale: vis.miss ? 1 : vis.scale
+        });
+        if (vis.miss) drawMiss(ctx, nx, ty, lineGap);
+      }
+
       if (ready(clefImg)) {
         ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
       }
 
-      var pulse = state && state.running && ((state.beat % 1) < 0.12);
+      var pulse = state && state.running && !state.paused && ((state.beat % 1) < 0.12);
       ctx.save();
       ctx.shadowColor = pulse ? 'rgba(255, 214, 120, 0.95)' : 'rgba(120, 186, 230, 0.9)';
       ctx.shadowBlur = 8;
@@ -332,6 +475,8 @@
   return {
     create: create,
     staffStep: staffStep,
-    pitchParts: pitchParts
+    pitchParts: pitchParts,
+    fuseVisual: fuseVisual,
+    KIND_LABEL: KIND_LABEL
   };
 });

@@ -1,9 +1,10 @@
-// js/app.js — cinta, HUD, tutorial, teclado físico y en pantalla.
-// El teclado en pantalla usa el mismo KEY_MAP → noteOn → InstrumentTranslator que el QWERTY.
+// js/app.js — cinta, HUD, tutorial, pausa, teclado físico y en pantalla.
+// Cada NoteOn (pantalla, QWERTY, MIDI) pasa por InstrumentTranslator y suena.
+// El AudioContext se desbloquea en el mismo gesto, antes de preventDefault.
 'use strict';
 
 (function () {
-  var VERSION = '0.1.3';
+  var VERSION = '0.1.4';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
   var KB_KEY = 'onscreenKeyboard';
 
@@ -12,7 +13,13 @@
   var hud = null;
   var tutorial = null;
   var audioCtx = null;
+  var masterGain = null;
+  var analyser = null;
+  var peakBuf = null;
+  var audioUnlocked = false;
+  var audioHeldForPause = false;
   var runningLoop = false;
+  var paused = false;
   var lastClickBeat = -1;
   var heldKeys = {};
   var midiStatus = '';
@@ -20,6 +27,11 @@
   var midiReady = false;
   var tutorialBooted = false;
   var lastHz = 0;
+  var tonesPlayed = 0;
+  var playerTones = 0;
+  var bossTones = 0;
+  var bossHeard = {};
+  var lastAudioBeat = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -34,73 +46,181 @@
     return InstrumentTranslator.hzForPitch(pitch, 440) || 261.63;
   }
 
-  function ensureAudio() {
+  function getAudio() {
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    if (!audioCtx) audioCtx = new AC();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!audioCtx) {
+      try { audioCtx = new AC(); } catch (e) { return null; }
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.78;
+      masterGain.connect(audioCtx.destination);
+      try {
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.15;
+        masterGain.connect(analyser);
+        // El analizador tiene que llegar al destino para que el grafo lo procese.
+        var tap = audioCtx.createGain();
+        tap.gain.value = 0;
+        analyser.connect(tap);
+        tap.connect(audioCtx.destination);
+      } catch (e2) {}
+    }
     return audioCtx;
   }
 
-  function beep(freq, dur, type, gain) {
-    var ctx = ensureAudio();
-    // El metrónomo no encola clics: si el audio aún no corre, se salta este beat.
-    if (!ctx || ctx.state !== 'running') return;
-    var osc = ctx.createOscillator();
-    var g = ctx.createGain();
-    osc.type = type || 'triangle';
-    osc.frequency.value = freq;
-    var t0 = ctx.currentTime;
-    var peak = gain == null ? 0.1 : gain;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(0.04, dur));
-    osc.connect(g);
-    g.connect(ctx.destination);
-    osc.start(t0);
-    osc.stop(t0 + dur + 0.02);
+  // Buffer mudo + resume en el turno del gesto. iOS/Android ignoran el audio
+  // si el primer start() queda solo dentro de resume().then(), o si preventDefault
+  // corre antes de crear/reanudar el contexto.
+  function primeAudio() {
+    var ctx = getAudio();
+    if (!ctx) return null;
+    if (paused || audioHeldForPause) return ctx;
+    if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+      try { ctx.resume(); } catch (e) {}
+    }
+    if (!audioUnlocked) {
+      try {
+        var rate = ctx.sampleRate || 22050;
+        var buf = ctx.createBuffer(1, 1, rate);
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(masterGain || ctx.destination);
+        src.start(0);
+        audioUnlocked = true;
+      } catch (e3) {}
+    }
+    return ctx;
   }
 
-  function playPitch(pitch) {
-    var freq = hz(pitch);
-    lastHz = freq;
-    // Fundamental + octava suave. Audible por defecto; sin samples ni CDN.
-    var ctx = ensureAudio();
-    if (!ctx) return;
-    var start = function () {
-      if (!ctx || ctx.state === 'closed') return;
-      var t0 = ctx.currentTime;
-      var master = ctx.createGain();
-      master.gain.setValueAtTime(0.0001, t0);
-      master.gain.exponentialRampToValueAtTime(0.2, t0 + 0.015);
-      master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.48);
-      master.connect(ctx.destination);
-      var osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      osc.connect(master);
+  function samplePeak() {
+    if (!analyser) return 0;
+    if (!peakBuf || peakBuf.length !== analyser.fftSize) peakBuf = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(peakBuf);
+    var peak = 0;
+    var i;
+    var v;
+    for (i = 0; i < peakBuf.length; i++) {
+      v = peakBuf[i] - 128;
+      if (v < 0) v = -v;
+      if (v > peak) peak = v;
+    }
+    return peak;
+  }
+
+  function startVoice(ctx, freq, opts) {
+    var peak = opts.gain == null ? 0.28 : opts.gain;
+    var dur = opts.dur == null ? 0.46 : opts.dur;
+    var type = opts.type || 'triangle';
+    var t0 = ctx.currentTime;
+    var amp = ctx.createGain();
+    amp.gain.setValueAtTime(0, t0);
+    amp.gain.linearRampToValueAtTime(peak, t0 + 0.012);
+    amp.gain.linearRampToValueAtTime(peak * 0.55, t0 + Math.max(0.04, dur * 0.4));
+    amp.gain.linearRampToValueAtTime(0, t0 + dur);
+    amp.connect(masterGain || ctx.destination);
+    var osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    osc.connect(amp);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
+    if (opts.overtone !== false) {
       var over = ctx.createOscillator();
       var og = ctx.createGain();
       over.type = 'sine';
-      over.frequency.value = freq * 2;
-      og.gain.value = 0.28;
+      over.frequency.setValueAtTime(freq * 2, t0);
+      og.gain.setValueAtTime(0.22, t0);
       over.connect(og);
-      og.connect(master);
-      osc.start(t0);
+      og.connect(amp);
       over.start(t0);
-      osc.stop(t0 + 0.52);
-      over.stop(t0 + 0.52);
-    };
-    if (ctx.state === 'running') start();
-    else {
-      var resumed = ctx.resume();
-      if (resumed && resumed.then) resumed.then(start);
-      else start();
+      over.stop(t0 + dur + 0.03);
     }
+    tonesPlayed += 1;
+    if (opts.role === 'boss') bossTones += 1;
+    else if (opts.role !== 'metro') playerTones += 1;
+  }
+
+  function playFreq(freq, opts) {
+    opts = opts || {};
+    if (paused || !freq) return;
+    var ctx = primeAudio();
+    if (!ctx) return;
+    var played = false;
+    function emit() {
+      if (played || paused || !ctx || ctx.state !== 'running') return;
+      played = true;
+      try { startVoice(ctx, freq, opts); } catch (e) {}
+    }
+    emit();
+    if (played || opts.immediate) return;
+    var kick = function () { emit(); };
+    try {
+      var resumed = ctx.resume();
+      if (resumed && typeof resumed.then === 'function') resumed.then(kick);
+    } catch (e2) {}
+    setTimeout(kick, 0);
+    setTimeout(kick, 60);
+    setTimeout(kick, 180);
+  }
+
+  function playPitch(pitch, opts) {
+    opts = opts || {};
+    var freq = hz(pitch);
+    if (opts.role !== 'boss' && opts.role !== 'metro') lastHz = freq;
+    playFreq(freq, opts);
   }
 
   function metronomeClick(strong) {
-    beep(strong ? 1320 : 880, 0.04, 'square', strong ? 0.07 : 0.04);
+    playFreq(strong ? 1320 : 880, {
+      gain: strong ? 0.045 : 0.028,
+      dur: 0.04,
+      type: 'square',
+      overtone: false,
+      role: 'metro',
+      immediate: true
+    });
+  }
+
+  function playChartMelody(state) {
+    if (!state || state.paused || !state.running || state.ended) return;
+    if (state.phase !== 'defend' && state.phase !== 'setup') {
+      lastAudioBeat = state.beat;
+      return;
+    }
+    var from = lastAudioBeat;
+    var to = state.beat;
+    lastAudioBeat = to;
+    if (!(to > from) || (to - from) > 2) return;
+    var bars = state.ribbon || [];
+    var i;
+    var j;
+    var bar;
+    var notes;
+    var note;
+    var abs;
+    var id;
+    for (i = 0; i < bars.length; i++) {
+      bar = bars[i];
+      if (!bar || bar.kind === 'hole') continue;
+      if (bar.kind !== 'defend' && bar.kind !== 'setup') continue;
+      notes = bar.notes || [];
+      for (j = 0; j < notes.length; j++) {
+        note = notes[j];
+        abs = bar.startBeat + note.beat;
+        if (abs <= from || abs > to + 1e-4) continue;
+        id = bar.globalBar + ':' + note.beat + ':' + note.pitch;
+        if (bossHeard[id]) continue;
+        bossHeard[id] = true;
+        playPitch(note.pitch, {
+          role: 'boss',
+          gain: 0.13,
+          type: 'sine',
+          dur: 0.48,
+          overtone: false
+        });
+      }
+    }
   }
 
   function pitchForKey(key) {
@@ -112,13 +232,37 @@
     return !!(tutorial && tutorial.isOpen());
   }
 
+  function setPauseUi(on, visible) {
+    var btn = $('btnPause');
+    var banner = $('pauseBanner');
+    if (btn) {
+      btn.hidden = !visible;
+      btn.textContent = on ? 'Continuar' : 'Pausa';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-label', on ? 'Continuar' : 'Pausa');
+      btn.classList.toggle('on', !!on);
+    }
+    if (banner) banner.classList.toggle('visible', !!on);
+  }
+
+  function releaseHeld() {
+    var pitches = Object.keys(heldKeys);
+    var i;
+    for (i = 0; i < pitches.length; i++) {
+      markKey(pitches[i], false);
+      if (director) director.noteOff(pitches[i], performance.now());
+    }
+    heldKeys = {};
+  }
+
   function render() {
     if (!director) return;
     var state = director.tick(performance.now());
     if (tape) tape.render(state);
     if (hud) hud.render(state);
+    playChartMelody(state);
 
-    if (state.running) {
+    if (state.running && !state.paused) {
       var ibeat = Math.floor(state.beat + 1e-6);
       if (ibeat !== lastClickBeat && ibeat >= 0) {
         lastClickBeat = ibeat;
@@ -145,6 +289,9 @@
   function showOutcome(state) {
     var overlay = $('overlay');
     var msg = $('overlayMsg');
+    paused = false;
+    audioHeldForPause = false;
+    setPauseUi(false, false);
     if (!overlay || !msg) return;
     overlay.className = 'visible';
     if (state.outcome === 'win') {
@@ -171,16 +318,22 @@
 
   function startFight() {
     if (!director || tutorialOpen()) return;
-    ensureAudio();
+    paused = false;
+    audioHeldForPause = false;
+    primeAudio();
     if (!midiReady) {
       midiReady = true;
       setupMidi();
     }
     hideOutcome();
     lastClickBeat = -1;
+    bossHeard = {};
+    lastAudioBeat = 0;
+    releaseHeld();
     stopLoop();
     director.start(performance.now());
     runningLoop = true;
+    setPauseUi(false, true);
     $('btnStart').className = 'hidden';
     tickTimer = setInterval(function () {
       if (!runningLoop) return;
@@ -195,12 +348,47 @@
     startFight();
   }
 
+  function pauseFight() {
+    if (!director || !runningLoop || paused) return;
+    var state = director.snapshot(performance.now());
+    if (state.ended) return;
+    releaseHeld();
+    director.pause(performance.now());
+    paused = true;
+    if (audioCtx && audioCtx.state === 'running') {
+      audioHeldForPause = true;
+      try { audioCtx.suspend(); } catch (e) {}
+    }
+    setPauseUi(true, true);
+    if (tape) tape.render(director.snapshot(performance.now()));
+    if (hud) hud.render(director.snapshot(performance.now()));
+  }
+
+  function resumeFight() {
+    if (!director || !paused) return;
+    if (audioCtx && audioHeldForPause) {
+      try { audioCtx.resume(); } catch (e) {}
+      audioHeldForPause = false;
+    }
+    director.resume(performance.now());
+    paused = false;
+    setPauseUi(false, true);
+  }
+
+  function togglePause() {
+    if (tutorialOpen() || !director || !runningLoop) return;
+    if (paused) resumeFight();
+    else pauseFight();
+  }
+
   function noteOn(pitch) {
-    if (tutorialOpen()) return;
+    if (paused) return;
     if (!pitch || heldKeys[pitch]) return;
     heldKeys[pitch] = true;
     playPitch(pitch);
     markKey(pitch, true);
+    // El tutorial puede sonar (desbloquea el audio) pero no entra al combate.
+    if (tutorialOpen()) return;
     if (director) director.noteOn(pitch, performance.now());
   }
 
@@ -219,13 +407,18 @@
   }
 
   function onKeyDown(ev) {
-    if (tutorialOpen()) return;
     if (ev.repeat) return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === 'p' || ev.key === 'P') {
+      if (!tutorialOpen()) togglePause();
+      return;
+    }
+    if (paused) return;
     var pitch = pitchForKey(ev.key);
     if (!pitch) return;
-    ev.preventDefault();
+    primeAudio();
     noteOn(pitch);
+    ev.preventDefault();
   }
 
   function onKeyUp(ev) {
@@ -271,12 +464,13 @@
     keys.forEach(function (btn) {
       var pointers = {};
       btn.addEventListener('pointerdown', function (e) {
-        if (tutorialOpen()) return;
-        e.preventDefault();
-        try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+        if (paused) return;
         var pitch = pitchForKey(btn.getAttribute('data-key'));
         pointers[e.pointerId] = pitch;
+        primeAudio();
         noteOn(pitch);
+        e.preventDefault();
+        try { btn.setPointerCapture(e.pointerId); } catch (err) {}
       });
       function release(e) {
         var pitch = pointers[e.pointerId];
@@ -379,13 +573,21 @@
       director: director,
       start: startFight,
       restart: restartFight,
+      pause: pauseFight,
+      resume: resumeFight,
+      togglePause: togglePause,
+      isPaused: function () { return paused; },
       noteOn: noteOn,
       noteOff: noteOff,
       tutorial: tutorial,
       setKeyboard: function (on) { applyKeyboard(!!on, true); },
       keyboardOn: function () { return !$('keys').hidden; },
       lastHz: function () { return lastHz; },
-      audioContext: function () { return audioCtx; }
+      audioContext: function () { return audioCtx; },
+      tonesPlayed: function () { return tonesPlayed; },
+      playerTones: function () { return playerTones; },
+      bossTones: function () { return bossTones; },
+      samplePeak: samplePeak
     };
     maybeTutorial();
   }
@@ -396,15 +598,23 @@
     tutorial.maybeStart();
   }
 
+  function onGestureUnlock() {
+    if (paused || audioHeldForPause) return;
+    primeAudio();
+  }
+
   function init() {
     buildPiano();
     bindOnscreenKeys();
     applyKeyboard(readKeyboardPref(), false);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
-    document.addEventListener('pointerdown', function () { ensureAudio(); });
+    document.addEventListener('pointerdown', onGestureUnlock, true);
+    document.addEventListener('touchend', onGestureUnlock, true);
+    document.addEventListener('keydown', onGestureUnlock, true);
     $('btnStart').addEventListener('click', startFight);
     $('btnRestart').addEventListener('click', restartFight);
+    $('btnPause').addEventListener('click', togglePause);
     $('btnKeyboard').addEventListener('click', function () {
       if (tutorialOpen()) return;
       applyKeyboard($('keys').hidden, true);

@@ -4,24 +4,26 @@ Combate con piano (un jefe). Página estática para GitHub Pages, sin CDN ni red
 
 La detección de micrófono/pitch vive en el repo aparte [`piano-game`](https://github.com/juliangdeveloper/piano-game). **Este juego no depende de él** (ni CDN, ni fetch). M0 usa teclado QWERTY + Web MIDI.
 
-Versión **0.1.3**. El combate (agujero, Defend, 12 elementos, HP 15/20) es el de **0.1.1**.
+Versión **0.1.4**. El combate (ataque libre, Defend, 12 elementos, HP 15/20) es el de **0.1.1**. El id interno del compás de improvisación sigue siendo `hole`.
 
-El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama: las notas de Defiende vienen del chart; en el agujero, lo que tocas se escribe ahí en el momento. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
+El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama limpio (sin marco detrás): las notas de Defiende vienen del chart y suenan al cruzar el playhead; lo que tocas en el **Ataque** y en **Defiende** se escribe ahí. Un acierto casi o perfecto se funde con la nota del chart. **Pausa** congela cinta, combate y audio. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
 
 ## Jugar
 
 Jefe M0: **Raindrops, Thunder**. HP jugador 15 / jefe 20. BPM 60, sala C = **Agua**.
 
 1. Un compás de **escucha** (sin daño; drone C / toca libre).
-2. Bucle **1 Agujero + 4 Defiende** hasta KO (el agujero va primero en el loop).
-3. En Defiende, copia las notas de la cinta (`A` `S` `D` = C4 D4 E4). Perfect / Parcial / Fallo — no hay DPS al jefe.
-4. En el **agujero**, improvisa: **mayor → ataque**, **menor → mejora**, **pentatónica → cura**. Tocar no resta HP; el silencio es válido.
+2. Bucle **1 Ataque + 4 Defiende** hasta KO (el ataque va primero en el loop).
+3. En Defiende, copia las notas de la cinta (`A` `S` `D` = C4 D4 E4). Perfect / Parcial / Fallo — no hay DPS al jefe. La frase del jefe suena al llegar al playhead.
+4. En el **Ataque**, improvisa: **mayor → ataque**, **menor → mejora**, **pentatónica → cura**. Tocar no resta HP; el silencio es válido.
 
 El elemento sale de la **clave** (12 del círculo de quintas), no de grados I–VII. ×sala = pasos más cortos entre la tónica improvisada y la sala.
 
 La primera visita muestra un tutorial (Siguiente / Saltar). **?** lo vuelve a abrir. `localStorage.seenTutorial` recuerda que ya se vio.
 
-**Teclado** en el HUD muestra un piano abajo (A–K blancas, W E T Y U negras), las mismas notas que el QWERTY. En pantallas estrechas o táctiles empieza encendido; la elección queda en `localStorage.onscreenKeyboard`.
+**Teclado** en el HUD muestra un piano abajo (A–K blancas, W E T Y U negras), las mismas notas que el QWERTY. En pantallas estrechas o táctiles empieza encendido; la elección queda en `localStorage.onscreenKeyboard`. Cada NoteOn suena (oscilador Web Audio). El primer toque — Empezar, Siguiente del tutorial o una tecla — reanuda el AudioContext.
+
+**Pausa** / **Continuar** aparece durante el combate (también la tecla `P`). Congela el scroll de la cinta, el reloj del combate y el audio. Al continuar, el beat sigue donde se quedó.
 
 ```
 python3 -m http.server 8000
@@ -76,4 +78,4 @@ Hay un `.nojekyll` para no pasar Jekyll. Tras el primer push a `main`, Pages pue
 | A S D F G H J K | C4 D4 E4 F4 G4 A4 B4 C5 |
 | W E T Y U | C#4 Eb4 F#4 Ab4 Bb4 |
 
-Defiende: A/S/D. Agujero: usa el teclado completo para formar gestos (p.ej. C D E, C Eb G, C D E G A).
+Defiende: A/S/D. Ataque: usa el teclado completo para formar gestos (p.ej. C D E, C Eb G, C D E G A).
