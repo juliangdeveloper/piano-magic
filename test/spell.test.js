@@ -212,6 +212,20 @@ test('S18: tríada mayor C E G es ataque, no cura pentatónica', () => {
   assert.strictEqual(r.heal, 0);
 });
 
+test('S20: judgeNoteSync usa 0.15 perfect y el hit 0.45 como partial; fuera es fail', () => {
+  assert.strictEqual(Spell.PERFECT_WINDOW_BEATS, 0.15);
+  assert.strictEqual(Spell.HIT_WINDOW_BEATS, 0.45);
+  assert.strictEqual(Spell.judgeNoteSync(0), 'perfect');
+  assert.strictEqual(Spell.judgeNoteSync(0.15), 'perfect');
+  assert.strictEqual(Spell.judgeNoteSync(-0.15), 'perfect');
+  assert.strictEqual(Spell.judgeNoteSync(0.16), 'partial');
+  assert.strictEqual(Spell.judgeNoteSync(0.45), 'partial');
+  assert.strictEqual(Spell.judgeNoteSync(-0.45), 'partial');
+  assert.strictEqual(Spell.judgeNoteSync(0.46), 'fail');
+  assert.strictEqual(Spell.judgeNoteSync(1), 'fail');
+  assert.strictEqual(Spell.judgeNoteSync(NaN), 'fail');
+});
+
 test('S19: F# mayor en sala C → 6 pasos, ×sala 0, 0 daño', () => {
   const s = Spell.classify(['F#4', 'A#4', 'C#4'], 'C');
   assert.strictEqual(s.tonic, 'F#');
