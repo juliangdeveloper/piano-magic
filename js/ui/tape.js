@@ -55,15 +55,12 @@
   }
 
   /**
-   * Presentación de un NoteOn de Defend.
-   * perfect brilla más y funde más rápido que partial.
-   * fail no se funde: la nota queda en su beat.
-   * ageBeats es el tiempo de cinta desde el onset (la pausa lo congela).
-   */
-  /**
    * Marcas de pulso dentro de un compás de Ataque (kind hole).
-   * label es 1..n. current es el beat que contiene playBeat.
-   * El borde derecho (playBeat === start + n) ya es el compás siguiente.
+   * La barra de compás es el divisor (beat onset 0). El número 1 no va
+   * encima de esa línea: cada marca se centra en su cuarto
+   * (onset + 0.5), así 1 queda dentro del primer tiempo y 2–4 siguen
+   * a un beat de distancia, antes de la barra siguiente.
+   * current sigue el cuarto que contiene playBeat, no la x del glifo.
    */
   function attackBeatMarks(barStart, beatsPerBar, playBeat) {
     var n = (typeof beatsPerBar === 'number' && beatsPerBar > 0) ? Math.round(beatsPerBar) : 4;
@@ -72,16 +69,22 @@
     var marks = [];
     var i;
     for (i = 0; i < n; i++) {
-      var abs = start + i;
+      var onset = start + i;
       marks.push({
-        beat: abs,
+        beat: onset + 0.5,
         label: String(i + 1),
-        current: play >= abs && play < abs + 1
+        current: play >= onset && play < onset + 1
       });
     }
     return marks;
   }
 
+  /**
+   * Presentación de un NoteOn de Defend.
+   * perfect brilla más y funde más rápido que partial.
+   * fail no se funde: la nota queda en su beat.
+   * ageBeats es el tiempo de cinta desde el onset (la pausa lo congela).
+   */
   function fuseVisual(sync, ageBeats) {
     var age = (typeof ageBeats === 'number' && ageBeats > 0) ? ageBeats : 0;
     if (sync !== 'perfect' && sync !== 'partial') {
@@ -116,7 +119,7 @@
 
   function create(canvas, opts) {
     opts = opts || {};
-    var version = opts.version || '0.1.5';
+    var version = opts.version || '0.1.6';
     var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;

@@ -6,7 +6,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.5';
+  var VERSION = '0.1.6';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
   var KB_KEY = 'onscreenKeyboard';
 
