@@ -154,6 +154,16 @@
       return '';
     }
 
+    function copyBar(b) {
+      return {
+        globalBar: b.globalBar,
+        kind: b.kind,
+        listenOnly: b.listenOnly,
+        notes: b.notes,
+        startBeat: b.startBeat
+      };
+    }
+
     function snapshot(t) {
       t = (typeof t === 'number') ? t : nowFn();
       var beat = currentBeat(t);
@@ -167,15 +177,23 @@
       else if (!running) phase = 'idle';
       else phase = meta.kind;
 
-      var upcoming = Chart.upcoming(chart, barIndex, 4).map(function (b) {
-        return {
-          globalBar: b.globalBar,
-          kind: b.kind,
-          listenOnly: b.listenOnly,
-          notes: b.notes,
-          startBeat: b.startBeat
-        };
-      });
+      var upcoming = Chart.upcoming(chart, barIndex, 4).map(copyBar);
+      // Cinta: un par de compases ya pasados siguen a la izquierda del playhead.
+      var lookBehind = 2;
+      var fromBar = barIndex - lookBehind;
+      if (fromBar < 0) fromBar = 0;
+      var ribbon = Chart.upcoming(chart, fromBar, lookBehind + 5).map(copyBar);
+      var improvNotes = [];
+      for (var ci = 0; ci < collected.length; ci++) {
+        var cn = collected[ci];
+        if (Chart.barAt(chart, cn.barIndex).kind !== 'hole') continue;
+        improvNotes.push({
+          pitch: cn.pitch,
+          beat: cn.beat,
+          dur: 1,
+          barIndex: cn.barIndex
+        });
+      }
 
       return {
         version: VERSION,
@@ -198,6 +216,8 @@
           loopIndex: meta.loopIndex
         },
         upcoming: upcoming,
+        ribbon: ribbon,
+        improvNotes: improvNotes,
         playerHp: playerHp,
         bossHp: bossHp,
         playerHpMax: playerHpMax,

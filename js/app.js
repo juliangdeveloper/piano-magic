@@ -3,7 +3,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.2';
+  var VERSION = '0.1.3';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
   var KB_KEY = 'onscreenKeyboard';
 
@@ -19,6 +19,7 @@
   var tickTimer = null;
   var midiReady = false;
   var tutorialBooted = false;
+  var lastHz = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -43,14 +44,17 @@
 
   function beep(freq, dur, type, gain) {
     var ctx = ensureAudio();
-    if (!ctx) return;
+    // El metrónomo no encola clics: si el audio aún no corre, se salta este beat.
+    if (!ctx || ctx.state !== 'running') return;
     var osc = ctx.createOscillator();
     var g = ctx.createGain();
     osc.type = type || 'triangle';
     osc.frequency.value = freq;
     var t0 = ctx.currentTime;
-    g.gain.setValueAtTime(gain == null ? 0.1 : gain, t0);
-    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    var peak = gain == null ? 0.1 : gain;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(0.04, dur));
     osc.connect(g);
     g.connect(ctx.destination);
     osc.start(t0);
@@ -58,7 +62,41 @@
   }
 
   function playPitch(pitch) {
-    beep(hz(pitch), 0.28, 'triangle', 0.11);
+    var freq = hz(pitch);
+    lastHz = freq;
+    // Fundamental + octava suave. Audible por defecto; sin samples ni CDN.
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var start = function () {
+      if (!ctx || ctx.state === 'closed') return;
+      var t0 = ctx.currentTime;
+      var master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, t0);
+      master.gain.exponentialRampToValueAtTime(0.2, t0 + 0.015);
+      master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.48);
+      master.connect(ctx.destination);
+      var osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.connect(master);
+      var over = ctx.createOscillator();
+      var og = ctx.createGain();
+      over.type = 'sine';
+      over.frequency.value = freq * 2;
+      og.gain.value = 0.28;
+      over.connect(og);
+      og.connect(master);
+      osc.start(t0);
+      over.start(t0);
+      osc.stop(t0 + 0.52);
+      over.stop(t0 + 0.52);
+    };
+    if (ctx.state === 'running') start();
+    else {
+      var resumed = ctx.resume();
+      if (resumed && resumed.then) resumed.then(start);
+      else start();
+    }
   }
 
   function metronomeClick(strong) {
@@ -345,7 +383,9 @@
       noteOff: noteOff,
       tutorial: tutorial,
       setKeyboard: function (on) { applyKeyboard(!!on, true); },
-      keyboardOn: function () { return !$('keys').hidden; }
+      keyboardOn: function () { return !$('keys').hidden; },
+      lastHz: function () { return lastHz; },
+      audioContext: function () { return audioCtx; }
     };
     maybeTutorial();
   }
@@ -362,6 +402,7 @@
     applyKeyboard(readKeyboardPref(), false);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
+    document.addEventListener('pointerdown', function () { ensureAudio(); });
     $('btnStart').addEventListener('click', startFight);
     $('btnRestart').addEventListener('click', restartFight);
     $('btnKeyboard').addEventListener('click', function () {
