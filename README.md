@@ -2,11 +2,11 @@
 
 Combate con piano (un jefe). Página estática para GitHub Pages, sin CDN ni red en runtime salvo el JSON del chart (mismo origen).
 
-La detección de micrófono/pitch vive en el repo aparte [`piano-game`](https://github.com/juliangdeveloper/piano-game). **Este juego no depende de él** (ni CDN, ni fetch). M0 usa teclado QWERTY + Web MIDI.
+El YIN monofónico está copiado de [`piano-game`](https://github.com/juliangdeveloper/piano-game) (`js/pitch.js`). **No hay dependencia en runtime** (ni CDN, ni fetch). El juego también usa teclado QWERTY, teclado en pantalla y Web MIDI.
 
-Versión **0.1.4**. El combate (ataque libre, Defend, 12 elementos, HP 15/20) es el de **0.1.1**. El id interno del compás de improvisación sigue siendo `hole`.
+Versión **0.1.5**. El combate (ataque libre, Defend, 12 elementos, HP 15/20) es el de **0.1.1**. El id interno del compás de improvisación sigue siendo `hole`.
 
-El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama limpio (sin marco detrás): las notas de Defiende vienen del chart y suenan al cruzar el playhead; lo que tocas en el **Ataque** y en **Defiende** se escribe ahí. Un acierto casi o perfecto se funde con la nota del chart. **Pausa** congela cinta, combate y audio. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
+El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama limpio (sin marco detrás): las notas de Defiende vienen del chart y suenan al cruzar el playhead; lo que tocas en el **Ataque** y en **Defiende** se escribe ahí. En el Ataque, unos números `1 2 3 4` marcan el pulso encima del pentagrama. Un acierto casi o perfecto se funde con la nota del chart. **Pausa** congela cinta, combate y audio. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
 
 ## Jugar
 
@@ -21,7 +21,9 @@ El elemento sale de la **clave** (12 del círculo de quintas), no de grados I–
 
 La primera visita muestra un tutorial (Siguiente / Saltar). **?** lo vuelve a abrir. `localStorage.seenTutorial` recuerda que ya se vio.
 
-**Teclado** en el HUD muestra un piano abajo (A–K blancas, W E T Y U negras), las mismas notas que el QWERTY. En pantallas estrechas o táctiles empieza encendido; la elección queda en `localStorage.onscreenKeyboard`. Cada NoteOn suena (oscilador Web Audio). El primer toque — Empezar, Siguiente del tutorial o una tecla — reanuda el AudioContext.
+**Teclado** en el HUD muestra un piano abajo (A–K blancas, W E T Y U negras), las mismas notas que el QWERTY. En pantallas estrechas o táctiles empieza encendido; la elección queda en `localStorage.onscreenKeyboard`. Cada NoteOn suena (oscilador Web Audio) en el `pointerdown`, con un ataque corto. El primer toque — Empezar, Siguiente del tutorial o una tecla — desbloquea el audio con un beep breve (HTML `playsinline` + buffer) y, si el navegador lo permite, `audioSession` en `playback`, para que el **altavoz** del iPhone o iPad suene y no solo los auriculares.
+
+**Micrófono** (apagado al entrar) oye una sola nota — piano, voz o instrumento — y la manda al combate como si fuera una tecla. Pide permiso solo al activarlo. Si lo niegas, el aviso está en español y puedes seguir con el teclado. No dispara dos veces una nota que ya tienes pulsada. Mientras está activo, la melodía del jefe y el metrónomo no suenan: si salieran por el altavoz, el mic las contaría como tuyas. En iPhone/iPad, si al encenderlo dejas de oír el altavoz (el sistema a veces usa el auricular de llamada), apaga el micrófono o usa auriculares. Limitaciones: se equivoca con ruido, acordes y notas fuera de C3–C6; tarda un poco más que el teclado; Safari móvil puede pedir el permiso otra vez al recargar.
 
 **Pausa** / **Continuar** aparece durante el combate (también la tecla `P`). Congela el scroll de la cinta, el reloj del combate y el audio. Al continuar, el beat sigue donde se quedó.
 
@@ -45,6 +47,8 @@ Corre `test/spell.test.js`, `test/chart.test.js`, `test/director.test.js` y `tes
 ```
 index.html                 UI (español)
 css/ui.css
+js/pitch.js                 YIN monofónico (copiado de piano-game)
+js/instrument/mic-notes.js   hops del mic → NoteOn/NoteOff
 js/instrument/translator.js  NoteOn/Off → beats (stub M0)
 js/spell/engine.js           12 claves / ×sala / modo / resolve
 js/combat/chart.js           chart JSON
