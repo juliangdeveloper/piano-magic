@@ -137,12 +137,33 @@
     return out;
   }
 
+  // El JSON nombra el tiempo (0, 1, 2, 3). El golpe — cabeza, melodía,
+  // metrónomo y ventana — cae en el centro de ese tiempo, el mismo punto
+  // que las marcas 1–2–3–4 del Ataque. Así el compás no cambia de fase
+  // al entrar en Defiende. Las ventanas siguen siendo ±0.15 / ±0.45
+  // alrededor de ese centro.
+  var BEAT_CENTER = 0.5;
+
+  function hitOnset(beat) {
+    var b = (typeof beat === 'number' && isFinite(beat)) ? beat : 0;
+    return b + BEAT_CENTER;
+  }
+
+  // Índice del último centro ya alcanzado. −1 antes del primero.
+  function centerReached(beat) {
+    if (typeof beat !== 'number' || !isFinite(beat)) return -1;
+    return Math.floor(beat - BEAT_CENTER + 1e-6);
+  }
+
   return {
     parse: parse,
     barAt: barAt,
     upcoming: upcoming,
     beatsPerBar: beatsPerBar,
     setupBars: setupBars,
-    loopLength: loopLength
+    loopLength: loopLength,
+    BEAT_CENTER: BEAT_CENTER,
+    hitOnset: hitOnset,
+    centerReached: centerReached
   };
 });

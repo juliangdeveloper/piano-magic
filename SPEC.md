@@ -1,6 +1,6 @@
-# piano-magic — SPEC v0.1.6 (pulsos del Ataque dentro del compás)
+# piano-magic — SPEC v0.1.7 (Defiende en el pulso, cinta continua)
 
-Producto **0.1.6**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. 0.1.5 dejó el micrófono, el altavoz, la latencia del teclado y las marcas de pulso. Esta versión corrige dónde caen: el **1** va en el centro del primer tiempo, después de la barra izquierda, y **2–4** siguen a un beat de distancia. El pulso resaltado sigue siendo el cuarto que contiene el playhead.
+Producto **0.1.7**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. 0.1.6 dejó el **1** del Ataque en el centro del primer tiempo. Esta versión pone las cabezas de Defiende en ese mismo centro (no sobre la barra), hace sonar la melodía y el metrónomo ahí, y juzga Perfect/Parcial/Fallo con las mismas ventanas ±0.15 / ±0.45 alrededor de ese punto. El reloj del director no se reinicia al pasar de Ataque a Defiende: un solo `requestAnimationFrame` pinta la cinta, para que no se amontonen callbacks y el scroll dé un tirón.
 
 Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN. 100% client-side.
 
@@ -104,7 +104,7 @@ En `kind: "defend"` **no** se resuelve SpellEngine (ni ataque, ni buff, ni cura;
 - **Partial** — al menos un acierto, no Perfect → daño parcial (`round(3 × missRatio)`, mín. 1).
 - **Fail** — 0 aciertos → 3 HP al jugador.
 
-Ventana de hit: ±0.45 beats respecto del onset esperado.
+Ventana de hit: ±0.45 beats respecto del onset esperado. El onset esperado de una nota del chart es el centro de su tiempo (`beat` del JSON + 0.5), el mismo punto que la marca 1–2–3–4. El JSON sigue guardando 0, 1, 2, 3 y los mismos tonos.
 
 La fusión en pantalla reutiliza esa ventana y un subconjunto más cerrado (`PERFECT_WINDOW_BEATS` = 0.15): onset dentro de 0.15 → fusión fuerte (Perfect); dentro de 0.45 pero fuera de 0.15 → fusión suave (Partial); fuera de 0.45, o pitch distinto → Fail, sin fusión. `judgeNoteSync` no cambia el grado del compás ni el daño.
 
@@ -128,15 +128,15 @@ KO: `bossHp === 0` → victoria; `playerHp === 0` → derrota. Overlay + **Reini
 
 - `index.html` + `css/ui.css` — español, fondo azul, columna hasta ~960px. Sin CDN.
 - Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, **un** retrato del jefe (`boss-portrait.png`: cara de la nube y rayos en la misma imagen, sin cortes horizontales), barra HP fina aparte (`hp-bar-style.png`, diamantes incluidos; no lleva rebanadas del cuerpo), clave de sol, tres iconos de buff. `tape-frame.png` queda en assets pero **no** se pinta detrás de la cinta. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan). `boss-cloud.png` es el recorte viejo y **no** se muestra.
-- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El Ataque es un marco en el mismo pentagrama (no una ficha de letras) y, solo en `kind: "hole"`, marcas de pulso (`attackBeatMarks`) por encima del pentagrama, centradas en cada cuarto (no sobre la barra): no tapan las cabezas. No hay imagen detrás del ribbon (`tape-frame.png` no se usa). Las notas Defend salen del JSON del chart. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. `defendNotes` se dibujan en azul (plica abajo) y, si el sync es perfect o partial, se funden con halo y chispas sobre el blanco. Fail queda en rojo, en su beat, con una cruz. Sin VexFlow y sin CDN.
+- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El Ataque es un marco en el mismo pentagrama (no una ficha de letras) y, solo en `kind: "hole"`, marcas de pulso (`attackBeatMarks`) por encima del pentagrama, centradas en cada cuarto (no sobre la barra): no tapan las cabezas. No hay imagen detrás del ribbon (`tape-frame.png` no se usa). Las notas Defend salen del JSON del chart y se dibujan con `chartNoteBeat` en el mismo centro que esas marcas. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. `defendNotes` se dibujan en azul (plica abajo) y, si el sync es perfect o partial, se funden con halo y chispas sobre el blanco. Fail queda en rojo, en su beat, con una cruz. Sin VexFlow y sin CDN.
 - `js/ui/hud.js` — HP **15/20** (actual / máximo), sala, BPM, metrónomo, feedback, chip ATQ+. Un `<img>` de retrato y, encima, la barra HP.
 - `js/ui/tutorial.js` — primera visita. El paso de sala dice **escala y tempo** (la sala sigue siendo el elemento del círculo de quintas por dentro). Spotlight, **Siguiente** / **Saltar**, `localStorage.seenTutorial`. El botón **?** lo repite. Sin la clave es primera visita y se muestra; un save legado `pmSave` sin la clave cuenta como visto (hoy no hay saves).
-- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, micrófono opcional, synth local (Web Audio, oscilador), rAF. Cada NoteOn de pantalla, teclado físico o MIDI pasa por `InstrumentTranslator` y suena. El del mic entra al combate en silencio. El AudioContext se crea en el gesto (`latencyHint: 'interactive'`, sin forzar `sampleRate`). En ese mismo turno: `navigator.audioSession.type = 'playback'` si existe (altavoz, no respeta el mute del iPhone), un beep corto por `<audio playsinline>` y otro buffer audible directo a `destination`. El oscilador del teclado arranca en `pointerdown`, con ataque ya audible, sin `resume().then()` ni `setTimeout` antes del primer sample. `preventDefault` va **después** del NoteOn. Por defecto audible. En Defiende y en setup (si el chart trae notas) la melodía del chart suena al cruzar el playhead, más baja y en seno, por el mismo master. No suena en el Ataque libre. Con el mic abierto esa melodía y el metrónomo se callan.
+- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, micrófono opcional, synth local (Web Audio, oscilador), un solo rAF (`rafLoop`). Un `setInterval` solo pinta si el frame anterior tiene más de 80 ms, y no vuelve a pedir `requestAnimationFrame` (eso amontonaba callbacks y la cinta se trababa al llegar a Defiende). Cada NoteOn de pantalla, teclado físico o MIDI pasa por `InstrumentTranslator` y suena. El del mic entra al combate en silencio. El AudioContext se crea en el gesto (`latencyHint: 'interactive'`, sin forzar `sampleRate`). En ese mismo turno: `navigator.audioSession.type = 'playback'` si existe (altavoz, no respeta el mute del iPhone), un beep corto por `<audio playsinline>` y otro buffer audible directo a `destination`. El oscilador del teclado arranca en `pointerdown`, con ataque ya audible, sin `resume().then()` ni `setTimeout` antes del primer sample. `preventDefault` va **después** del NoteOn. Por defecto audible. En Defiende y en setup (si el chart trae notas) la melodía del chart suena al cruzar el playhead en el centro del tiempo (`Chart.hitOnset`), más baja y en seno, por el mismo master. El metrónomo usa `Chart.centerReached`, el mismo centro. No suena en el Ataque libre. Con el mic abierto esa melodía y el metrónomo se callan. El beat del director no se reinicia al cambiar de fase.
 - **Micrófono.** Botón **Micrófono** / **Micrófono: sí**. Permiso solo al activarlo. Restricciones sin cancelación de eco ni AGC (en iOS el procesamiento de voz manda el audio al auricular). Al conceder, la sesión pasa a `play-and-record` y se sueltan las pistas en cuanto se apaga, volviendo a `playback`. Si el navegador no tiene mic o el permiso se niega, el mensaje queda en español bajo el botón de pausa. En iPhone/iPad el estado avisa: si el altavoz se calla, apaga el micrófono. Limitaciones: monofónico, C3–C6, se confunde con ruido y con acordes, y el análisis espera dos hops (~64 ms) además de la ventana del analizador. Safari móvil puede volver a pedir permiso al recargar. No se probó en un iPhone físico: el arreglo de altavoz usa la Audio Session API y un beep de desbloqueo, que es lo que deja mudo el speaker integrado cuando el primer buffer es silencio.
 - **Pausa / Continuar** (y la tecla `P`) durante el combate. `director.pause` congela el beat; al continuar se desplaza `startTimeMs` por el tiempo en pausa, así no se resuelven compases de golpe. El AudioContext se suspende y se reanuda en ese clic. El tutorial y el overlay de victoria/derrota siguen igual: no se puede Empezar con el tutorial abierto, y al terminar se oculta Pausa.
 - Teclado en pantalla: botón **Teclado** en el HUD. Por defecto activo en viewport estrecho (≤700px), puntero grueso o táctil; si no, apagado. La última elección queda en `localStorage.onscreenKeyboard` (`on` / `off`). Las teclas usan `InstrumentTranslator.KEY_MAP` (A–K blancas, W E T Y U negras) y el mismo `noteOn` / `noteOff` que el teclado físico.
 
-Versión **0.1.6**: `VERSION`, `package.json`, query `?v=0.1.6` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot de 0.1.4 (`paused`, `ribbon`, `improvNotes`, `defendNotes`) no cambia el daño.
+Versión **0.1.7**: `VERSION`, `package.json`, query `?v=0.1.7` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot de 0.1.4 (`paused`, `ribbon`, `improvNotes`, `defendNotes`) no cambia el daño.
 
 ## Tests
 
@@ -152,7 +152,7 @@ Node nativo (`node --test`), sin `npm install`. Puros:
 - `test/ui.test.js`
 - `test/pitch.test.js` — YIN sobre senos
 - `test/mic-notes.test.js` — hops, anti-eco, fusión de fuentes
-- `test/beats.test.js` — marcas 1–2–3–4 del Ataque
+- `test/beats.test.js` — marcas 1–2–3–4 del Ataque y el mismo centro en las notas de Defiende
 
 ## Reparto de archivos
 
@@ -186,7 +186,7 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 5. Ataque (`hole`): mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.
 7. `npm test` verde.
-8. Versión de producto **0.1.6** (`?v=0.1.6`). Combate sigue en **0.1.1**.
+8. Versión de producto **0.1.7** (`?v=0.1.7`). Combate sigue en **0.1.1**.
 9. GitHub Pages desde la raíz de `main` (ver README). `.nojekyll` en la raíz.
 10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). El paso de sala dice escala y tempo. `seenTutorial` persiste.
 11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate y **suena** (Web Audio) en cada NoteOn. Igual el teclado físico y el MIDI.

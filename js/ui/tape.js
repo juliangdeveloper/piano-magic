@@ -14,6 +14,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // Mismo centro que Chart.BEAT_CENTER: el tiempo del JSON, más medio beat.
+  var BEAT_CENTER = 0.5;
   var KIND_INK = { setup: '#1d4e89', defend: '#1b6b42', hole: '#6d3d96' };
   var KIND_LABEL = { setup: 'ESCUCHA', defend: 'DEFIENDE', hole: 'ATAQUE' };
   var PARCHMENT = '#efe6d2';
@@ -58,8 +60,9 @@
    * Marcas de pulso dentro de un compás de Ataque (kind hole).
    * La barra de compás es el divisor (beat onset 0). El número 1 no va
    * encima de esa línea: cada marca se centra en su cuarto
-   * (onset + 0.5), así 1 queda dentro del primer tiempo y 2–4 siguen
-   * a un beat de distancia, antes de la barra siguiente.
+   * (onset + BEAT_CENTER), así 1 queda dentro del primer tiempo y 2–4
+   * siguen a un beat de distancia, antes de la barra siguiente.
+   * Las cabezas del chart usan el mismo centro (`chartNoteBeat`).
    * current sigue el cuarto que contiene playBeat, no la x del glifo.
    */
   function attackBeatMarks(barStart, beatsPerBar, playBeat) {
@@ -71,7 +74,7 @@
     for (i = 0; i < n; i++) {
       var onset = start + i;
       marks.push({
-        beat: onset + 0.5,
+        beat: onset + BEAT_CENTER,
         label: String(i + 1),
         current: play >= onset && play < onset + 1
       });
@@ -85,6 +88,12 @@
    * fail no se funde: la nota queda en su beat.
    * ageBeats es el tiempo de cinta desde el onset (la pausa lo congela).
    */
+  function chartNoteBeat(barStart, noteBeat) {
+    var start = (typeof barStart === 'number' && isFinite(barStart)) ? barStart : 0;
+    var nb = (typeof noteBeat === 'number' && isFinite(noteBeat)) ? noteBeat : 0;
+    return start + nb + BEAT_CENTER;
+  }
+
   function fuseVisual(sync, ageBeats) {
     var age = (typeof ageBeats === 'number' && ageBeats > 0) ? ageBeats : 0;
     if (sync !== 'perfect' && sync !== 'partial') {
@@ -119,7 +128,7 @@
 
   function create(canvas, opts) {
     opts = opts || {};
-    var version = opts.version || '0.1.6';
+    var version = opts.version || '0.1.7';
     var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;
@@ -438,7 +447,7 @@
           note = notes[j];
           parts = pitchParts(note.pitch);
           if (!parts) continue;
-          nx = xAt(bar.startBeat + note.beat);
+          nx = xAt(chartNoteBeat(bar.startBeat, note.beat));
           if (nx < clefRight - 2 || nx > w + 8) continue;
           if (parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, yFor(parts.step, bottomLine, lineGap), lineGap);
           else if (parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, yFor(parts.step, bottomLine, lineGap), lineGap);
@@ -496,7 +505,8 @@
         ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
       }
 
-      var pulse = state && state.running && !state.paused && ((state.beat % 1) < 0.12);
+      var beatFrac = beat - Math.floor(beat);
+      var pulse = state && state.running && !state.paused && beatFrac >= BEAT_CENTER && beatFrac < BEAT_CENTER + 0.12;
       ctx.save();
       ctx.shadowColor = pulse ? 'rgba(255, 214, 120, 0.95)' : 'rgba(120, 186, 230, 0.9)';
       ctx.shadowBlur = 8;
@@ -537,6 +547,8 @@
     pitchParts: pitchParts,
     fuseVisual: fuseVisual,
     attackBeatMarks: attackBeatMarks,
+    chartNoteBeat: chartNoteBeat,
+    BEAT_CENTER: BEAT_CENTER,
     KIND_LABEL: KIND_LABEL
   };
 });

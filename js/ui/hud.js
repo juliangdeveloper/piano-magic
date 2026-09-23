@@ -21,7 +21,7 @@
   };
 
   var BUFF_ICON = {
-    atk: 'assets/ui/buff-icon-2.png?v=0.1.6'
+    atk: 'assets/ui/buff-icon-2.png?v=0.1.7'
   };
 
   function el(id) {
@@ -76,7 +76,11 @@
 
       setText(bpm, String(state.bpm));
       if (orb) {
-        var pulsing = !!(state.running && !state.paused && (state.beat % 1) < 0.18);
+        var center = (typeof Chart !== 'undefined' && typeof Chart.BEAT_CENTER === 'number')
+          ? Chart.BEAT_CENTER
+          : 0.5;
+        var frac = (state.beat || 0) - Math.floor(state.beat || 0);
+        var pulsing = !!(state.running && !state.paused && frac >= center && frac < center + 0.18);
         orb.classList.toggle('pulse', pulsing);
       }
 
@@ -87,7 +91,11 @@
       if (beats) {
         var dots = beats.querySelectorAll('i');
         var beatIn = Math.floor(state.beatInBar || 0) % (state.beatsPerBar || 4);
-        var pulse = (state.beat % 1) < 0.18;
+        var beatFrac = (state.beat || 0) - Math.floor(state.beat || 0);
+        var beatCenter = (typeof Chart !== 'undefined' && typeof Chart.BEAT_CENTER === 'number')
+          ? Chart.BEAT_CENTER
+          : 0.5;
+        var pulse = beatFrac >= beatCenter && beatFrac < beatCenter + 0.18;
         for (var i = 0; i < dots.length; i++) {
           dots[i].className = '';
           if (state.running && i === beatIn) dots[i].className = pulse ? 'on pulse' : 'on';
