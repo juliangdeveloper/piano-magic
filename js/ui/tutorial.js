@@ -18,7 +18,7 @@
       id: 'sala',
       selector: '#stageTop',
       title: 'Sala y tempo',
-      body: 'La sala fija el elemento y el tempo.'
+      body: 'La sala fija la escala y el tempo.'
     },
     {
       id: 'cinta',
