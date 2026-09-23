@@ -220,3 +220,43 @@ test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
   assert.strictEqual(s.bossHp, 17);
   assert.strictEqual(s.playerHp, 15);
 });
+
+test('D13: NoteOn en el agujero entra en improvNotes; en setup o defend, no', () => {
+  const ctx = make();
+  ctx.dir.start(0);
+  ctx.set(200);
+  ctx.dir.noteOn('C4', 200);
+  let s = ctx.dir.snapshot(200);
+  assert.strictEqual(s.improvNotes.length, 0);
+
+  ctx.set(4500);
+  ctx.dir.noteOn('E4', 4500);
+  ctx.dir.noteOn('G#4', 4700);
+  s = ctx.dir.snapshot(4700);
+  assert.strictEqual(s.phase, 'hole');
+  assert.strictEqual(s.improvNotes.length, 2);
+  assert.strictEqual(s.improvNotes[0].pitch, 'E4');
+  assert.ok(Math.abs(s.improvNotes[0].beat - 4.5) < 1e-9);
+  assert.strictEqual(s.improvNotes[1].pitch, 'G#4');
+  assert.strictEqual(s.improvNotes[0].barIndex, 1);
+
+  ctx.set(9000);
+  ctx.dir.tick(9000);
+  ctx.dir.noteOn('C4', 9000);
+  s = ctx.dir.snapshot(9000);
+  assert.strictEqual(s.phase, 'defend');
+  assert.strictEqual(s.improvNotes.length, 2);
+  assert.ok(s.ribbon.length >= 5);
+  assert.strictEqual(s.ribbon[0].globalBar, 0);
+});
+
+test('D14: la cinta mira dos compases atrás cuando ya hay historia', () => {
+  const ctx = make();
+  ctx.dir.start(0);
+  ctx.set(20000);
+  const s = ctx.dir.tick(20000);
+  assert.strictEqual(s.barIndex, 5);
+  assert.strictEqual(s.ribbon[0].globalBar, 3);
+  assert.strictEqual(s.playerHp, 6);
+  assert.strictEqual(s.bossHp, 20);
+});
