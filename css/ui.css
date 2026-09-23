@@ -1,4 +1,4 @@
-/* css/ui.css — piano-magic v0.1.4. Sin fuentes ni CDN. */
+/* css/ui.css — piano-magic v0.1.5. Sin fuentes ni CDN. */
 :root {
   --bg0: #10243f;
   --bg1: #1c3d68;
@@ -65,6 +65,7 @@ body {
   grid-area: util;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 6px 0 0;
 }
@@ -77,7 +78,7 @@ body {
   margin-right: auto;
 }
 
-#btnKeyboard, #btnHelp, #btnPause {
+#btnKeyboard, #btnMic, #btnHelp, #btnPause {
   appearance: none;
   border: 1px solid rgba(226, 194, 122, 0.85);
   background: rgba(8, 18, 36, 0.35);
@@ -88,7 +89,7 @@ body {
   cursor: pointer;
 }
 
-#btnKeyboard {
+#btnKeyboard, #btnMic {
   font-size: 13px;
   padding: 6px 12px;
   min-height: 36px;
@@ -97,6 +98,11 @@ body {
 #btnKeyboard.on {
   background: rgba(226, 194, 122, 0.28);
   color: #fff8e6;
+}
+
+#btnMic.on {
+  background: rgba(126, 200, 255, 0.32);
+  color: #f4fbff;
 }
 
 #btnHelp {
@@ -484,10 +490,22 @@ footer {
 #btnStart:active, #btnRestart:active, #tutNext:active { filter: brightness(0.95); }
 #btnStart.hidden { display: none; }
 
-#midiStatus, #version {
+#midiStatus, #micStatus, #version {
   font-size: 11px;
   color: var(--dim);
   text-align: center;
+}
+
+#micStatus:empty { display: none; }
+
+#speakerUnlock {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 #keys {

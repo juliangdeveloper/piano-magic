@@ -1,16 +1,16 @@
-# piano-magic — SPEC v0.1.4 (pausa, audio, fusión, ataques)
+# piano-magic — SPEC v0.1.5 (micrófono, altavoz, latencia, pulsos)
 
-Producto **0.1.4**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. Esta versión añade pausa, melodía audible del chart, notas del jugador en Defiende con fusión, y quita el marco detrás de la cinta.
+Producto **0.1.5**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. 0.1.4 dejó la pausa, la melodía del chart, la fusión en Defiende y la cinta sin marco. Esta versión añade micrófono opcional, audio por el altavoz del teléfono, menos latencia en el teclado en pantalla y marcas de pulso en el Ataque.
 
-Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN, sin mic/YIN. 100% client-side.
+Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN. 100% client-side.
 
-`piano-game` es **otro repo** (solo detección de pitch). Este juego no lo clona ni hace fetch a él.
+`piano-game` es **otro repo**. El YIN de `js/pitch.js` está **copiado** aquí (no hay fetch ni dependencia en runtime).
 
 ## Combate (bloqueado)
 
 - HP jugador **15** / jefe **20**.
 - Flujo: **setup listen** (BPM + elemento de sala, sin daño) → bucle **1 ataque (`hole`) + 4 Defend** hasta KO. El ataque va **primero** en el loop.
-- Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases. Las notas del chart van en pentagrama (clave de sol). En el Ataque, los NoteOn se escriben en ese pentagrama en el beat en que suenan y siguen visibles mientras la cinta avanza. En Defiende, los NoteOn del jugador también se escriben, con otro color y la plica hacia abajo, hasta fundirse con el blanco si el onset cae en la ventana.
+- Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases. Las notas del chart van en pentagrama (clave de sol). En el Ataque, los NoteOn se escriben en ese pentagrama en el beat en que suenan y siguen visibles mientras la cinta avanza, y unos ticks `1 2 3 4` marcan el pulso por encima del pentagrama (el pulso bajo el playhead se oscurece). En Defiende, los NoteOn del jugador también se escriben, con otro color y la plica hacia abajo, hasta fundirse con el blanco si el onset cae en la ventana. Defiende no lleva esas marcas: ya tiene las notas del chart.
 - HUD: HP de ambos, icono/nombre de sala (12 claves → elemento), BPM/metrónomo, feedback de resolución, buffs activos.
 - Sin barra de skills fantástica ni HP inflado.
 
@@ -31,7 +31,7 @@ Entrada M0:
 
 - Teclado QWERTY → pitches del chart (y vecinos para mayor/menor/pentatónica).
 - Web MIDI si existe (`requestMIDIAccess`).
-- **No** micrófono / YIN.
+- Micrófono **opcional** (botón Micrófono). YIN monofónico (`js/pitch.js`, vendored de piano-game) + `MicNotes.hop` (dos hops para NoteOn, tres huecos para NoteOff). `getUserMedia` solo al encender. Permiso denegado: texto en español y el botón vuelve a off. El mismo `noteOn` / `noteOff` que el teclado; si la nota ya está sostenida por OSK, QWERTY o MIDI, el mic no abre otro hechizo ni otro daño. El mic no hace sonar el oscilador (evitaría un acople). Mientras el mic está abierto no suenan la melodía del jefe ni el metrónomo, para que el altavoz no cuente como nota.
 
 Mapeo documentado en pantalla:
 
@@ -128,14 +128,15 @@ KO: `bossHp === 0` → victoria; `playerHp === 0` → derrota. Overlay + **Reini
 
 - `index.html` + `css/ui.css` — español, fondo azul, columna hasta ~960px. Sin CDN.
 - Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, **un** retrato del jefe (`boss-portrait.png`: cara de la nube y rayos en la misma imagen, sin cortes horizontales), barra HP fina aparte (`hp-bar-style.png`, diamantes incluidos; no lleva rebanadas del cuerpo), clave de sol, tres iconos de buff. `tape-frame.png` queda en assets pero **no** se pinta detrás de la cinta. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan). `boss-cloud.png` es el recorte viejo y **no** se muestra.
-- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El Ataque es un marco en el mismo pentagrama (no una ficha de letras). No hay imagen detrás del ribbon (`tape-frame.png` no se usa). Las notas Defend salen del JSON del chart. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. `defendNotes` se dibujan en azul (plica abajo) y, si el sync es perfect o partial, se funden con halo y chispas sobre el blanco. Fail queda en rojo, en su beat, con una cruz. Sin VexFlow y sin CDN.
+- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El Ataque es un marco en el mismo pentagrama (no una ficha de letras) y, solo en `kind: "hole"`, marcas de pulso (`attackBeatMarks`) por encima del pentagrama: no tapan las cabezas. No hay imagen detrás del ribbon (`tape-frame.png` no se usa). Las notas Defend salen del JSON del chart. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. `defendNotes` se dibujan en azul (plica abajo) y, si el sync es perfect o partial, se funden con halo y chispas sobre el blanco. Fail queda en rojo, en su beat, con una cruz. Sin VexFlow y sin CDN.
 - `js/ui/hud.js` — HP **15/20** (actual / máximo), sala, BPM, metrónomo, feedback, chip ATQ+. Un `<img>` de retrato y, encima, la barra HP.
 - `js/ui/tutorial.js` — primera visita. El paso de sala dice **escala y tempo** (la sala sigue siendo el elemento del círculo de quintas por dentro). Spotlight, **Siguiente** / **Saltar**, `localStorage.seenTutorial`. El botón **?** lo repite. Sin la clave es primera visita y se muestra; un save legado `pmSave` sin la clave cuenta como visto (hoy no hay saves).
-- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, synth local (Web Audio, oscilador), rAF. Cada NoteOn — pantalla, teclado físico o MIDI — pasa por `InstrumentTranslator` y suena. El AudioContext se crea y se reanuda en el gesto (tap, tecla, Empezar, Siguiente), con un buffer mudo, y el oscilador arranca cuando el contexto está `running` (reintento corto si el primer turno aún estaba suspendido). `preventDefault` de la tecla en pantalla va **después** del NoteOn. Por defecto audible. En Defiende y en setup (si el chart trae notas) la melodía del chart suena al cruzar el playhead, más baja y en seno, por el mismo master. No suena en el Ataque libre.
+- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, micrófono opcional, synth local (Web Audio, oscilador), rAF. Cada NoteOn de pantalla, teclado físico o MIDI pasa por `InstrumentTranslator` y suena. El del mic entra al combate en silencio. El AudioContext se crea en el gesto (`latencyHint: 'interactive'`, sin forzar `sampleRate`). En ese mismo turno: `navigator.audioSession.type = 'playback'` si existe (altavoz, no respeta el mute del iPhone), un beep corto por `<audio playsinline>` y otro buffer audible directo a `destination`. El oscilador del teclado arranca en `pointerdown`, con ataque ya audible, sin `resume().then()` ni `setTimeout` antes del primer sample. `preventDefault` va **después** del NoteOn. Por defecto audible. En Defiende y en setup (si el chart trae notas) la melodía del chart suena al cruzar el playhead, más baja y en seno, por el mismo master. No suena en el Ataque libre. Con el mic abierto esa melodía y el metrónomo se callan.
+- **Micrófono.** Botón **Micrófono** / **Micrófono: sí**. Permiso solo al activarlo. Restricciones sin cancelación de eco ni AGC (en iOS el procesamiento de voz manda el audio al auricular). Al conceder, la sesión pasa a `play-and-record` y se sueltan las pistas en cuanto se apaga, volviendo a `playback`. Si el navegador no tiene mic o el permiso se niega, el mensaje queda en español bajo el botón de pausa. En iPhone/iPad el estado avisa: si el altavoz se calla, apaga el micrófono. Limitaciones: monofónico, C3–C6, se confunde con ruido y con acordes, y el análisis espera dos hops (~64 ms) además de la ventana del analizador. Safari móvil puede volver a pedir permiso al recargar. No se probó en un iPhone físico: el arreglo de altavoz usa la Audio Session API y un beep de desbloqueo, que es lo que deja mudo el speaker integrado cuando el primer buffer es silencio.
 - **Pausa / Continuar** (y la tecla `P`) durante el combate. `director.pause` congela el beat; al continuar se desplaza `startTimeMs` por el tiempo en pausa, así no se resuelven compases de golpe. El AudioContext se suspende y se reanuda en ese clic. El tutorial y el overlay de victoria/derrota siguen igual: no se puede Empezar con el tutorial abierto, y al terminar se oculta Pausa.
 - Teclado en pantalla: botón **Teclado** en el HUD. Por defecto activo en viewport estrecho (≤700px), puntero grueso o táctil; si no, apagado. La última elección queda en `localStorage.onscreenKeyboard` (`on` / `off`). Las teclas usan `InstrumentTranslator.KEY_MAP` (A–K blancas, W E T Y U negras) y el mismo `noteOn` / `noteOff` que el teclado físico.
 
-Versión **0.1.4**: `VERSION`, `package.json`, query `?v=0.1.4` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot añade `paused`, `ribbon`, `improvNotes` (NoteOn del ataque) y `defendNotes` (NoteOn de Defiende, con `sync` / `targetBeat`). No cambia el daño.
+Versión **0.1.5**: `VERSION`, `package.json`, query `?v=0.1.5` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot de 0.1.4 (`paused`, `ribbon`, `improvNotes`, `defendNotes`) no cambia el daño.
 
 ## Tests
 
@@ -148,6 +149,10 @@ Node nativo (`node --test`), sin `npm install`. Puros:
 - `test/spell.test.js`
 - `test/chart.test.js`
 - `test/director.test.js`
+- `test/ui.test.js`
+- `test/pitch.test.js` — YIN sobre senos
+- `test/mic-notes.test.js` — hops, anti-eco, fusión de fuentes
+- `test/beats.test.js` — marcas 1–2–3–4 del Ataque
 
 ## Reparto de archivos
 
@@ -155,6 +160,8 @@ Node nativo (`node --test`), sin `npm install`. Puros:
 index.html
 css/ui.css
 js/app.js
+js/pitch.js                 YIN vendored (piano-game), sin red
+js/instrument/mic-notes.js  hops → NoteOn/NoteOff, anti-eco
 js/instrument/translator.js
 js/spell/engine.js
 js/combat/director.js
@@ -179,9 +186,11 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 5. Ataque (`hole`): mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.
 7. `npm test` verde.
-8. Versión de producto **0.1.4** (`?v=0.1.4`). Combate sigue en **0.1.1**.
+8. Versión de producto **0.1.5** (`?v=0.1.5`). Combate sigue en **0.1.1**.
 9. GitHub Pages desde la raíz de `main` (ver README). `.nojekyll` en la raíz.
 10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). El paso de sala dice escala y tempo. `seenTutorial` persiste.
 11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate y **suena** (Web Audio) en cada NoteOn. Igual el teclado físico y el MIDI.
 12. El jefe es un solo retrato (`boss-portrait.png`) más la barra HP aparte. HP en pantalla 15/20.
-13. La cinta es un pentagrama sin imagen detrás. Las notas Defend del chart se leen como cabezas y suenan al cruzar el playhead. En el Ataque, lo que se toca se escribe en el pentagrama y permanece al avanzar la cinta. En Defiende, la nota del jugador se escribe aparte y se funde si el timing es perfecto o parcial.
+13. La cinta es un pentagrama sin imagen detrás. Las notas Defend del chart se leen como cabezas y suenan al cruzar el playhead (salvo con el micrófono activo). En el Ataque, lo que se toca se escribe en el pentagrama y permanece al avanzar la cinta, y se ven los pulsos 1–2–3–4. En Defiende, la nota del jugador se escribe aparte y se funde si el timing es perfecto o parcial.
+14. **Micrófono** es opcional y pide permiso al encenderlo. Una nota detectada sigue el mismo camino de combate que una tecla. Si ya está pulsada en el teclado, no se dispara dos veces.
+15. El teclado en pantalla suena en `pointerdown`. El primer desbloqueo incluye un beep audible para el altavoz integrado.
