@@ -4,7 +4,9 @@ Combate con piano (un jefe). Página estática para GitHub Pages, sin CDN ni red
 
 La detección de micrófono/pitch vive en el repo aparte [`piano-game`](https://github.com/juliangdeveloper/piano-game). **Este juego no depende de él** (ni CDN, ni fetch). M0 usa teclado QWERTY + Web MIDI.
 
-Versión **0.1.2**. El combate (agujero, Defend, 12 elementos, HP 15/20) es el de **0.1.1**.
+Versión **0.1.3**. El combate (agujero, Defend, 12 elementos, HP 15/20) es el de **0.1.1**.
+
+El jefe es **un** retrato (nube y rayos juntos) y una barra de HP aparte. La cinta es un pentagrama: las notas de Defiende vienen del chart; en el agujero, lo que tocas se escribe ahí en el momento. El teclado en pantalla, el QWERTY y el MIDI suenan con Web Audio (sin CDN). El tutorial de la sala habla de **escala y tempo**.
 
 ## Jugar
 
@@ -34,7 +36,7 @@ python3 -m http.server 8000
 npm test
 ```
 
-Corre `test/spell.test.js`, `test/chart.test.js` y `test/director.test.js` (Node, sin `npm install`).
+Corre `test/spell.test.js`, `test/chart.test.js`, `test/director.test.js` y `test/ui.test.js` (Node, sin `npm install`).
 
 ## Estructura
 
@@ -45,7 +47,7 @@ js/instrument/translator.js  NoteOn/Off → beats (stub M0)
 js/spell/engine.js           12 claves / ×sala / modo / resolve
 js/combat/chart.js           chart JSON
 js/combat/director.js        setup + loop hasta KO
-js/ui/tape.js                cinta continua
+js/ui/tape.js                pentagrama continuo (sin CDN)
 js/ui/hud.js
 js/ui/tutorial.js
 js/app.js

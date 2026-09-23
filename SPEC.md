@@ -1,6 +1,6 @@
-# piano-magic — SPEC v0.1.2 (M0.2 UI)
+# piano-magic — SPEC v0.1.3 (pentagrama, sonido, retrato)
 
-Producto **0.1.2**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, agujero primero, Defend solo copia, 12 elementos, ×sala). Esta versión cambia cromo, tutorial y teclado en pantalla.
+Producto **0.1.3**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, agujero primero, Defend solo copia, 12 elementos, ×sala). Esta versión cambia el retrato del jefe (una sola imagen), el sonido del teclado y la cinta (pentagrama).
 
 Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN, sin mic/YIN. 100% client-side.
 
@@ -10,7 +10,7 @@ Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CD
 
 - HP jugador **15** / jefe **20**.
 - Flujo: **setup listen** (BPM + elemento de sala, sin daño) → bucle **1 agujero + 4 Defend** hasta KO. El agujero va **primero** en el loop.
-- Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases.
+- Cinta continua: un solo ribbon, playhead fijo, preview de compases siguientes en la misma cinta, sin tiempo muerto entre compases. Las notas del chart van en pentagrama (clave de sol). En el agujero, los NoteOn se escriben en ese pentagrama en el beat en que suenan y siguen visibles mientras la cinta avanza.
 - HUD: HP de ambos, icono/nombre de sala (12 claves → elemento), BPM/metrónomo, feedback de resolución, buffs activos.
 - Sin barra de skills fantástica ni HP inflado.
 
@@ -125,14 +125,14 @@ KO: `bossHp === 0` → victoria; `playerHp === 0` → derrota. Overlay + **Reini
 ## UI
 
 - `index.html` + `css/ui.css` — español, fondo azul, columna hasta ~960px. Sin CDN.
-- Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, retrato del jefe, barra HP, marco de la cinta, ficha de nota, ranura de hueco, tres iconos de buff. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan).
-- `js/ui/tape.js` — canvas sobre el pergamino: playhead fijo, fichas, hueco, números de compás reales.
-- `js/ui/hud.js` — HP **15/20** (actual / máximo), sala, BPM, metrónomo, feedback, chip ATQ+.
-- `js/ui/tutorial.js` — primera visita. Spotlight, **Siguiente** / **Saltar**, `localStorage.seenTutorial`. El botón **?** lo repite. Sin la clave es primera visita y se muestra; un save legado `pmSave` sin la clave cuenta como visto (hoy no hay saves).
-- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, synth local, rAF.
+- Cromo en `assets/ui/` (mismo origen): icono de sala Agua, orbe BPM, **un** retrato del jefe (`boss-portrait.png`: cara de la nube y rayos en la misma imagen, sin cortes horizontales), barra HP fina aparte (`hp-bar-style.png`, diamantes incluidos; no lleva rebanadas del cuerpo), marco de la cinta, clave de sol, tres iconos de buff. `mockup-full.png` es solo referencia (HP inflado y barra de 6 skills no se usan). `boss-cloud.png` es el recorte viejo y **no** se muestra.
+- `js/ui/tape.js` — pentagrama en canvas sobre el pergamino: clave de sol, cabezas, plicas, alteraciones, líneas adicionales, playhead fijo. El agujero es un marco en el mismo pentagrama (no una ficha de letras). Las notas Defend salen del JSON del chart. `improvNotes` (solo compases `hole`) se dibujan en su beat absoluto. Sin VexFlow y sin CDN: un ribbon que se desplaza no cabe en un formateador de compases estáticos, y el canvas pesa menos.
+- `js/ui/hud.js` — HP **15/20** (actual / máximo), sala, BPM, metrónomo, feedback, chip ATQ+. Un `<img>` de retrato y, encima, la barra HP.
+- `js/ui/tutorial.js` — primera visita. El paso de sala dice **escala y tempo** (la sala sigue siendo el elemento del círculo de quintas por dentro). Spotlight, **Siguiente** / **Saltar**, `localStorage.seenTutorial`. El botón **?** lo repite. Sin la clave es primera visita y se muestra; un save legado `pmSave` sin la clave cuenta como visto (hoy no hay saves).
+- `js/app.js` — chart same-origin, QWERTY, teclado en pantalla, MIDI, synth local (Web Audio, oscilador), rAF. Cada NoteOn — pantalla, teclado físico o MIDI — pasa por `InstrumentTranslator` y suena. Por defecto audible.
 - Teclado en pantalla: botón **Teclado** en el HUD. Por defecto activo en viewport estrecho (≤700px), puntero grueso o táctil; si no, apagado. La última elección queda en `localStorage.onscreenKeyboard` (`on` / `off`). Las teclas usan `InstrumentTranslator.KEY_MAP` (A–K blancas, W E T Y U negras) y el mismo `noteOn` / `noteOff` que el teclado físico.
 
-Versión **0.1.2**: `VERSION`, `package.json`, query `?v=0.1.2` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1.
+Versión **0.1.3**: `VERSION`, `package.json`, query `?v=0.1.3` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot añade `ribbon` (compases con mirada atrás) e `improvNotes` (NoteOn del agujero, para la cinta). No cambia el daño.
 
 ## Tests
 
@@ -176,7 +176,9 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 5. Agujero: mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.
 7. `npm test` verde.
-8. Versión de producto **0.1.2** (`?v=0.1.2`). Combate sigue en **0.1.1**.
+8. Versión de producto **0.1.3** (`?v=0.1.3`). Combate sigue en **0.1.1**.
 9. GitHub Pages desde la raíz de `main` (ver README). `.nojekyll` en la raíz.
-10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). `seenTutorial` persiste.
-11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate.
+10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). El paso de sala dice escala y tempo. `seenTutorial` persiste.
+11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate y **suena** (Web Audio) en cada NoteOn. Igual el teclado físico y el MIDI.
+12. El jefe es un solo retrato (`boss-portrait.png`) más la barra HP aparte. HP en pantalla 15/20.
+13. La cinta es un pentagrama. Las notas Defend del chart se leen como cabezas. En el agujero, lo que se toca se escribe en el pentagrama y permanece al avanzar la cinta.
