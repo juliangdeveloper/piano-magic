@@ -20,9 +20,11 @@ function make() {
   };
 }
 
-function playBar(ctx, startMs, pitches) {
+function playBar(ctx, startMs, pitches, onCenter) {
+  // Defiende se juzga en el centro del tiempo (beat + 0.5 @ 60 bpm = +500 ms).
+  const shift = onCenter ? 500 : 0;
   for (let i = 0; i < pitches.length; i++) {
-    ctx.set(startMs + i * 1000 + 20);
+    ctx.set(startMs + i * 1000 + shift + 20);
     ctx.dir.noteOn(pitches[i], ctx.now());
     ctx.dir.noteOff(pitches[i], ctx.now() + 200);
   }
@@ -74,7 +76,7 @@ test('D3: defend perfecto no hace daño al jefe ni al jugador', () => {
   ctx.dir.start(0);
   ctx.dir.tick(4000); // setup → hole
   ctx.dir.tick(8000); // hole idle → first defend
-  playBar(ctx, 8000, ['C4', 'C4', 'C4', 'C4']);
+  playBar(ctx, 8000, ['C4', 'C4', 'C4', 'C4'], true);
   const s = ctx.dir.tick(12000);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.playerHp, 15);
@@ -142,7 +144,7 @@ test('D7: 10 agujeros mayor (C D E) con defends perfectos derrotan al jefe (20 H
     playBar(ctx, base, ['C4', 'D4', 'E4']);
     ctx.dir.tick(base + 4000);
     for (let i = 0; i < 4; i++) {
-      playBar(ctx, base + 4000 + i * 4000, DEFEND_NOTES[i]);
+      playBar(ctx, base + 4000 + i * 4000, DEFEND_NOTES[i], true);
       ctx.dir.tick(base + 8000 + i * 4000);
     }
   }
@@ -191,7 +193,7 @@ test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
   ctx.dir.start(0);
   ctx.dir.tick(4000); // setup → hole
   ctx.dir.tick(8000); // hole idle → first defend
-  playBar(ctx, 8000, ['C4', 'C4']);
+  playBar(ctx, 8000, ['C4', 'C4'], true);
   const s = ctx.dir.tick(12000);
   assert.strictEqual(s.lastResolve.grade, 'partial');
   assert.strictEqual(s.lastResolve.kind, 'defend-partial');
@@ -210,7 +212,7 @@ test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
   assert.ok(s.buffs.length >= 1);
 
   for (let i = 0; i < 4; i++) {
-    playBar(ctx, 8000 + i * 4000, DEFEND_NOTES[i]);
+    playBar(ctx, 8000 + i * 4000, DEFEND_NOTES[i], true);
     ctx.dir.tick(12000 + i * 4000);
   }
   playBar(ctx, 24000, ['C4', 'D4', 'E4']);
@@ -279,33 +281,50 @@ test('D15: la pausa congela el beat; continuar no salta compases ni resuelve de 
 test('D16: en Defend la nota del jugador queda en defendNotes con sync; el hole sigue solo en improvNotes', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.set(8020);
-  ctx.dir.noteOn('C4', 8020);
-  let s = ctx.dir.snapshot(8020);
+  ctx.set(8000);
+  ctx.dir.noteOn('C4', 8000);
+  let s = ctx.dir.snapshot(8000);
+  assert.strictEqual(s.defendNotes[0].sync, 'fail', 'la barra no es el centro del tiempo');
+
+  ctx.set(8520);
+  ctx.dir.noteOn('C4', 8520);
+  s = ctx.dir.snapshot(8520);
   assert.strictEqual(s.phase, 'defend');
   assert.strictEqual(s.improvNotes.length, 0);
-  assert.strictEqual(s.defendNotes.length, 1);
-  assert.strictEqual(s.defendNotes[0].pitch, 'C4');
-  assert.strictEqual(s.defendNotes[0].sync, 'perfect');
-  assert.ok(Math.abs(s.defendNotes[0].targetBeat - 8) < 1e-9);
-  assert.ok(s.defendNotes[0].error < 0.15);
-
-  ctx.dir.noteOn('C4', 9400);
-  s = ctx.dir.snapshot(9400);
   assert.strictEqual(s.defendNotes.length, 2);
-  assert.strictEqual(s.defendNotes[1].sync, 'partial');
-  assert.ok(Math.abs(s.defendNotes[1].targetBeat - 9) < 1e-9);
+  assert.strictEqual(s.defendNotes[1].pitch, 'C4');
+  assert.strictEqual(s.defendNotes[1].sync, 'perfect');
+  assert.ok(Math.abs(s.defendNotes[1].targetBeat - 8.5) < 1e-9);
+  assert.ok(s.defendNotes[1].error < 0.15);
 
-  ctx.dir.noteOn('G4', 10020);
-  s = ctx.dir.snapshot(10020);
-  assert.strictEqual(s.defendNotes[2].sync, 'fail');
-  assert.strictEqual(s.defendNotes[2].targetBeat, null);
+  ctx.dir.noteOn('C4', 9900);
+  s = ctx.dir.snapshot(9900);
+  assert.strictEqual(s.defendNotes.length, 3);
+  assert.strictEqual(s.defendNotes[2].sync, 'partial');
+  assert.ok(Math.abs(s.defendNotes[2].targetBeat - 9.5) < 1e-9);
+
+  ctx.dir.noteOn('G4', 10520);
+  s = ctx.dir.snapshot(10520);
+  assert.strictEqual(s.defendNotes[3].sync, 'fail');
+  assert.strictEqual(s.defendNotes[3].targetBeat, null);
   assert.strictEqual(s.improvNotes.length, 0);
 
-  ctx.dir.noteOn('C4', 11020);
-  ctx.dir.noteOn('C4', 12020);
-  s = ctx.dir.snapshot(12020);
+  ctx.dir.noteOn('C4', 11520);
+  ctx.dir.noteOn('C4', 12520);
+  s = ctx.dir.snapshot(12520);
   assert.strictEqual(s.defendNotes.filter((n) => n.sync === 'perfect').length, 3);
+});
+
+test('D18: el beat no salta al pasar de Ataque a Defiende', () => {
+  const ctx = make();
+  ctx.dir.start(0);
+  const a = ctx.dir.tick(7990);
+  const b = ctx.dir.tick(8010);
+  assert.strictEqual(a.phase, 'hole');
+  assert.strictEqual(b.phase, 'defend');
+  assert.ok(Math.abs((b.beat - a.beat) - 0.02) < 1e-9);
+  assert.strictEqual(b.barIndex, a.barIndex + 1);
+  assert.strictEqual(b.currentBar.startBeat, 8);
 });
 
 test('D17: el feedback del hole dice Ataque', () => {

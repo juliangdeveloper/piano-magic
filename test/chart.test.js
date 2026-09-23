@@ -82,4 +82,17 @@ test('C7: notas del segundo defend son C D E E', () => {
   const c = load();
   const pitches = c.loop[2].notes.map((n) => n.pitch);
   assert.deepStrictEqual(pitches, ['C4', 'D4', 'E4', 'E4']);
+  const beats = c.loop[2].notes.map((n) => n.beat);
+  assert.deepStrictEqual(beats, [0, 1, 2, 3]);
+});
+
+test('C8: el centro del tiempo es continuo al cruzar Ataque → Defiende', () => {
+  assert.strictEqual(Chart.BEAT_CENTER, 0.5);
+  assert.strictEqual(Chart.hitOnset(0), 0.5);
+  assert.strictEqual(Chart.hitOnset(3), 3.5);
+  assert.strictEqual(Chart.centerReached(7.49), 6);
+  assert.strictEqual(Chart.centerReached(7.5), 7);
+  assert.strictEqual(Chart.centerReached(8), 7);
+  assert.strictEqual(Chart.centerReached(8.5), 8);
+  assert.strictEqual(Chart.centerReached(8.5) - Chart.centerReached(7.5), 1);
 });

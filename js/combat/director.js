@@ -86,7 +86,10 @@
       } else if (meta.kind === 'hole') {
         result = Spell.resolveHole(notes, chart.roomKey, { buffs: buffs });
       } else {
-        result = Spell.resolveDefend(notes, meta.notes, chart.roomKey, { buffs: buffs });
+        var expected = (meta.notes || []).map(function (n) {
+          return { pitch: n.pitch, beat: Chart.hitOnset(n.beat), dur: n.dur };
+        });
+        result = Spell.resolveDefend(notes, expected, chart.roomKey, { buffs: buffs });
       }
 
       applyResult(result);
@@ -330,7 +333,8 @@
       for (i = 0; i < notes.length; i++) {
         if (claimedTargets[ev.barIndex + ':' + i]) continue;
         if (!samePitch(ev.pitch, notes[i].pitch)) continue;
-        var d = Math.abs(ev.beatInBar - notes[i].beat);
+        var onset = Chart.hitOnset(notes[i].beat);
+        var d = Math.abs(ev.beatInBar - onset);
         if (d <= Spell.HIT_WINDOW_BEATS && d < bestDist) {
           bestDist = d;
           best = i;
@@ -340,7 +344,7 @@
       claimedTargets[ev.barIndex + ':' + best] = true;
       return {
         sync: Spell.judgeNoteSync(bestDist),
-        targetBeat: meta.startBeat + notes[best].beat,
+        targetBeat: meta.startBeat + Chart.hitOnset(notes[best].beat),
         error: bestDist
       };
     }

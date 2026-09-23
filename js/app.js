@@ -6,7 +6,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.6';
+  var VERSION = '0.1.7';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
   var KB_KEY = 'onscreenKeyboard';
 
@@ -21,6 +21,7 @@
   var audioUnlocked = false;
   var audioHeldForPause = false;
   var runningLoop = false;
+  var lastPaintMs = 0;
   var paused = false;
   var lastClickBeat = -1;
   var heldKeys = {};
@@ -346,7 +347,7 @@
       notes = bar.notes || [];
       for (j = 0; j < notes.length; j++) {
         note = notes[j];
-        abs = bar.startBeat + note.beat;
+        abs = Chart.hitOnset(bar.startBeat + note.beat);
         if (abs <= from || abs > to + 1e-4) continue;
         id = bar.globalBar + ':' + note.beat + ':' + note.pitch;
         if (bossHeard[id]) continue;
@@ -396,26 +397,32 @@
   }
 
   function render() {
-    if (!director) return;
-    var state = director.tick(performance.now());
+    if (!director || !runningLoop) return;
+    lastPaintMs = performance.now();
+    var state = director.tick(lastPaintMs);
     if (tape) tape.render(state);
     if (hud) hud.render(state);
     playChartMelody(state);
 
     if (state.running && !state.paused) {
-      var ibeat = Math.floor(state.beat + 1e-6);
-      if (ibeat !== lastClickBeat && ibeat >= 0) {
-        lastClickBeat = ibeat;
-        if (!micStream) metronomeClick((ibeat % state.beatsPerBar) === 0);
+      // El clic cae en el centro del tiempo, junto a la marca y a la nota.
+      var slot = Chart.centerReached(state.beat);
+      if (slot !== lastClickBeat && slot >= 0) {
+        lastClickBeat = slot;
+        if (!micStream) metronomeClick((slot % (state.beatsPerBar || 4)) === 0);
       }
     }
 
     if (state.ended) {
       showOutcome(state);
       stopLoop();
-      return;
     }
-    if (runningLoop) requestAnimationFrame(render);
+  }
+
+  function rafLoop() {
+    if (!runningLoop) return;
+    render();
+    if (runningLoop) requestAnimationFrame(rafLoop);
   }
 
   function stopLoop() {
@@ -475,11 +482,16 @@
     runningLoop = true;
     setPauseUi(false, true);
     $('btnStart').className = 'hidden';
+    lastPaintMs = performance.now();
+    // Un solo rAF. El interval no abre otra cadena: solo recupera
+    // un frame si el anterior se atrasó (pestaña oculta). Si cada
+    // tick volviera a pedir un rAF, al llegar a Defiende la cinta
+    // se atasca y el reloj da tirones.
     tickTimer = setInterval(function () {
       if (!runningLoop) return;
-      render();
+      if (performance.now() - lastPaintMs > 80) render();
     }, 50);
-    requestAnimationFrame(render);
+    requestAnimationFrame(rafLoop);
   }
 
   function restartFight() {
