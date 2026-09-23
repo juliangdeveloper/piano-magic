@@ -47,6 +47,9 @@
     var collected = [];
     var resolvedBar = -1;
     var freezeBeat = 0;
+    var paused = false;
+    var pausedAt = null;
+    var claimedTargets = {};
 
     function roomElement() {
       return Spell.elementForKey(chart.roomKey);
@@ -54,11 +57,12 @@
 
     function currentBeat(t) {
       if (!running && !ended) return 0;
-      if (ended) return freezeBeat;
+      if (ended || paused) return freezeBeat;
       return translator.beatsAt(t);
     }
 
     function tickTo(t) {
+      if (paused) return snapshot(t);
       if (!running || ended) return snapshot(t);
       var beat = translator.beatsAt(t);
       var bpb = Chart.beatsPerBar(chart);
@@ -110,7 +114,7 @@
     }
 
     function decayBuffs(kind) {
-      // ATQ+ cuenta ventanas de agujero (donde hay DPS), no copias Defend.
+      // ATQ+ cuenta ventanas hole (donde hay DPS), no copias Defend.
       if (kind !== 'hole') return;
       var next = [];
       for (var i = 0; i < buffs.length; i++) {
@@ -139,8 +143,8 @@
       if (!r) return '';
       if (r.kind === 'setup') return 'Escucha · sin daño';
       if (r.kind === 'hole-idle') {
-        if (r.extras) return 'Agujero · sin gesto';
-        return 'Agujero · libre';
+        if (r.extras) return 'Ataque · sin gesto';
+        return 'Ataque · libre';
       }
       if (r.kind === 'defend-fail') return 'Fallo · −' + r.playerDamage + ' HP';
       if (r.kind === 'defend-partial') return 'Parcial · −' + r.playerDamage + ' HP';
@@ -184,20 +188,34 @@
       if (fromBar < 0) fromBar = 0;
       var ribbon = Chart.upcoming(chart, fromBar, lookBehind + 5).map(copyBar);
       var improvNotes = [];
+      var defendNotes = [];
       for (var ci = 0; ci < collected.length; ci++) {
         var cn = collected[ci];
-        if (Chart.barAt(chart, cn.barIndex).kind !== 'hole') continue;
-        improvNotes.push({
-          pitch: cn.pitch,
-          beat: cn.beat,
-          dur: 1,
-          barIndex: cn.barIndex
-        });
+        var cnKind = Chart.barAt(chart, cn.barIndex).kind;
+        if (cnKind === 'hole') {
+          improvNotes.push({
+            pitch: cn.pitch,
+            beat: cn.beat,
+            dur: 1,
+            barIndex: cn.barIndex
+          });
+        } else if (cnKind === 'defend') {
+          defendNotes.push({
+            pitch: cn.pitch,
+            beat: cn.beat,
+            dur: 1,
+            barIndex: cn.barIndex,
+            sync: cn.sync || 'fail',
+            targetBeat: (typeof cn.targetBeat === 'number') ? cn.targetBeat : null,
+            error: (typeof cn.error === 'number') ? cn.error : null
+          });
+        }
       }
 
       return {
         version: VERSION,
         running: running,
+        paused: paused,
         ended: ended,
         outcome: outcome,
         phase: phase,
@@ -218,6 +236,7 @@
         upcoming: upcoming,
         ribbon: ribbon,
         improvNotes: improvNotes,
+        defendNotes: defendNotes,
         playerHp: playerHp,
         bossHp: bossHp,
         playerHpMax: playerHpMax,
@@ -245,6 +264,9 @@
       ended = false;
       outcome = null;
       freezeBeat = 0;
+      paused = false;
+      pausedAt = null;
+      claimedTargets = {};
       running = true;
       translator.setBpm(chart.bpm);
       translator.setTimeSig(chart.timeSig);
@@ -264,23 +286,86 @@
       lastResolve = null;
       lastFeedback = '';
       freezeBeat = 0;
+      paused = false;
+      pausedAt = null;
+      claimedTargets = {};
       translator.setStart(null);
       return snapshot(0);
     }
 
+    function pause(t) {
+      t = (typeof t === 'number') ? t : nowFn();
+      if (!running || ended || paused) return snapshot(t);
+      freezeBeat = translator.beatsAt(t);
+      paused = true;
+      pausedAt = t;
+      return snapshot(t);
+    }
+
+    function resume(t) {
+      t = (typeof t === 'number') ? t : nowFn();
+      if (!paused) return snapshot(t);
+      var delta = t - (pausedAt == null ? t : pausedAt);
+      if (delta < 0) delta = 0;
+      var start = translator.getStart();
+      if (typeof start === 'number') translator.setStart(start + delta);
+      paused = false;
+      pausedAt = null;
+      return snapshot(t);
+    }
+
+    function samePitch(a, b) {
+      var ma = Translator.pitchToMidi(a);
+      var mb = Translator.pitchToMidi(b);
+      return ma != null && ma === mb;
+    }
+
+    function judgeDefend(ev) {
+      var meta = Chart.barAt(chart, ev.barIndex);
+      if (!meta || meta.kind !== 'defend') return null;
+      var notes = meta.notes || [];
+      var best = -1;
+      var bestDist = Infinity;
+      var i;
+      for (i = 0; i < notes.length; i++) {
+        if (claimedTargets[ev.barIndex + ':' + i]) continue;
+        if (!samePitch(ev.pitch, notes[i].pitch)) continue;
+        var d = Math.abs(ev.beatInBar - notes[i].beat);
+        if (d <= Spell.HIT_WINDOW_BEATS && d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      if (best < 0) return { sync: 'fail', targetBeat: null, error: null };
+      claimedTargets[ev.barIndex + ':' + best] = true;
+      return {
+        sync: Spell.judgeNoteSync(bestDist),
+        targetBeat: meta.startBeat + notes[best].beat,
+        error: bestDist
+      };
+    }
+
     function noteOn(pitch, timeMs) {
       var t = (typeof timeMs === 'number') ? timeMs : nowFn();
+      if (paused) return { type: 'on', pitch: null, ignored: true, timeMs: t };
       tickTo(t);
       var ev = translator.noteOn(pitch, t);
       if (running && !ended && ev.pitch) {
-        collected.push({
+        var row = {
           pitch: ev.pitch,
           midi: ev.midi,
           timeMs: t,
           beat: ev.beat,
           beatInBar: ev.beatInBar,
           barIndex: ev.barIndex
-        });
+        };
+        var judged = judgeDefend(ev);
+        if (judged) {
+          row.sync = judged.sync;
+          row.targetBeat = judged.targetBeat;
+          row.error = judged.error;
+        }
+        collected.push(row);
       }
       return ev;
     }
@@ -295,6 +380,8 @@
       chart: chart,
       start: start,
       reset: reset,
+      pause: pause,
+      resume: resume,
       tick: tickTo,
       noteOn: noteOn,
       noteOff: noteOff,

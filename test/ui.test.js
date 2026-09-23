@@ -1,4 +1,4 @@
-// test/ui.test.js — v0.1.3: tutorial (escala), pentagrama, retrato único.
+// test/ui.test.js — v0.1.4: tutorial, pentagrama, pausa, ataques, fusión.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -8,6 +8,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const Tutorial = require(path.join(root, 'js', 'ui', 'tutorial.js'));
 const Tape = require(path.join(root, 'js', 'ui', 'tape.js'));
+const Hud = require(path.join(root, 'js', 'ui', 'hud.js'));
 
 test('U1: el paso de sala dice escala y tempo, no elemento', () => {
   const sala = Tutorial.STEPS.find((s) => s.id === 'sala');
@@ -38,21 +39,71 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.3, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.3');
+test('U3: versión 0.1.4, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.4');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.3');
+  assert.strictEqual(pkg.version, '0.1.4');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.3/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.4/);
   assert.equal(html.includes('boss-cloud.png'), false);
   assert.equal(html.includes('0.1.2'), false);
+  assert.equal(html.includes('0.1.3'), false);
   assert.match(html, /id="bossPortrait"/);
   const portraits = html.match(/id="bossPortrait"/g) || [];
   assert.strictEqual(portraits.length, 1);
   const tape = fs.readFileSync(path.join(root, 'js', 'ui', 'tape.js'), 'utf8');
   assert.equal(tape.includes('note-tile'), false);
   assert.match(tape, /improvNotes/);
+  assert.match(tape, /defendNotes/);
   assert.match(tape, /treble-clef\.png/);
   assert.ok(fs.existsSync(path.join(root, 'assets', 'ui', 'boss-portrait.png')));
   assert.ok(fs.existsSync(path.join(root, 'assets', 'ui', 'treble-clef.png')));
+});
+
+test('U4: la cinta no lleva el marco decorativo detrás y el ataque se llama Ataque', () => {
+  const css = fs.readFileSync(path.join(root, 'css', 'ui.css'), 'utf8');
+  assert.equal(/tape-frame\.png/.test(css), false);
+  assert.strictEqual(Tape.KIND_LABEL.hole, 'ATAQUE');
+  assert.strictEqual(Tape.KIND_LABEL.defend, 'DEFIENDE');
+  assert.strictEqual(Hud.PHASE_LABEL.hole, 'Ataque');
+  const ataque = Tutorial.STEPS.find((s) => s.id === 'hueco');
+  assert.ok(ataque);
+  assert.strictEqual(ataque.title, 'Ataque');
+  assert.equal(/agujero|hueco/i.test(ataque.title + '\n' + ataque.body), false);
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.equal(/agujero|hueco/i.test(html), false);
+  assert.match(html, /id="btnPause"/);
+  assert.match(html, />Pausa</);
+  assert.match(html, /id="pauseBanner"/);
+  const hud = fs.readFileSync(path.join(root, 'js', 'ui', 'hud.js'), 'utf8');
+  assert.equal(/agujero|hueco/i.test(hud), false);
+  const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+  assert.match(app, /primeAudio/);
+  assert.match(app, /playChartMelody/);
+  assert.match(app, /audioCtx\.suspend/);
+});
+
+test('U5: la fusión perfect es más fuerte que la parcial y el fallo no se funde', () => {
+  const perfect = Tape.fuseVisual('perfect', 0);
+  const partial = Tape.fuseVisual('partial', 0);
+  const fail = Tape.fuseVisual('fail', 0.05);
+  assert.ok(perfect.glow > partial.glow);
+  assert.ok(perfect.sparkle > partial.sparkle);
+  assert.ok(Tape.fuseVisual('perfect', 0.13).scale > Tape.fuseVisual('partial', 0.21).scale);
+  assert.strictEqual(perfect.lerp, 0);
+  assert.strictEqual(perfect.fused, false);
+  assert.strictEqual(fail.miss, true);
+  assert.strictEqual(fail.lerp, 0);
+  assert.strictEqual(fail.sparkle, 0);
+  assert.strictEqual(fail.fused, false);
+  const mid = Tape.fuseVisual('perfect', 0.13);
+  assert.ok(mid.lerp > 0 && mid.lerp < 1);
+  assert.strictEqual(mid.showPlayer, true);
+  const done = Tape.fuseVisual('perfect', 0.5);
+  assert.strictEqual(done.fused, true);
+  assert.strictEqual(done.sparkle, 0);
+  assert.ok(done.glow < perfect.glow);
+  const lateFail = Tape.fuseVisual('fail', 0.4);
+  assert.strictEqual(lateFail.lerp, 0);
+  assert.strictEqual(lateFail.fused, false);
 });

@@ -250,6 +250,73 @@ test('D13: NoteOn en el agujero entra en improvNotes; en setup o defend, no', ()
   assert.strictEqual(s.ribbon[0].globalBar, 0);
 });
 
+test('D15: la pausa congela el beat; continuar no salta compases ni resuelve de más', () => {
+  const ctx = make();
+  ctx.dir.start(0);
+  ctx.dir.pause(3900);
+  let s = ctx.dir.tick(20000);
+  assert.strictEqual(s.paused, true);
+  assert.ok(Math.abs(s.beat - 3.9) < 1e-9);
+  assert.strictEqual(s.phase, 'setup');
+  assert.strictEqual(s.lastResolve, null);
+  assert.strictEqual(s.playerHp, 15);
+  ctx.dir.noteOn('E4', 15000);
+  s = ctx.dir.snapshot(20000);
+  assert.strictEqual(s.improvNotes.length, 0);
+  assert.strictEqual(s.defendNotes.length, 0);
+  ctx.dir.resume(20000);
+  s = ctx.dir.snapshot(20000);
+  assert.strictEqual(s.paused, false);
+  assert.ok(Math.abs(s.beat - 3.9) < 1e-9);
+  s = ctx.dir.tick(20200);
+  assert.strictEqual(s.phase, 'hole');
+  assert.strictEqual(s.lastResolve.kind, 'setup');
+  assert.ok(Math.abs(s.beat - 4.1) < 1e-9);
+  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.bossHp, 20);
+});
+
+test('D16: en Defend la nota del jugador queda en defendNotes con sync; el hole sigue solo en improvNotes', () => {
+  const ctx = make();
+  ctx.dir.start(0);
+  ctx.set(8020);
+  ctx.dir.noteOn('C4', 8020);
+  let s = ctx.dir.snapshot(8020);
+  assert.strictEqual(s.phase, 'defend');
+  assert.strictEqual(s.improvNotes.length, 0);
+  assert.strictEqual(s.defendNotes.length, 1);
+  assert.strictEqual(s.defendNotes[0].pitch, 'C4');
+  assert.strictEqual(s.defendNotes[0].sync, 'perfect');
+  assert.ok(Math.abs(s.defendNotes[0].targetBeat - 8) < 1e-9);
+  assert.ok(s.defendNotes[0].error < 0.15);
+
+  ctx.dir.noteOn('C4', 9400);
+  s = ctx.dir.snapshot(9400);
+  assert.strictEqual(s.defendNotes.length, 2);
+  assert.strictEqual(s.defendNotes[1].sync, 'partial');
+  assert.ok(Math.abs(s.defendNotes[1].targetBeat - 9) < 1e-9);
+
+  ctx.dir.noteOn('G4', 10020);
+  s = ctx.dir.snapshot(10020);
+  assert.strictEqual(s.defendNotes[2].sync, 'fail');
+  assert.strictEqual(s.defendNotes[2].targetBeat, null);
+  assert.strictEqual(s.improvNotes.length, 0);
+
+  ctx.dir.noteOn('C4', 11020);
+  ctx.dir.noteOn('C4', 12020);
+  s = ctx.dir.snapshot(12020);
+  assert.strictEqual(s.defendNotes.filter((n) => n.sync === 'perfect').length, 3);
+});
+
+test('D17: el feedback del hole dice Ataque', () => {
+  const ctx = make();
+  ctx.dir.start(0);
+  const s = ctx.dir.tick(8000);
+  assert.strictEqual(s.phase, 'defend');
+  assert.strictEqual(s.lastResolve.kind, 'hole-idle');
+  assert.strictEqual(s.feedback, 'Ataque · libre');
+});
+
 test('D14: la cinta mira dos compases atrás cuando ya hay historia', () => {
   const ctx = make();
   ctx.dir.start(0);

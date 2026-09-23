@@ -1,6 +1,6 @@
 {
   "name": "piano-magic",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "scripts": {
     "test": "node --test test/spell.test.js test/chart.test.js test/director.test.js test/ui.test.js"

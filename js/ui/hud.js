@@ -15,13 +15,13 @@
     idle: 'Listo',
     setup: 'Escucha',
     defend: 'Defiende',
-    hole: 'Agujero',
+    hole: 'Ataque',
     win: 'Victoria',
     lose: 'Derrota'
   };
 
   var BUFF_ICON = {
-    atk: 'assets/ui/buff-icon-2.png?v=0.1.3'
+    atk: 'assets/ui/buff-icon-2.png?v=0.1.4'
   };
 
   function el(id) {
@@ -76,7 +76,7 @@
 
       setText(bpm, String(state.bpm));
       if (orb) {
-        var pulsing = !!(state.running && (state.beat % 1) < 0.18);
+        var pulsing = !!(state.running && !state.paused && (state.beat % 1) < 0.18);
         orb.classList.toggle('pulse', pulsing);
       }
 
@@ -133,11 +133,11 @@
       var hint = el(ids.hint || 'hint');
       if (hint) {
         if (state.phase === 'hole') {
-          hint.textContent = 'Agujero: improvisa · mayor (C D E) = ataque · menor (C Eb G) = mejora · pentatónica (C D E G A) = cura. Tocar no resta HP.';
+          hint.textContent = 'Ataque: improvisa · mayor (C D E) = ataque · menor (C Eb G) = mejora · pentatónica (C D E G A) = cura. Tocar no resta HP.';
         } else if (state.phase === 'defend') {
           hint.textContent = 'Defiende: copia la cinta. A = C4 · S = D4 · D = E4. Perfecto / Parcial / Fallo — sin DPS al jefe.';
         } else {
-          hint.textContent = 'Tras la escucha: agujero (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Agujero: F G H J K + W E T Y U. Sala C = Agua.';
+          hint.textContent = 'Tras la escucha: ataque (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Ataque: F G H J K + W E T Y U. Sala C = Agua.';
         }
       }
     }

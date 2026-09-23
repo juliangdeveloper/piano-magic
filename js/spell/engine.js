@@ -49,8 +49,10 @@
   var FULL_ACCURACY = 0.75;
   var MIN_GESTURE_PCS = 2;
 
-  // Ventana de improvisación en el agujero: todos los NoteOn del compás (1 barra).
+  // Ventana de improvisación en el hole (ataque en la UI): todos los NoteOn del compás (1 barra).
   var HOLE_WINDOW_BARS = 1;
+  // Subconjunto visual del hit de combate. No cambia Perfect/Partial/Fail del compás.
+  var PERFECT_WINDOW_BEATS = 0.15;
 
   var MAJOR = [0, 2, 4, 5, 7, 9, 11];
   var MINOR = [0, 2, 3, 5, 7, 8, 10];
@@ -389,7 +391,24 @@
   }
 
   /**
-   * Agujero = improvisación libre. Mayor→ataque, menor→buff, pent→cura.
+   * Onset de una nota de Defend contra su blanco.
+   * perfect: |error| ≤ ventana cerrada (por defecto 0.15 beats).
+   * partial: dentro del hit de combate (por defecto ±0.45) pero no perfect.
+   * fail: fuera del hit. Solo presentación; resolveDefend no la usa.
+   */
+  function judgeNoteSync(errorBeats, hitWindow, perfectWindow) {
+    var err = Math.abs(Number(errorBeats));
+    if (!isFinite(err)) return 'fail';
+    var hit = (typeof hitWindow === 'number') ? hitWindow : HIT_WINDOW_BEATS;
+    var perfect = (typeof perfectWindow === 'number') ? perfectWindow : PERFECT_WINDOW_BEATS;
+    if (perfect > hit) perfect = hit;
+    if (err <= perfect + 1e-9) return 'perfect';
+    if (err <= hit + 1e-9) return 'partial';
+    return 'fail';
+  }
+
+  /**
+   * Hole = improvisación libre (en la UI: Ataque). Mayor→ataque, menor→buff, pent→cura.
    * Tocar no daña al jugador. Silencio no se pune.
    */
   function resolveHole(played, roomKey, opts) {
@@ -487,6 +506,7 @@
     classify: classify,
     inferGesture: inferGesture,
     matchNotes: matchNotes,
+    judgeNoteSync: judgeNoteSync,
     resolveDefend: resolveDefend,
     resolveHole: resolveHole,
     resolveSetup: resolveSetup,
@@ -503,6 +523,7 @@
     BASE_HEAL: BASE_HEAL,
     MISS_DAMAGE: MISS_DAMAGE,
     HIT_WINDOW_BEATS: HIT_WINDOW_BEATS,
+    PERFECT_WINDOW_BEATS: PERFECT_WINDOW_BEATS,
     MIN_ACCURACY: MIN_ACCURACY,
     FULL_ACCURACY: FULL_ACCURACY,
     MIN_GESTURE_PCS: MIN_GESTURE_PCS,
