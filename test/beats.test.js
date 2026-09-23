@@ -36,6 +36,21 @@ test('el pulso en el borde pertenece al beat que empieza ahí', () => {
   assert.strictEqual(next[0].current, true);
 });
 
+test('las notas de Defiende usan el mismo centro que los pulsos', () => {
+  const marks = Tape.attackBeatMarks(8, 4, 8.2);
+  assert.strictEqual(Tape.chartNoteBeat(8, 0), marks[0].beat);
+  assert.strictEqual(Tape.chartNoteBeat(8, 1), marks[1].beat);
+  assert.strictEqual(Tape.chartNoteBeat(8, 2), marks[2].beat);
+  assert.strictEqual(Tape.chartNoteBeat(8, 3), marks[3].beat);
+  assert.ok(Tape.chartNoteBeat(8, 0) > 8, 'la primera nota cae dentro del compás');
+  assert.ok(Tape.chartNoteBeat(8, 3) < 12, 'la última nota cae antes de la barra siguiente');
+  const gaps = [1, 2, 3].map((i) => Tape.chartNoteBeat(8, i) - Tape.chartNoteBeat(8, i - 1));
+  assert.deepStrictEqual(gaps, [1, 1, 1]);
+  const Chart = require(path.join(__dirname, '..', 'js', 'combat', 'chart.js'));
+  assert.strictEqual(Tape.BEAT_CENTER, Chart.BEAT_CENTER);
+  assert.strictEqual(Tape.chartNoteBeat(4, 2), 4 + Chart.hitOnset(2));
+});
+
 test('otro compás sigue el numerador', () => {
   const three = Tape.attackBeatMarks(0, 3, 1.5);
   assert.strictEqual(three.length, 3);
