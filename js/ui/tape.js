@@ -362,21 +362,21 @@
         ctx.lineCap = 'round';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.font = '600 8px Georgia, serif';
+        ctx.font = '700 10px Georgia, serif';
         for (mi = 0; mi < marks.length; mi++) {
           m = marks[mi];
           x = xAt(m.beat);
           if (x < clefRight + 4 || x > w - 6) continue;
           on = !!m.current;
-          tickTop = topLine - (on ? 8 : 5);
-          ctx.strokeStyle = on ? 'rgba(138, 90, 24, 0.95)' : 'rgba(92, 70, 42, 0.42)';
-          ctx.lineWidth = on ? 1.7 : 1;
+          tickTop = topLine - (on ? 11 : 8);
+          ctx.strokeStyle = on ? 'rgba(122, 72, 16, 0.95)' : 'rgba(74, 52, 28, 0.72)';
+          ctx.lineWidth = on ? 2 : 1.35;
           ctx.beginPath();
           ctx.moveTo(x, topLine - 1);
           ctx.lineTo(x, tickTop);
           ctx.stroke();
           if (tickTop > 16) {
-            ctx.fillStyle = on ? 'rgba(120, 74, 16, 0.95)' : 'rgba(92, 70, 42, 0.5)';
+            ctx.fillStyle = on ? 'rgba(110, 64, 12, 0.98)' : 'rgba(74, 52, 28, 0.78)';
             ctx.fillText(m.label, x, tickTop - 1);
           }
         }

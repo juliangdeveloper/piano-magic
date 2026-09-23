@@ -159,18 +159,25 @@
       masterGain = audioCtx.createGain();
       masterGain.gain.value = 0.92;
       masterGain.connect(audioCtx.destination);
-      try {
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.15;
-        masterGain.connect(analyser);
-        var tap = audioCtx.createGain();
-        tap.gain.value = 0;
-        analyser.connect(tap);
-        tap.connect(audioCtx.destination);
-      } catch (e3) {}
     }
     return audioCtx;
+  }
+
+  // El analizador no entra en el primer NoteOn: un tap mudo extra retrasa el
+  // ataque y en iOS a veces deja la ruta del altavoz en silencio.
+  function ensureAnalyser() {
+    if (analyser || !audioCtx || !masterGain) return analyser;
+    try {
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.15;
+      masterGain.connect(analyser);
+      var tap = audioCtx.createGain();
+      tap.gain.value = 0;
+      analyser.connect(tap);
+      tap.connect(audioCtx.destination);
+    } catch (e) {}
+    return analyser;
   }
 
   // Beep corto (HTML playsinline + buffer) en el mismo turno del gesto.
@@ -209,6 +216,7 @@
   }
 
   function samplePeak() {
+    ensureAnalyser();
     if (!analyser) return 0;
     if (!peakBuf || peakBuf.length !== analyser.fftSize) peakBuf = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(peakBuf);
@@ -275,12 +283,19 @@
   function playFreq(freq, opts) {
     opts = opts || {};
     if (paused || !freq) return;
-    var ctx = primeAudio();
+    var ctx = getAudio();
     if (!ctx) return;
+    preferSpeaker(!!micStream);
     if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
       try { ctx.resume(); } catch (e) {}
     }
+    // El tono se agenda antes del beep de desbloqueo, para no esperar al WAV.
     try { startVoice(ctx, freq, opts); } catch (e2) {}
+    if (!audioUnlocked || ctx.state !== 'running') {
+      try { audiblePrime(ctx); } catch (e3) {}
+      playSpeakerEl();
+      audioUnlocked = true;
+    }
   }
 
   function playPitch(pitch, opts) {
@@ -913,8 +928,13 @@
     tutorial.maybeStart();
   }
 
-  function onGestureUnlock() {
+  function onGestureUnlock(ev) {
     if (paused || audioHeldForPause) return;
+    // La tecla (OSK o QWERTY) agenda el tono ella misma. Si el desbloqueo
+    // corre antes, en captura, el primer sample espera al beep.
+    if (ev && ev.type === 'keydown' && pitchForKey(ev.key)) return;
+    var t = ev && ev.target;
+    if (t && t.closest && t.closest('#piano .key')) return;
     primeAudio();
   }
 
@@ -960,6 +980,8 @@
       maybeTutorial();
     });
   }
+
+  try { primeWavUrl(); } catch (e) {}
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
