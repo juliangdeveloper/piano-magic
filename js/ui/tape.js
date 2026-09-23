@@ -60,6 +60,28 @@
    * fail no se funde: la nota queda en su beat.
    * ageBeats es el tiempo de cinta desde el onset (la pausa lo congela).
    */
+  /**
+   * Marcas de pulso dentro de un compás de Ataque (kind hole).
+   * label es 1..n. current es el beat que contiene playBeat.
+   * El borde derecho (playBeat === start + n) ya es el compás siguiente.
+   */
+  function attackBeatMarks(barStart, beatsPerBar, playBeat) {
+    var n = (typeof beatsPerBar === 'number' && beatsPerBar > 0) ? Math.round(beatsPerBar) : 4;
+    var start = (typeof barStart === 'number' && isFinite(barStart)) ? barStart : 0;
+    var play = (typeof playBeat === 'number' && isFinite(playBeat)) ? playBeat : 0;
+    var marks = [];
+    var i;
+    for (i = 0; i < n; i++) {
+      var abs = start + i;
+      marks.push({
+        beat: abs,
+        label: String(i + 1),
+        current: play >= abs && play < abs + 1
+      });
+    }
+    return marks;
+  }
+
   function fuseVisual(sync, ageBeats) {
     var age = (typeof ageBeats === 'number' && ageBeats > 0) ? ageBeats : 0;
     if (sync !== 'perfect' && sync !== 'partial') {
@@ -94,7 +116,7 @@
 
   function create(canvas, opts) {
     opts = opts || {};
-    var version = opts.version || '0.1.4';
+    var version = opts.version || '0.1.5';
     var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;
@@ -328,6 +350,39 @@
         return playheadX + (absBeat - beat) * pxPerBeat;
       }
 
+      // Ticks y números 1–2–3–4 por encima del pentagrama: no tapan las cabezas.
+      function drawAttackGuide(bar) {
+        var marks = attackBeatMarks(bar.startBeat, bpb, beat);
+        var mi;
+        var m;
+        var x;
+        var on;
+        var tickTop;
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.font = '600 8px Georgia, serif';
+        for (mi = 0; mi < marks.length; mi++) {
+          m = marks[mi];
+          x = xAt(m.beat);
+          if (x < clefRight + 4 || x > w - 6) continue;
+          on = !!m.current;
+          tickTop = topLine - (on ? 8 : 5);
+          ctx.strokeStyle = on ? 'rgba(138, 90, 24, 0.95)' : 'rgba(92, 70, 42, 0.42)';
+          ctx.lineWidth = on ? 1.7 : 1;
+          ctx.beginPath();
+          ctx.moveTo(x, topLine - 1);
+          ctx.lineTo(x, tickTop);
+          ctx.stroke();
+          if (tickTop > 16) {
+            ctx.fillStyle = on ? 'rgba(120, 74, 16, 0.95)' : 'rgba(92, 70, 42, 0.5)';
+            ctx.fillText(m.label, x, tickTop - 1);
+          }
+        }
+        ctx.restore();
+      }
+
       var bars = (state && (state.ribbon || state.upcoming)) || [];
       var i, j, bar, x0, x1, note, parts, nx;
       for (i = 0; i < bars.length; i++) {
@@ -357,6 +412,7 @@
             ctx.stroke();
             ctx.restore();
           }
+          drawAttackGuide(bar);
         }
 
         ctx.fillStyle = '#5c4630';
@@ -477,6 +533,7 @@
     staffStep: staffStep,
     pitchParts: pitchParts,
     fuseVisual: fuseVisual,
+    attackBeatMarks: attackBeatMarks,
     KIND_LABEL: KIND_LABEL
   };
 });
