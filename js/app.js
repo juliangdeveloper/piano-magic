@@ -6,7 +6,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.7';
+  var VERSION = '0.1.8';
   var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
   var KB_KEY = 'onscreenKeyboard';
 
@@ -759,18 +759,11 @@
     if (!micAnalyser || !micTracker || !micBuf || paused || !window.Pitch || !window.MicNotes) return;
     if (!audioCtx) return;
     try { micAnalyser.getFloatTimeDomainData(micBuf); } catch (e) { return; }
-    var db = MicNotes.rmsDb(micBuf);
-    var midi = null;
-    var name = null;
-    if (db >= MicNotes.GATE_DB) {
-      var res = Pitch.detectPitch(micBuf, audioCtx.sampleRate || 48000, { maxLag: 420 });
-      if (res && res.freq) {
-        var note = Pitch.noteFromFreq(res.freq, 440);
-        name = MicNotes.accept(note, res.clarity);
-        if (name && note && MicNotes.isBlocked(synthBlocks, note.midi, performance.now())) name = null;
-        if (name) midi = note.midi;
-      }
-    }
+    // v0.1.8: piso de ruido adaptativo, corrección de octava y votación 3 de 5.
+    var obs = MicNotes.observe(micTracker, micBuf, audioCtx.sampleRate || 48000, Pitch);
+    var midi = obs.midi;
+    var name = obs.name;
+    if (name && MicNotes.isBlocked(synthBlocks, midi, performance.now())) { name = null; midi = null; }
     var ev = MicNotes.hop(micTracker, { midi: name ? midi : null, name: name });
     if (ev.off) noteOff(ev.off, 'mic');
     if (ev.on) noteOn(ev.on, 'mic', { silent: true });
@@ -795,7 +788,7 @@
     playSpeakerEl();
     micHp = ctx.createBiquadFilter();
     micHp.type = 'highpass';
-    micHp.frequency.value = 70;
+    micHp.frequency.value = 90;
     micHp.Q.value = 0.707;
     micSource = ctx.createMediaStreamSource(stream);
     micAnalyser = ctx.createAnalyser();
