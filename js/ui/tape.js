@@ -128,7 +128,7 @@
 
   function create(canvas, opts) {
     opts = opts || {};
-    var version = opts.version || '0.1.7';
+    var version = opts.version || '0.1.8';
     var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;

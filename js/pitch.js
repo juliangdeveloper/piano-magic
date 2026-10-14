@@ -91,6 +91,25 @@
 
     if (bestTau < 0) return { freq: null, clarity: 0 };
 
+    // v0.1.8: corrección de octava. Si el valle elegido es un múltiplo del
+    // periodo real (subarmónico: nota una octava abajo), baja a τ/k cuando ese
+    // valle es casi igual de profundo. Los graves del piano tienen fundamental
+    // débil y el argmin global caía en 2T.
+    var k, sub, j, lo, hi, m, mv;
+    for (k = 4; k >= 2; k--) {
+      sub = bestTau / k;
+      if (sub < TAU_MIN + 1) continue;
+      lo = Math.max(TAU_MIN, Math.floor(sub) - 2);
+      hi = Math.min(maxLag - 1, Math.ceil(sub) + 2);
+      m = -1; mv = Infinity;
+      for (j = lo; j <= hi; j++) if (dp[j] < mv) { mv = dp[j]; m = j; }
+      if (m > TAU_MIN && dp[m] <= dp[m - 1] && dp[m] <= dp[m + 1] &&
+          mv < Math.max(YIN_THRESHOLD * 2, bestDp * 1.6 + 0.06)) {
+        bestTau = m; bestDp = mv;
+        break;
+      }
+    }
+
     // Refinamiento parabólico con vecinos de d'(tau)
     var refinedTau = bestTau;
     var s0, s1, s2;

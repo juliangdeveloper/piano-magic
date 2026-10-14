@@ -16,7 +16,10 @@
   var MIN_RUN = 2;
   var RELEASE_GAPS = 3;
   var HOP_MS = 32;
-  var GATE_DB = -42;
+  var GATE_DB = -50;
+  var FLOOR_MARGIN_DB = 5; // la nota debe superar el ruido de fondo
+  var VOTE_N = 5;   // v0.1.8: ventana de votación (frames)
+  var VOTE_MIN = 3; // votos para aceptar una nota
   var MIN_MIDI = 48; // C3
   var MAX_MIDI = 84; // C6
 
@@ -27,7 +30,9 @@
       candMidi: null,
       candName: null,
       run: 0,
-      gap: 0
+      gap: 0,
+      votes: [],
+      lastDb: -120
     };
   }
 
@@ -39,6 +44,54 @@
     st.candName = null;
     st.run = 0;
     st.gap = 0;
+    st.votes = [];
+    st.lastDb = -120;
+    st.floorDb = null;
+  }
+
+  // Un frame crudo → observación suavizada {midi, name} (o nulls).
+  // Votación por mayoría en los últimos VOTE_N frames; un salto de octava
+  // respecto a la nota sostenida solo se acepta con un nuevo ataque (+6 dB).
+  function observe(st, buf, sampleRate, Pitch) {
+    var db = rmsDb(buf);
+    var onset = db - st.lastDb >= 6;
+    st.lastDb = db;
+    // Piso de ruido adaptativo: baja de inmediato, sube lento (~1 dB/s).
+    if (st.floorDb == null || db < st.floorDb) st.floorDb = db;
+    else st.floorDb += 0.03;
+    var raw = null, rawName = null;
+    if (db >= GATE_DB && db >= st.floorDb + FLOOR_MARGIN_DB) {
+      var res = Pitch.detectPitch(buf, sampleRate, { maxLag: Math.ceil(sampleRate / 120) });
+      if (res && res.freq) {
+        var note = Pitch.noteFromFreq(res.freq, 440);
+        var nm = accept(note, res.clarity);
+        if (nm) { raw = note.midi; rawName = nm; }
+      }
+    }
+    if (onset) st.votes = [];
+    st.votes.push(raw == null ? null : { midi: raw, name: rawName });
+    if (st.votes.length > VOTE_N) st.votes.shift();
+    var count = {}, best = null, bestN = 0, i, v;
+    for (i = 0; i < st.votes.length; i++) {
+      v = st.votes[i];
+      if (!v) continue;
+      count[v.midi] = (count[v.midi] || 0) + 1;
+      if (count[v.midi] > bestN) { bestN = count[v.midi]; best = v; }
+    }
+    var need = Math.min(VOTE_MIN, Math.max(2, st.votes.length));
+    if (!best || bestN < need) {
+      // Sin consenso: si la nota sostenida aún aparece, mantenerla.
+      if (st.heldMidi != null && raw != null && count[st.heldMidi]) {
+        return { midi: st.heldMidi, name: st.heldName, db: db };
+      }
+      return { midi: null, name: null, db: db };
+    }
+    if (st.heldMidi != null && best.midi !== st.heldMidi &&
+        Math.abs(best.midi - st.heldMidi) % 12 === 0 && !onset && st.votes.length >= VOTE_N &&
+        count[st.heldMidi]) {
+      return { midi: st.heldMidi, name: st.heldName, db: db };
+    }
+    return { midi: best.midi, name: best.name, db: db };
   }
 
   function rmsDb(buffer) {
@@ -55,8 +108,8 @@
     var minMidi = opts.minMidi == null ? MIN_MIDI : opts.minMidi;
     var maxMidi = opts.maxMidi == null ? MAX_MIDI : opts.maxMidi;
     var maxCents = opts.maxCents == null ? 40 : opts.maxCents;
-    var strict = opts.strict == null ? 0.86 : opts.strict;
-    var relaxed = opts.relaxed == null ? 0.78 : opts.relaxed;
+    var strict = opts.strict == null ? 0.72 : opts.strict;
+    var relaxed = opts.relaxed == null ? 0.70 : opts.relaxed;
     if (!note || typeof note.midi !== 'number') return null;
     if (note.midi < minMidi || note.midi > maxMidi) return null;
     if (typeof note.cents === 'number' && Math.abs(note.cents) > maxCents) return null;
@@ -191,6 +244,7 @@
     create: create,
     reset: reset,
     rmsDb: rmsDb,
+    observe: observe,
     accept: accept,
     isBlocked: isBlocked,
     hop: hop,
