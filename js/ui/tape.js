@@ -219,13 +219,14 @@
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.lineCap = 'butt';
       var ls;
-      if (step <= -2) {
-        for (ls = -2; ls >= step; ls -= 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
+      if (step === -2) drawLedger(c, x, yFor(-2, bottomLine, lineGap), lineGap);
+      if (step <= -14) {
+        for (ls = -14; ls >= step; ls -= 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
       }
       if (step >= 10) {
         for (ls = 10; ls <= step; ls += 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
       }
-      var up = stemDown ? false : step < 4;
+      var up = stemDown ? false : (step <= -3 ? step < -8 : step < 4);
       var stemH = lineGap * 3.15;
       c.strokeStyle = color;
       c.lineWidth = Math.max(1, lineGap * 0.1);
@@ -254,6 +255,132 @@
         c.fill();
       }
       c.restore();
+      c.restore();
+    }
+
+    // v0.1.11: notas del Ataque con figura: cabeza hueca (blanca/redonda), plica,
+    // puntillo, ligaduras entre segmentos, barras (1 = corcheas, 2 = semicorcheas)
+    // agrupadas por pulso; corchete si queda sola. Fuera de tiempo = gris con ×.
+    function drawRhythm(c, improv, xAt, bottomLine, lineGap, clefRight, w) {
+      var heads = [];
+      for (var i = 0; i < improv.length; i++) {
+        var n = improv[i];
+        var parts = pitchParts(n.pitch);
+        if (!parts) continue;
+        var segs = (n.segs && n.segs.length) ? n.segs : [{ pos: n.gridBeat - BEAT_CENTER, beats: 1, base: 1, dot: false, tied: false }];
+        for (var s2 = 0; s2 < segs.length; s2++) {
+          var g = segs[s2];
+          heads.push({ x: xAt(g.pos + BEAT_CENTER), y: yFor(parts.step, bottomLine, lineGap), step: parts.step, acc: s2 === 0 ? parts.acc : '',
+            base: g.base, dot: g.dot, tied: g.tied, pos: g.pos, off: n.onGrid === false, held: n.held && s2 === segs.length - 1,
+            next: null });
+          if (s2 > 0) heads[heads.length - 2].next = heads[heads.length - 1];
+        }
+      }
+      var rx = Math.max(4, lineGap * 0.52), stemH = lineGap * 3.15;
+      var groups = {};
+      heads.forEach(function (h) {
+        if (h.x < clefRight - 2 || h.x > w + 12) { h.skip = true; return; }
+        var col = h.off ? 'rgba(90,80,70,0.55)' : (h.held ? '#1a4f8b' : '#5b2d86');
+        h.col = col;
+        if (h.acc === '#') drawSharp(c, h.x - lineGap * 0.85, h.y, lineGap, col);
+        else if (h.acc === 'b') drawFlat(c, h.x - lineGap * 0.7, h.y, lineGap, col);
+        var hollow = h.base >= 2;
+        // drawNote siempre dibuja plica arriba/abajo; para redonda la tapamos con una sin plica
+        c.save();
+        c.globalAlpha = 1;
+        if (h.step === -2) drawLedger(c, h.x, yFor(-2, bottomLine, lineGap), lineGap);
+        if (h.step <= -14) for (var ls = -14; ls >= h.step; ls -= 2) drawLedger(c, h.x, yFor(ls, bottomLine, lineGap), lineGap);
+        if (h.step >= 10) for (var ls2 = 10; ls2 <= h.step; ls2 += 2) drawLedger(c, h.x, yFor(ls2, bottomLine, lineGap), lineGap);
+        c.translate(h.x, h.y); c.rotate(-0.42); c.beginPath();
+        c.ellipse(0, 0, rx, Math.max(2.8, lineGap * 0.38), 0, 0, Math.PI * 2);
+        if (hollow) { c.fillStyle = 'rgba(255,250,240,0.94)'; c.fill(); c.strokeStyle = col; c.lineWidth = Math.max(1.5, lineGap * 0.14); c.stroke(); }
+        else { c.fillStyle = col; c.fill(); }
+        c.restore();
+        h.sx = h.x + rx * 0.82; h.sy = h.y - stemH;
+        if (h.base < 4) {
+          c.strokeStyle = col; c.lineWidth = Math.max(1, lineGap * 0.1);
+          c.beginPath(); c.moveTo(h.sx, h.y); c.lineTo(h.sx, h.sy); c.stroke();
+        }
+        if (h.dot) { c.fillStyle = col; c.beginPath(); c.arc(h.x + rx * 1.7, h.y - (h.step % 2 === 0 ? lineGap * 0.3 : 0), Math.max(1.6, lineGap * 0.13), 0, Math.PI * 2); c.fill(); }
+        if (h.off) drawMiss(c, h.x, h.y, lineGap);
+        if (h.base <= 0.5 && !h.off) {
+          var key = Math.floor(h.pos + 1e-6);
+          (groups[key] = groups[key] || []).push(h);
+        }
+      });
+      // ligaduras
+      heads.forEach(function (h) {
+        if (!h.tied || !h.next || h.skip) return;
+        var x2 = Math.min(h.next.x, w + 12);
+        c.strokeStyle = h.col; c.lineWidth = Math.max(1.2, lineGap * 0.12);
+        c.beginPath(); c.moveTo(h.x + rx * 0.6, h.y + lineGap * 0.55);
+        c.quadraticCurveTo((h.x + x2) / 2, h.y + lineGap * 1.35, x2 - rx * 0.6, h.y + lineGap * 0.55); c.stroke();
+      });
+      // barras por pulso
+      var bw = Math.max(2.4, lineGap * 0.38), gap = bw * 1.6;
+      Object.keys(groups).forEach(function (k) {
+        var gr = groups[k].sort(function (a, b) { return a.pos - b.pos; });
+        c.fillStyle = gr[0].col;
+        if (gr.length === 1) {
+          var h = gr[0], flags = h.base <= 0.25 ? 2 : 1;
+          c.strokeStyle = h.col; c.lineWidth = Math.max(1.4, lineGap * 0.16);
+          for (var f = 0; f < flags; f++) { c.beginPath(); c.moveTo(h.sx, h.sy + f * gap); c.quadraticCurveTo(h.sx + lineGap, h.sy + f * gap + lineGap * 0.9, h.sx + lineGap * 0.7, h.sy + f * gap + lineGap * 1.9); c.stroke(); }
+          return;
+        }
+        var top = Math.min.apply(null, gr.map(function (h) { return h.sy; }));
+        c.strokeStyle = gr[0].col; c.lineWidth = Math.max(1, lineGap * 0.1);
+        gr.forEach(function (h) { c.beginPath(); c.moveTo(h.sx, h.sy); c.lineTo(h.sx, top); c.stroke(); h.sy = top; });
+        var x0 = gr[0].sx, x1 = gr[gr.length - 1].sx;
+        c.fillRect(x0, top, x1 - x0, bw);
+        // segunda barra: tramos de semicorcheas consecutivas; si una sola, medio corchete hacia su vecina
+        for (var i2 = 0; i2 < gr.length; i2++) {
+          if (gr[i2].base > 0.25) continue;
+          var j = i2;
+          while (j + 1 < gr.length && gr[j + 1].base <= 0.25) j++;
+          if (j > i2) c.fillRect(gr[i2].sx, top + gap, gr[j].sx - gr[i2].sx, bw);
+          else {
+            var stub = lineGap * 0.9;
+            if (i2 === gr.length - 1) c.fillRect(gr[i2].sx - stub, top + gap, stub, bw);
+            else c.fillRect(gr[i2].sx, top + gap, stub, bw);
+          }
+          i2 = j;
+        }
+      });
+    }
+
+    // Llave del gran pentagrama (equivalente a StaveConnector brace).
+    function drawBrace(c, y0, y1, lineGap) {
+      var x = 2.5, mid = (y0 + y1) / 2, wv = Math.max(3, lineGap * 0.55);
+      c.save();
+      c.fillStyle = INK;
+      c.beginPath();
+      c.moveTo(x + wv, y0);
+      c.bezierCurveTo(x - wv * 0.2, y0 + (mid - y0) * 0.3, x + wv * 0.9, mid - (mid - y0) * 0.3, x - wv * 0.2, mid);
+      c.bezierCurveTo(x + wv * 0.9, mid + (y1 - mid) * 0.3, x - wv * 0.2, y1 - (y1 - mid) * 0.3, x + wv, y1);
+      c.bezierCurveTo(x + wv * 0.1, y1 - (y1 - mid) * 0.3, x + wv * 1.5, mid + (y1 - mid) * 0.3, x + wv * 0.3, mid);
+      c.bezierCurveTo(x + wv * 1.5, mid - (mid - y0) * 0.3, x + wv * 0.1, y0 + (mid - y0) * 0.3, x + wv, y0);
+      c.fill();
+      c.restore();
+    }
+
+    // Clave de fa dibujada (sin fuente): cabeza en la línea de F3 y dos puntos.
+    function drawBassClef(c, bassTop, lineGap) {
+      var x = 8 + lineGap * 0.4, fy = bassTop + lineGap; // F3 = 2ª línea desde arriba
+      c.save();
+      c.strokeStyle = INK; c.fillStyle = INK;
+      c.lineWidth = Math.max(1.6, lineGap * 0.22);
+      c.beginPath();
+      c.arc(x + lineGap * 0.35, fy, lineGap * 0.32, 0, Math.PI * 2);
+      c.fill();
+      c.beginPath();
+      c.moveTo(x + lineGap * 0.1, fy - lineGap * 0.15);
+      c.bezierCurveTo(x + lineGap * 0.6, fy - lineGap * 1.3, x + lineGap * 2.2, fy - lineGap * 1.0, x + lineGap * 2.0, fy + lineGap * 0.3);
+      c.bezierCurveTo(x + lineGap * 1.8, fy + lineGap * 1.6, x + lineGap * 0.9, fy + lineGap * 2.4, x, fy + lineGap * 2.9);
+      c.stroke();
+      c.beginPath();
+      c.arc(x + lineGap * 2.6, fy - lineGap * 0.5, lineGap * 0.17, 0, Math.PI * 2);
+      c.arc(x + lineGap * 2.6, fy + lineGap * 0.5, lineGap * 0.17, 0, Math.PI * 2);
+      c.fill();
       c.restore();
     }
 
@@ -323,17 +450,14 @@
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
 
-      // El pentagrama ocupa el centro del pergamino y deja sitio a C4 (línea adicional).
-      var lineGap = Math.max(7, Math.min(13, (h - 20) / 6.4));
+      // v0.1.11: gran pentagrama. Clave de sol arriba y clave de fa abajo, contiguas
+      // como en el piano: E4 = línea inferior de sol (paso 0), C4 = línea adicional
+      // central (paso −2), A3 = línea superior de fa (paso −4). MIDI < 60 cae en fa.
+      var lineGap = Math.max(5.5, Math.min(13, (h - 24) / 13.2));
       var staffH = lineGap * 4;
-      var bottomLine = (h + staffH) / 2 + lineGap * 0.15;
-      if (bottomLine + lineGap > h - 6) bottomLine = h - 6 - lineGap;
-      var topLine = bottomLine - staffH;
-      if (topLine < 14) {
-        bottomLine += 14 - topLine;
-        topLine = 14;
-      }
-
+      var topLine = Math.max(14, (h - lineGap * 11) / 2 + lineGap * 0.6);
+      var bottomLine = topLine + staffH;
+      var bassTop = yFor(-4, bottomLine, lineGap);
       var historyBeats = 3.2;
       var futureBeats = 11;
       var pxPerBeat = Math.max(8, (w - 8) / (historyBeats + futureBeats));
@@ -350,7 +474,14 @@
         ctx.moveTo(0, sy);
         ctx.lineTo(w, sy);
         ctx.stroke();
+        var by = bassTop + s * lineGap;
+        ctx.beginPath();
+        ctx.moveTo(0, by);
+        ctx.lineTo(w, by);
+        ctx.stroke();
       }
+      drawBrace(ctx, topLine, bassTop + staffH, lineGap);
+      drawBassClef(ctx, bassTop, lineGap);
 
       var clefH = lineGap * 7.15;
       var clefW = clefH * (ready(clefImg) ? (clefImg.naturalWidth / clefImg.naturalHeight) : 0.36);
@@ -407,7 +538,7 @@
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x0, topLine);
-        ctx.lineTo(x0, bottomLine);
+        ctx.lineTo(x0, bassTop + staffH);
         ctx.stroke();
 
         if (bar.kind === 'hole') {
@@ -419,7 +550,7 @@
             ctx.strokeStyle = '#b8893a';
             ctx.lineWidth = 1.4;
             ctx.setLineDash([4, 3]);
-            roundRect(ctx, hx0 + 1, topLine - 3, hx1 - hx0 - 2, (bottomLine - topLine) + 6, 5);
+            roundRect(ctx, hx0 + 1, topLine - 3, hx1 - hx0 - 2, (bassTop + staffH - topLine) + 6, 5);
             ctx.fill();
             ctx.stroke();
             ctx.restore();
@@ -456,16 +587,7 @@
       }
 
       var improv = (state && state.improvNotes) || [];
-      for (i = 0; i < improv.length; i++) {
-        note = improv[i];
-        parts = pitchParts(note.pitch);
-        if (!parts) continue;
-        nx = xAt(note.beat);
-        if (nx < clefRight - 2 || nx > w + 12) continue;
-        if (parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, yFor(parts.step, bottomLine, lineGap), lineGap);
-        else if (parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, yFor(parts.step, bottomLine, lineGap), lineGap);
-        drawNote(ctx, nx, parts.step, bottomLine, lineGap);
-      }
+      drawRhythm(ctx, improv, xAt, bottomLine, lineGap, clefRight, w);
 
       var defendPlayed = (state && state.defendNotes) || [];
       for (i = 0; i < defendPlayed.length; i++) {
@@ -514,7 +636,7 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(playheadX, topLine - 6);
-      ctx.lineTo(playheadX, bottomLine + 6);
+      ctx.lineTo(playheadX, bassTop + staffH + 6);
       ctx.stroke();
       ctx.fillStyle = pulse ? '#ffe7a3' : '#f7fbff';
       ctx.beginPath();

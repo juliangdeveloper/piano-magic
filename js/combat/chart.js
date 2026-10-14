@@ -74,6 +74,7 @@
       bpm: bpm,
       timeSig: timeSig,
       roomKey: String(raw.roomKey),
+      roomScale: Array.isArray(raw.roomScale) && raw.roomScale.length ? raw.roomScale.map(String) : null,
       setup: { listenOnly: setup.listenOnly !== false, bars: setupBars },
       loop: loop,
       hp: { player: player, boss: boss }

@@ -13,7 +13,14 @@
 
   // Solo los rivales con chart en charts/. Para sumar otro: un JSON más aquí.
   var LIST = [
-    { id: 'raindrops-thunder', label: 'Raindrops, Thunder', chart: 'charts/raindrops-thunder.json' }
+    { id: 'raindrops-thunder', label: 'Raindrops, Thunder', chart: 'charts/raindrops-thunder.json' },
+    // Grimorio Unidad 2 · Cámara del Rocío (piano-magic-grimoire-unit2.docx + *.ly).
+    { id: 'parade-feather', label: 'Parade Feather', chart: 'charts/parade-feather.json', grimoire: true },
+    { id: 'veil-boat', label: 'The Veil Boat', chart: 'charts/veil-boat.json', grimoire: true },
+    { id: 'tower-chime', label: 'Tower Chime', chart: 'charts/tower-chime.json', grimoire: true },
+    // PROVISIONALES (progresión Faber), fáciles de quitar: borrar estas dos líneas.
+    { id: 'bosque-de-sol', label: 'Guardián del Bosque de Sol', chart: 'charts/bosque-de-sol.json' },
+    { id: 'torre-de-escalas', label: 'Hechicera de la Torre', chart: 'charts/torre-de-escalas.json' }
   ];
 
   function options() {
@@ -28,7 +35,7 @@
     return all[0];
   }
 
-  // Modo libre: misma sala/BPM del chart base, pero el loop es solo Ataque
+  // Modo libre: usa el chart del rival 1 (sala C, escala de Do mayor). Misma sala/BPM del chart base, pero el loop es solo Ataque
   // (sin Defiende ni golpes del jefe) y el jefe no cae.
   function freeChart(base) {
     var c = JSON.parse(JSON.stringify(base));

@@ -120,7 +120,7 @@ test('S10: agujero silencio = idle sin daño; tocar no pune al jugador', () => {
 
   const one = Spell.resolveHole(played(['C4']), 'C');
   assert.strictEqual(one.playerDamage, 0);
-  assert.strictEqual(one.kind, 'hole-idle');
+  assert.strictEqual(one.bossDamage, 2, 'v0.1.11: una nota de la escala = ataque base');
 });
 
 test('S11: hole pentatónica cura (no daña jefe, no daña jugador)', () => {
@@ -208,7 +208,7 @@ test('S18: tríada mayor C E G es ataque, no cura pentatónica', () => {
   assert.strictEqual(s.mode, 'major');
   assert.strictEqual(s.action, 'attack');
   const r = Spell.resolveHole(played(['C4', 'E4', 'G4']), 'C');
-  assert.strictEqual(r.bossDamage, 2);
+  assert.strictEqual(r.bossDamage, 4, 'v0.1.11: tríada mayor de la tónica = 2×2');
   assert.strictEqual(r.heal, 0);
 });
 
