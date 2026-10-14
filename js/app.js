@@ -6,7 +6,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.9';
+  var VERSION = '0.1.10';
   var RIVAL_KEY = 'pmRival';
   var chartCache = {};
   var rivalId = null;
@@ -50,6 +50,8 @@
   var micBuf = null;
   var micTimer = null;
   var micTracker = null;
+  var micSilentTicks = 0;
+  var micRewires = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -481,6 +483,7 @@
     if (!director || tutorialOpen()) return;
     paused = false;
     audioHeldForPause = false;
+    unmuteMaster();
     primeAudio();
     if (!midiReady) {
       midiReady = true;
@@ -514,13 +517,28 @@
   // v0.1.8: reiniciar no debe dejar el micrófono mudo. Si la pista murió
   // (iOS la corta al cambiar la sesión de audio) se reabre sola; si sigue
   // viva se reanuda el AudioContext y se rearma el intervalo de lectura.
+  // v0.1.10: solo una pista 'ended' está muerta; 'muted' es transitorio en iOS
+  // (antes se cerraba y se volvía a pedir el mic, y a veces no volvía).
   function micTrackAlive() {
     if (!micStream) return false;
     var tr = micStream.getAudioTracks ? micStream.getAudioTracks() : [];
     if (!tr.length) return false;
     for (var i = 0; i < tr.length; i++) {
-      if (tr[i].readyState === 'ended' || tr[i].muted) return false;
+      if (tr[i].readyState === 'ended') return false;
     }
+    return true;
+  }
+
+  // Rehace el MediaStreamSource sobre la misma pista (no pide permiso otra vez).
+  function rewireMic() {
+    var ctx = audioCtx;
+    if (!ctx || !micStream || !micHp) return false;
+    try { if (micSource) micSource.disconnect(); } catch (e) {}
+    try {
+      micSource = ctx.createMediaStreamSource(micStream);
+      micSource.connect(micHp);
+    } catch (e2) { return false; }
+    micSilentTicks = 0;
     return true;
   }
 
@@ -528,12 +546,15 @@
     if (!micWanted || micPending) return;
     if (!micStream || !micAnalyser || !micTrackAlive()) {
       stopMicGraph();
+      micWanted = true;
       enableMic();
       return;
     }
     if (audioCtx && audioCtx.state !== 'running') {
       try { audioCtx.resume(); } catch (e) {}
     }
+    rewireMic();
+    micRewires = 0;
     if (micTracker && window.MicNotes) MicNotes.reset(micTracker);
     if (micTimer) clearInterval(micTimer);
     micTimer = setInterval(micTick, MicNotes.HOP_MS);
@@ -553,7 +574,13 @@
     releaseHeld();
     director.pause(performance.now());
     paused = true;
-    if (audioCtx && audioCtx.state === 'running') {
+    if (audioCtx && micStream) {
+      // v0.1.10: con micrófono no se suspende el AudioContext. En Safari
+      // (iPad/iPhone) suspender y reanudar deja el MediaStreamSource entregando
+      // silencio: era la causa de que el mic dejara de oír tras Pausa→Reiniciar.
+      audioHeldForPause = true;
+      if (masterGain) masterGain.gain.value = 0;
+    } else if (audioCtx && audioCtx.state === 'running') {
       audioHeldForPause = true;
       try { audioCtx.suspend(); } catch (e) {}
     }
@@ -562,9 +589,14 @@
     if (hud) hud.render(director.snapshot(performance.now()));
   }
 
+  function unmuteMaster() {
+    if (masterGain) masterGain.gain.value = 0.92;
+  }
+
   function resumeFight() {
     if (!director || !paused) return;
     audioHeldForPause = false;
+    unmuteMaster();
     preferSpeaker(!!micStream);
     if (audioCtx) {
       try { audioCtx.resume(); } catch (e) {}
@@ -804,10 +836,26 @@
   function micTick() {
     if (!micAnalyser || !micTracker || !micBuf || paused || !window.Pitch || !window.MicNotes) return;
     if (!audioCtx) return;
-    if (audioCtx.state === 'suspended' && !audioHeldForPause) {
+    if (audioCtx.state !== 'running' && !audioHeldForPause) {
       try { audioCtx.resume(); } catch (e0) {}
     }
     try { micAnalyser.getFloatTimeDomainData(micBuf); } catch (e) { return; }
+    // Vigía: un mic real nunca da ceros exactos. ~0.6 s de ceros = la fuente
+    // quedó muda (Safari); se rehace, y si no basta se reabre el micrófono.
+    var allZero = true;
+    for (var zi = 0; zi < micBuf.length; zi += 16) { if (micBuf[zi] !== 0) { allZero = false; break; } }
+    if (allZero && audioCtx.state === 'running') {
+      micSilentTicks += 1;
+      if (micSilentTicks > 30) {
+        micSilentTicks = 0;
+        micRewires += 1;
+        if (micRewires <= 2 && micTrackAlive()) rewireMic();
+        else { micRewires = 0; stopMicGraph(); micWanted = true; enableMic(); }
+      }
+      return;
+    }
+    micSilentTicks = 0;
+    micRewires = 0;
     // v0.1.8: piso de ruido adaptativo, corrección de octava y votación 3 de 5.
     var obs = MicNotes.observe(micTracker, micBuf, audioCtx.sampleRate || 48000, Pitch);
     var midi = obs.midi;
@@ -1023,6 +1071,7 @@
     }
     paused = false;
     audioHeldForPause = false;
+    unmuteMaster();
     director.reset();
     hideOutcome();
     setPauseUi(false, false);
@@ -1130,6 +1179,12 @@
       if (tutorialOpen()) return;
       applyKeyboard($('keys').hidden, true);
     });
+    // v0.1.10: la cinta se ajusta al girar o al cambiar las barras de Safari.
+    window.addEventListener('resize', function () { requestAnimationFrame(refreshTape); });
+    window.addEventListener('orientationchange', function () { setTimeout(refreshTape, 250); });
+    if (window.ResizeObserver && $('tapeFrame')) {
+      try { new ResizeObserver(function () { refreshTape(); }).observe($('tapeFrame')); } catch (eRo) {}
+    }
     var btnMic = $('btnMic');
     if (btnMic) btnMic.addEventListener('click', toggleMic);
 
