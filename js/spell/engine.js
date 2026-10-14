@@ -407,81 +407,143 @@
     return 'fail';
   }
 
+  // v0.1.11: ritmo del Ataque. Rejilla de semicorcheas alineada con los pulsos
+  // del juego (centro del pulso = beatInBar k+0.5). Ventanas por nivel:
+  // negra (k+0.5) ±0.20 · corchea (k) ±0.12 · semicorchea (k±0.25) ±0.06 beat.
+  var GRID_TOL = { 1: 0.2, 0.5: 0.12, 0.25: 0.06 };
+  var DURS = [
+    { beats: 4, name: 'redonda' }, { beats: 3, name: 'blanca con puntillo', dot: true, base: 2 },
+    { beats: 2, name: 'blanca' }, { beats: 1.5, name: 'negra con puntillo', dot: true, base: 1 },
+    { beats: 1, name: 'negra' }, { beats: 0.75, name: 'corchea con puntillo', dot: true, base: 0.5 },
+    { beats: 0.5, name: 'corchea' }, { beats: 0.25, name: 'semicorchea' }
+  ];
+  var FIG_BY_BEATS = {};
+  DURS.forEach(function (d) { FIG_BY_BEATS[d.beats] = d; });
+
+  // Parte una nota sostenida en figuras ligadas (posición musical: 0 = pulso 1).
+  // Corta en la barra de compás y en la mitad del compás (4/4: pulso 3) si la
+  // nota no empieza ahí; una nota a contratiempo primero llega al siguiente pulso.
+  function splitTied(pos, beats, bpb) {
+    bpb = bpb || 4;
+    var total = Math.max(0.25, Math.round(beats / 0.25) * 0.25);
+    var p = Math.round(pos / 0.25) * 0.25;
+    var segs = [];
+    var guard = 0;
+    while (total > 1e-6 && guard++ < 64) {
+      var inBar = ((p % bpb) + bpb) % bpb;
+      var limit = Math.min(total, bpb - inBar);
+      var half = bpb / 2;
+      if (bpb % 2 === 0 && inBar < half && inBar + limit > half && inBar !== 0) limit = half - inBar;
+      var toBeat = Math.ceil(inBar - 1e-9) - inBar;
+      if (toBeat > 1e-6 && limit > toBeat) limit = toBeat;
+      var fig = null;
+      for (var i = 0; i < DURS.length; i++) {
+        if (DURS[i].beats <= limit + 1e-9) {
+          // dentro del pulso no se usan puntillos que crucen pulsos raros
+          if (DURS[i].dot && DURS[i].beats > 1 && inBar % 1 !== 0) continue;
+          fig = DURS[i]; break;
+        }
+      }
+      if (!fig) fig = DURS[DURS.length - 1];
+      segs.push({ pos: p, beats: fig.beats, name: fig.name, dot: !!fig.dot, base: fig.base || fig.beats, tied: false });
+      p += fig.beats;
+      total -= fig.beats;
+    }
+    for (var j = 0; j < segs.length - 1; j++) segs[j].tied = true;
+    return segs;
+  }
+
+  function snapOnset(beatInBar) {
+    if (typeof beatInBar !== 'number' || !isFinite(beatInBar)) return { ok: true, grid: null, level: null, error: 0 };
+    // Primero el pulso (negra), luego la corchea, luego la semicorchea.
+    var levels = [[1, 0.5], [0.5, 0], [0.25, 0.25]];
+    var nearest = null;
+    for (var i = 0; i < levels.length; i++) {
+      var step = levels[i][0] === 0.25 ? 0.5 : 1;
+      var g = Math.round((beatInBar - levels[i][1]) / step) * step + levels[i][1];
+      var err = beatInBar - g;
+      if (!nearest || Math.abs(err) < Math.abs(nearest.error)) nearest = { ok: false, grid: g, level: levels[i][0], error: err };
+      if (Math.abs(err) <= GRID_TOL[levels[i][0]] + 1e-9) return { ok: true, grid: g, level: levels[i][0], error: err };
+    }
+    return nearest;
+  }
+
+  // Duración medida (beats) → figura más cercana en escala logarítmica.
+  function quantizeDuration(beats) {
+    if (typeof beats !== 'number' || !(beats > 0)) return null;
+    var best = DURS[0], bd = Infinity;
+    for (var i = 0; i < DURS.length; i++) {
+      var d = Math.abs(Math.log(beats / DURS[i].beats));
+      if (d < bd) { bd = d; best = DURS[i]; }
+    }
+    return { beats: best.beats, name: best.name, dot: !!best.dot, base: best.base || best.beats };
+  }
+
+  // v0.1.11: Ataque por escala de sala explícita (chart.roomScale). Tónica = 1ª nota.
+  // Precedencia: tríada menor de la tónica > pentatónica > tríada mayor > ataque base.
+  var TRIAD_MULT = 2;
+  var MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+  var PENTA = [0, 2, 4, 7, 9];
+
+  function scaleFor(room) {
+    if (Array.isArray(room) && room.length) return room.slice();
+    var t = keyToPc(room || 'C');
+    return MAJOR_SCALE.map(function (iv) { return pcToKeyName((t + iv) % 12); });
+  }
+
+  function evaluateHole(pitches, room) {
+    var scale = scaleFor(room);
+    var scalePcs = scale.map(function (k) { return keyToPc(k); });
+    var tonic = scalePcs[0];
+    var set = {};
+    (pitches || []).forEach(function (p) {
+      var pc = Translator.pitchClass(typeof p === 'string' ? p : p && p.pitch);
+      if (pc != null) set[pc] = true;
+    });
+    var pcs = Object.keys(set).map(Number);
+    var rel = pcs.map(function (pc) { return ((pc - tonic) % 12 + 12) % 12; });
+    var has = function (iv) { return rel.indexOf(iv) >= 0; };
+    var inScale = pcs.filter(function (pc) { return scalePcs.indexOf(pc) >= 0; });
+    var mode = null, action = null;
+    if (has(0) && has(3) && has(7)) { mode = 'minor'; action = 'buff'; }
+    else if (inScale.length >= 4 && inScale.every(function (pc) { return PENTA.indexOf(((pc - tonic) % 12 + 12) % 12) >= 0; })
+      && inScale.some(function (pc) { var r = ((pc - tonic) % 12 + 12) % 12; return r === 2 || r === 9; })) { mode = 'pentatonic'; action = 'heal'; }
+    else if (has(0) && has(4) && has(7)) { mode = 'major'; action = 'attack'; }
+    else if (inScale.length >= 1) { mode = 'base'; action = 'attack'; }
+    return {
+      mode: mode, action: action, tonic: scale[0], roomScale: scale,
+      inScale: inScale.map(pcToKeyName), outOfScale: pcs.filter(function (pc) { return scalePcs.indexOf(pc) < 0; }).map(pcToKeyName),
+      element: elementForKey(scale[0]), pitches: (pitches || []).map(function (p) { return typeof p === 'string' ? p : p.pitch; })
+    };
+  }
+
   /**
-   * Hole = improvisación libre (en la UI: Ataque). Mayor→ataque, menor→buff, pent→cura.
-   * Tocar no daña al jugador. Silencio no se pune.
+   * Hole (Ataque). room = roomScale (array) o roomKey (→ escala mayor).
+   * base: ≥1 nota de la escala → 2×mejora. Tríada mayor de la tónica → 2×2×mejora.
+   * Tríada menor de la tónica → mejora ATQ+ (sin daño). Pentatónica (≥4 pcs de la penta,
+   * con 2ª o 6ª) → cura 3. Notas fuera de escala no cuentan. Tocar no daña al jugador.
    */
-  function resolveHole(played, roomKey, opts) {
+  function resolveHole(played, room, opts) {
     opts = opts || {};
     var n = (played || []).length;
-    if (n === 0) {
-      return {
-        ok: true,
-        kind: 'hole-idle',
-        grade: null,
-        accuracy: 1,
-        spell: null,
-        hits: 0,
-        expected: 0,
-        extras: 0,
-        missed: 0,
-        bossDamage: 0,
-        heal: 0,
-        buff: null,
-        playerDamage: 0
-      };
+    var rhythm = (played || []).map(function (p) {
+      var bib = (p && typeof p.beatInBar === 'number') ? p.beatInBar : null;
+      return { pitch: typeof p === 'string' ? p : p.pitch, snap: snapOnset(bib) };
+    });
+    var onTime = (played || []).filter(function (p, i) { return opts.rhythm === false || rhythm[i].snap.ok; });
+    var spell = onTime.length ? evaluateHole(onTime, room) : null;
+    if (!spell || !spell.action) {
+      return { ok: true, kind: 'hole-idle', grade: null, accuracy: n ? 0 : 1, spell: spell, hits: 0, expected: 0,
+        extras: n, missed: 0, bossDamage: 0, heal: 0, buff: null, playerDamage: 0, rhythm: rhythm, offGrid: n - onTime.length };
     }
-
-    var spell = classify(played, roomKey || 'C');
-    if (!spell.mode) {
-      return {
-        ok: true,
-        kind: 'hole-idle',
-        grade: null,
-        accuracy: 0,
-        spell: spell,
-        hits: 0,
-        expected: 0,
-        extras: n,
-        missed: 0,
-        bossDamage: 0,
-        heal: 0,
-        buff: null,
-        playerDamage: 0
-      };
-    }
-
-    var strength = gestureStrength(spell);
-    var roomMult = spell.multiplier;
     var buffMult = buffMultiplier(opts.buffs);
-    var bossDamage = 0;
-    var heal = 0;
-    var buff = null;
-
-    if (spell.action === 'attack') {
-      bossDamage = Math.round(BASE_ATTACK * roomMult * buffMult * strength);
-    } else if (spell.action === 'heal') {
-      heal = Math.round(BASE_HEAL * roomMult * strength);
-    } else if (spell.action === 'buff' && roomMult > 0) {
-      buff = { id: 'atk', label: 'ATQ+', amount: 0.5, remaining: 2 };
-    }
-
-    return {
-      ok: true,
-      kind: 'hole-spell',
-      grade: null,
-      accuracy: 1,
-      spell: spell,
-      hits: n,
-      expected: 0,
-      extras: n,
-      missed: 0,
-      bossDamage: bossDamage,
-      heal: heal,
-      buff: buff,
-      playerDamage: 0,
-      strength: strength
-    };
+    var bossDamage = 0, heal = 0, buff = null;
+    if (spell.mode === 'major') bossDamage = Math.round(BASE_ATTACK * TRIAD_MULT * buffMult);
+    else if (spell.mode === 'base') bossDamage = Math.round(BASE_ATTACK * buffMult);
+    else if (spell.mode === 'pentatonic') heal = BASE_HEAL;
+    else if (spell.mode === 'minor') buff = { id: 'atk', label: 'ATQ+', amount: 0.5, remaining: 2 };
+    return { ok: true, kind: 'hole-spell', grade: null, accuracy: 1, spell: spell, hits: n, expected: 0,
+      extras: n, missed: 0, bossDamage: bossDamage, heal: heal, buff: buff, playerDamage: 0, strength: 1, rhythm: rhythm, offGrid: n - onTime.length };
   }
 
   function resolveSetup() {
@@ -509,6 +571,14 @@
     judgeNoteSync: judgeNoteSync,
     resolveDefend: resolveDefend,
     resolveHole: resolveHole,
+    evaluateHole: evaluateHole,
+    snapOnset: snapOnset,
+    quantizeDuration: quantizeDuration,
+    splitTied: splitTied,
+    DURS: DURS,
+    GRID_TOL: GRID_TOL,
+    scaleFor: scaleFor,
+    TRIAD_MULT: TRIAD_MULT,
     resolveSetup: resolveSetup,
     circleDistance: circleDistance,
     roomMultiplier: roomMultiplier,

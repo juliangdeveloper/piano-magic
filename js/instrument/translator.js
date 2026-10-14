@@ -21,12 +21,19 @@
 
   // Home row blancas; fila superior negras. Documentado en pantalla.
   var KEY_MAP = {
+    v: 'G3', r: 'G#3', b: 'A3', i: 'A#3', n: 'B3',
     a: 'C4', w: 'C#4', s: 'D4', e: 'D#4', d: 'E4',
     f: 'F4', t: 'F#4', g: 'G4', y: 'G#4', h: 'A4',
-    u: 'A#4', j: 'B4', k: 'C5'
+    u: 'A#4', j: 'B4', k: 'C5', o: 'C#5', l: 'D5', p: 'D#5', 'ñ': 'E5', ';': 'E5',
+    "'": 'F5', z: 'F#5', x: 'G5', c: 'A5'
   };
 
   var KEY_LABELS = [
+    { key: 'V', pitch: 'G3' },
+    { key: 'B', pitch: 'A3' },
+    { key: 'N', pitch: 'B3' },
+    { key: 'R', pitch: 'G#3' },
+    { key: 'I', pitch: 'Bb3' },
     { key: 'A', pitch: 'C4' },
     { key: 'S', pitch: 'D4' },
     { key: 'D', pitch: 'E4' },
@@ -35,11 +42,19 @@
     { key: 'H', pitch: 'A4' },
     { key: 'J', pitch: 'B4' },
     { key: 'K', pitch: 'C5' },
+    { key: 'L', pitch: 'D5' },
+    { key: 'Ñ', pitch: 'E5' },
+    { key: "'", pitch: 'F5' },
+    { key: 'X', pitch: 'G5' },
+    { key: 'C', pitch: 'A5' },
     { key: 'W', pitch: 'C#4' },
     { key: 'E', pitch: 'Eb4' },
     { key: 'T', pitch: 'F#4' },
     { key: 'Y', pitch: 'Ab4' },
-    { key: 'U', pitch: 'Bb4' }
+    { key: 'U', pitch: 'Bb4' },
+    { key: 'O', pitch: 'C#5' },
+    { key: 'P', pitch: 'Eb5' },
+    { key: 'Z', pitch: 'F#5' }
   ];
 
   function normalizeName(raw) {

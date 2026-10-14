@@ -151,13 +151,13 @@
       var hint = el(ids.hint || 'hint');
       if (hint) {
         if (state.free) {
-          hint.textContent = 'Modo libre: solo atacas, sin Defiende. Mayor (C D E) = ataque · menor = mejora (sube el daño) · pentatónica = cura.';
+          hint.textContent = 'Modo libre: solo atacas. Nota de la escala a tiempo = 2 · tríada mayor de la tónica = 4 · tríada menor = mejora · pentatónica = cura 3. Fuera de escala o de tiempo no cuenta.';
         } else if (state.phase === 'hole') {
-          hint.textContent = 'Ataque: improvisa · mayor (C D E) = ataque · menor (C Eb G) = mejora · pentatónica (C D E G A) = cura. Tocar no resta HP.';
+          hint.textContent = 'Ataque (en la escala de la sala, a tiempo): nota suelta = 2 · tríada mayor de la tónica = 4 · tríada menor de la tónica = mejora +50% · pentatónica = cura 3. Lo de fuera no cuenta.';
         } else if (state.phase === 'defend') {
-          hint.textContent = 'Defiende: copia la cinta. A = C4 · S = D4 · D = E4. Perfecto / Parcial / Fallo — sin DPS al jefe.';
+          hint.textContent = 'Defiende: copia la cinta nota por nota. Perfecto / Parcial / Fallo — sin daño al jefe.';
         } else {
-          hint.textContent = 'Tras la escucha: ataque (improvisa) y luego 4 Defiende. A S D = C4 D4 E4. Ataque: F G H J K + W E T Y U. Sala C = Agua.';
+          hint.textContent = 'Tras la escucha: 1 compás de Ataque y 4 de Defiende. Teclado: V B N = G3 A3 B3 · A S D F G H J K L Ñ \' X C = C4…A5.';
         }
       }
     }

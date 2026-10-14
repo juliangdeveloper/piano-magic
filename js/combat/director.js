@@ -91,7 +91,7 @@
       if (meta.kind === 'setup' || meta.listenOnly) {
         result = Spell.resolveSetup();
       } else if (meta.kind === 'hole') {
-        result = Spell.resolveHole(notes, chart.roomKey, { buffs: buffs });
+        result = Spell.resolveHole(notes, chart.roomScale || chart.roomKey, { buffs: buffs });
       } else {
         var expected = (meta.notes || []).map(function (n) {
           return { pitch: n.pitch, beat: Chart.hitOnset(n.beat), dur: n.dur };
@@ -102,6 +102,16 @@
       applyResult(result);
       lastResolve = Object.assign({ barIndex: barIndex, kind: result.kind, phase: meta.kind }, result);
       lastFeedback = feedbackText(lastResolve);
+      if (meta.kind === 'hole' && notes.length) {
+        var figs = notes.slice().sort(function (a, b) { return a.beat - b.beat; }).map(function (n) {
+          var sn = Spell.snapOnset(n.beatInBar);
+          if (!sn.ok) return 'fuera de tiempo';
+          var bpbF = Chart.beatsPerBar(chart);
+          var segs = Spell.splitTied(sn.grid - Chart.BEAT_CENTER, n.durBeats != null ? n.durBeats : (barIndex + 1) * bpbF - n.beat, bpbF);
+          return segs.map(function (g) { return g.name; }).join(' ⁀ ') + (n.durBeats == null ? '…' : '');
+        });
+        lastFeedback = (lastFeedback ? lastFeedback + ' · ' : '') + figs.join(' · ');
+      }
       resolvedBar = barIndex;
 
       decayBuffs(meta.kind);
@@ -171,7 +181,7 @@
       if (r.kind === 'defend-perfect') return 'Perfecto';
       if (r.kind === 'hole-spell' && r.spell) {
         var el = r.spell.element ? r.spell.element.icon : '';
-        if (r.spell.action === 'attack') return 'Ataque ' + el + ' · −' + r.bossDamage + (free ? ' daño' : ' jefe');
+        if (r.spell.action === 'attack') return (r.spell.mode === 'major' ? 'Tríada ' : 'Ataque ') + el + ' · −' + r.bossDamage + (free ? ' daño' : ' jefe');
         if (r.spell.action === 'heal') return 'Cura · +' + r.heal + ' HP';
         if (r.spell.action === 'buff') return 'Mejora ATQ+';
       }
@@ -229,10 +239,19 @@
         var cn = collected[ci];
         var cnKind = Chart.barAt(chart, cn.barIndex).kind;
         if (cnKind === 'hole') {
+          var heldB = (cn.durBeats != null) ? cn.durBeats : Math.max(0, currentBeat(t) - cn.beat);
+          var qd = Spell.quantizeDuration(heldB);
+          var bpbI = Chart.beatsPerBar(chart);
+          var sn = Spell.snapOnset(cn.beatInBar);
           improvNotes.push({
             pitch: cn.pitch,
             beat: cn.beat,
-            dur: 1,
+            dur: qd ? qd.beats : 1,
+            durName: qd ? qd.name : null,
+            segs: Spell.splitTied((sn.grid != null ? sn.grid : cn.beatInBar) - Chart.BEAT_CENTER + cn.barIndex * bpbI, heldB, bpbI),
+            held: cn.durBeats == null,
+            gridBeat: sn.grid != null ? cn.barIndex * Chart.beatsPerBar(chart) + sn.grid : cn.beat,
+            onGrid: sn.ok,
             barIndex: cn.barIndex
           });
         } else if (cnKind === 'defend') {
@@ -386,12 +405,22 @@
       };
     }
 
+    var MERGE_MS = 60;
+
     function noteOn(pitch, timeMs) {
       var t = (typeof timeMs === 'number') ? timeMs : nowFn();
       if (paused) return { type: 'on', pitch: null, ignored: true, timeMs: t };
       tickTo(t);
       var ev = translator.noteOn(pitch, t);
       if (running && !ended && ev.pitch) {
+        // v0.1.11: parpadeo del mic — mismo tono re-detectado <60 ms tras soltar = misma nota.
+        for (var r = collected.length - 1; r >= 0 && r >= collected.length - 6; r--) {
+          var pr = collected[r];
+          if (pr.pitch === ev.pitch && pr.offMs != null && t - pr.offMs < MERGE_MS) {
+            pr.durBeats = null; pr.offMs = null; pr.merged = (pr.merged || 0) + 1;
+            return ev;
+          }
+        }
         var row = {
           pitch: ev.pitch,
           midi: ev.midi,
@@ -413,7 +442,16 @@
 
     function noteOff(pitch, timeMs) {
       var t = (typeof timeMs === 'number') ? timeMs : nowFn();
-      return translator.noteOff(pitch, t);
+      var off = translator.noteOff(pitch, t);
+      // v0.1.11: duración = noteOff − noteOn (teclado/MIDI: soltar; mic: se pierde o cambia el tono).
+      for (var k = collected.length - 1; k >= 0; k--) {
+        if (collected[k].pitch === off.pitch && collected[k].durBeats == null) {
+          collected[k].durBeats = Math.max(0, off.beat - collected[k].beat);
+          collected[k].offMs = t;
+          break;
+        }
+      }
+      return off;
     }
 
     return {

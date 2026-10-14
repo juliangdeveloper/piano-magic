@@ -6,7 +6,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.10';
+  var VERSION = '0.1.11';
   var RIVAL_KEY = 'pmRival';
   var chartCache = {};
   var rivalId = null;
@@ -666,20 +666,34 @@
   }
 
   function shortPitch(pitch) {
-    return String(pitch).replace(/4$/, '');
+    return String(pitch);
   }
 
   function buildPiano() {
     var piano = $('piano');
     if (!piano || !window.InstrumentTranslator) return;
     piano.textContent = '';
-    var blacks = { W: true, E: true, T: true, Y: true, U: true };
     var labels = InstrumentTranslator.KEY_LABELS;
+    // v0.1.11: C4–A5 (13 blancas). Las negras se ubican por posición, no por CSS fijo.
+    function isBlack(it) { return /[#b]/.test(it.pitch.replace(/^[A-G]/, '').replace(/\d+$/, '')); }
+    var whites = labels.filter(function (it) { return !isBlack(it); });
+    var W = whites.length || 1;
+    var blackW = 100 / W * 0.62;
+    function whiteIndexBelow(it) {
+      var m = InstrumentTranslator.pitchToMidi(it.pitch) - 1;
+      for (var q = 0; q < whites.length; q++) if (InstrumentTranslator.pitchToMidi(whites[q].pitch) === m) return q;
+      return 0;
+    }
     for (var i = 0; i < labels.length; i++) {
       var item = labels[i];
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'key ' + (blacks[item.key] ? 'black' : 'white');
+      var blk = isBlack(item);
+      btn.className = 'key ' + (blk ? 'black' : 'white');
+      if (blk) {
+        btn.style.width = blackW + '%';
+        btn.style.left = ((whiteIndexBelow(item) + 1) * 100 / W - blackW / 2) + '%';
+      }
       btn.setAttribute('data-key', item.key.toLowerCase());
       var pitch = pitchForKey(item.key);
       if (pitch) btn.setAttribute('data-pitch', pitch);
@@ -1007,6 +1021,7 @@
       now: function () { return performance.now(); }
     });
     if (window.PianoMagic) window.PianoMagic.director = director;
+    document.body.setAttribute('data-rival', (opt && opt.id) || chart.id || '');
   }
 
   function setPickerVisible(on) {
