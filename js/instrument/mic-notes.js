@@ -15,11 +15,11 @@
 
   var MIN_RUN = 2;
   var RELEASE_GAPS = 3;
-  var HOP_MS = 32;
-  var GATE_DB = -50;
-  var FLOOR_MARGIN_DB = 5; // la nota debe superar el ruido de fondo
-  var VOTE_N = 5;   // v0.1.8: ventana de votación (frames)
-  var VOTE_MIN = 3; // votos para aceptar una nota
+  var HOP_MS = 20;
+  var GATE_DB = -74; // v0.1.10: -50 cortaba un piano mf a 1-2 m del iPad (≈-55 dBFS sin AGC)
+  var FLOOR_MARGIN_DB = 8; // la nota debe superar el ruido de fondo
+  var VOTE_N = 3;   // v0.1.10: ventana corta (latencia ~60 ms)
+  var VOTE_MIN = 2; // votos para aceptar una nota
   var MIN_MIDI = 48; // C3
   var MAX_MIDI = 84; // C6
 
@@ -56,17 +56,25 @@
     var db = rmsDb(buf);
     var onset = db - st.lastDb >= 6;
     st.lastDb = db;
-    // Piso de ruido adaptativo: baja de inmediato, sube lento (~1 dB/s).
-    if (st.floorDb == null || db < st.floorDb) st.floorDb = db;
-    else st.floorDb += 0.03;
-    var raw = null, rawName = null;
-    if (db >= GATE_DB && db >= st.floorDb + FLOOR_MARGIN_DB) {
-      var res = Pitch.detectPitch(buf, sampleRate, { maxLag: Math.ceil(sampleRate / 120) });
-      if (res && res.freq) {
-        var note = Pitch.noteFromFreq(res.freq, 440);
-        var nm = accept(note, res.clarity);
-        if (nm) { raw = note.midi; rawName = nm; }
-      }
+    // v0.1.10: piso de ruido = nivel de los frames SIN tono (ruido del cuarto).
+    // Antes seguía el mínimo de todo, así que bajaba junto con la cola de cada
+    // nota y una nota nueva tenía que superar esa cola por 5 dB: casi ninguna
+    // pasaba al tocar seguido. Los frames con tono claro ya no lo mueven.
+    var raw = null, rawName = null, res = null;
+    if (db >= GATE_DB) res = Pitch.detectPitch(buf, sampleRate, { maxLag: Math.ceil(sampleRate / 120) });
+    var tonal = !!(res && res.freq && res.clarity >= 0.6);
+    // Solo frames claramente sin tono (o bajo la compuerta) mueven el piso;
+    // dos notas sonando juntas bajan la claridad pero no son ruido. Tope -50 dBFS.
+    var noisy = !res || !res.freq || res.clarity < 0.35;
+    if (noisy) {
+      if (st.floorDb == null || db < st.floorDb) st.floorDb = Math.min(db, -50);
+      else if (st.floorDb < -50) st.floorDb += 0.03; // sube ~1 dB/s
+    }
+    var floorOk = st.floorDb == null || db >= st.floorDb + FLOOR_MARGIN_DB;
+    if (tonal && floorOk) {
+      var note = Pitch.noteFromFreq(res.freq, 440);
+      var nm = accept(note, res.clarity);
+      if (nm) { raw = note.midi; rawName = nm; }
     }
     if (onset) st.votes = [];
     st.votes.push(raw == null ? null : { midi: raw, name: rawName });
@@ -86,11 +94,15 @@
       }
       return { midi: null, name: null, db: db };
     }
+    // Legato: un cambio de altura estable es nota nueva aunque no suba el
+    // volumen. Solo la octava exacta de la nota sostenida (cola que salta de
+    // armónico) pide un ataque nuevo o ~300 ms estable.
     if (st.heldMidi != null && best.midi !== st.heldMidi &&
-        Math.abs(best.midi - st.heldMidi) % 12 === 0 && !onset && st.votes.length >= VOTE_N &&
-        count[st.heldMidi]) {
-      return { midi: st.heldMidi, name: st.heldName, db: db };
-    }
+        Math.abs(best.midi - st.heldMidi) % 12 === 0 && !onset) {
+      st.octRun = (st.octMidi === best.midi) ? (st.octRun || 0) + 1 : 1;
+      st.octMidi = best.midi;
+      if (st.octRun < 15) return { midi: st.heldMidi, name: st.heldName, db: db };
+    } else { st.octRun = 0; st.octMidi = null; }
     return { midi: best.midi, name: best.name, db: db };
   }
 
@@ -108,8 +120,8 @@
     var minMidi = opts.minMidi == null ? MIN_MIDI : opts.minMidi;
     var maxMidi = opts.maxMidi == null ? MAX_MIDI : opts.maxMidi;
     var maxCents = opts.maxCents == null ? 40 : opts.maxCents;
-    var strict = opts.strict == null ? 0.72 : opts.strict;
-    var relaxed = opts.relaxed == null ? 0.70 : opts.relaxed;
+    var strict = opts.strict == null ? 0.6 : opts.strict;
+    var relaxed = opts.relaxed == null ? 0.6 : opts.relaxed;
     if (!note || typeof note.midi !== 'number') return null;
     if (note.midi < minMidi || note.midi > maxMidi) return null;
     if (typeof note.cents === 'number' && Math.abs(note.cents) > maxCents) return null;

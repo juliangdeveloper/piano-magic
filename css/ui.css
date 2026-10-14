@@ -809,20 +809,32 @@ footer {
   100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
 }
 
-/* Alturas cortas (iPad mini horizontal con barras de Safari ≈ 670 px). */
-@media (max-height: 820px) and (min-width: 700px) {
-  #bossPortrait { max-height: 88px; }
-  #tapeFrame { height: 132px; }
-  #hint { display: none; }
-  .chip img { width: 28px; height: 28px; }
-  .chip { font-size: 11px; }
-  #statusRow { padding-top: 4px; }
-  .piano { height: 104px; }
-  #btnStart, #btnPause, #btnPauseRestart, #btnPauseRival { min-height: 40px; padding-top: 8px; padding-bottom: 8px; }
+/* v0.1.10: layout que llena la pantalla sin scroll en iPad/iPhone (Safari).
+   El cuerpo nunca hace scroll; #scroll es una columna flex y la cinta crece
+   para ocupar el alto libre. Los tamaños escalan con la ventana (dvh/vw)
+   en vez de encoger todo con media queries fijas. */
+html, body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+#frame { height: 100vh; height: 100dvh; max-width: min(1180px, 100vw); overflow: hidden; padding-bottom: var(--safe-bottom); }
+#scroll { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+#stageTop, #gestureLegend, #buffs, #statusRow, #hint { flex: 0 0 auto; }
+#tapeFrame { flex: 1 1 auto; height: auto; min-height: 110px; max-height: 340px; }
+#bossPortrait { max-height: clamp(64px, 15dvh, 200px); }
+#hint { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+footer { flex: 0 0 auto; }
+#keys { flex: 0 0 auto; }
+.piano { height: clamp(96px, 16dvh, 190px); max-width: 900px; }
+.key .k { font-size: clamp(13px, 1.9dvh, 18px); }
+.key .p { font-size: clamp(10px, 1.4dvh, 14px); }
+@media (min-width: 700px) {
+  #songTitle { font-size: clamp(18px, 2.6dvh, 28px); }
+  .rival-opt { font-size: clamp(15px, 2dvh, 19px); }
 }
-@media (max-height: 820px) and (min-width: 700px) {
-  footer { flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 12px; row-gap: 2px; padding-top: 2px; padding-bottom: 4px; }
+/* Horizontal con poco alto (iPad mini apaisado ≈ 1133×~650 útil). */
+@media (orientation: landscape) and (max-height: 820px) {
+  #hint { display: none; }
+  #bossPortrait { max-height: clamp(56px, 12dvh, 120px); }
+  .chip img { width: 30px; height: 30px; }
+  footer { flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 12px; row-gap: 2px; padding-top: 4px; padding-bottom: 4px; }
   #midiStatus, #micStatus, #version { flex-basis: 100%; }
-  #bossPortrait { max-height: 76px; }
-  .rival-opt { min-height: 38px; padding: 6px 14px; }
+  .piano { height: clamp(90px, 17dvh, 150px); }
 }
