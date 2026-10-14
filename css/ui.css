@@ -366,7 +366,7 @@ body {
   font-size: 15px;
 }
 
-#btnPause {
+#btnPause, #btnPauseRestart {
   font-size: 17px;
   padding: 12px 36px;
   min-width: 180px;
@@ -377,7 +377,8 @@ body {
   color: var(--ink);
 }
 
-#btnPause[hidden] { display: none !important; }
+#btnPause[hidden], #btnPauseRestart[hidden] { display: none !important; }
+#btnPauseRestart { background: transparent; color: #f8e7b8; min-width: 140px; }
 
 #btnPause.on {
   background: linear-gradient(#f4f8ff, #9ec0ea);
