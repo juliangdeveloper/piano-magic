@@ -1,6 +1,6 @@
-# piano-magic — SPEC v0.1.8 (Defiende en el pulso, cinta continua)
+# piano-magic — SPEC v0.1.9 (Defiende en el pulso, cinta continua)
 
-Producto **0.1.8**. Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. 0.1.6 dejó el **1** del Ataque en el centro del primer tiempo. Esta versión pone las cabezas de Defiende en ese mismo centro (no sobre la barra), hace sonar la melodía y el metrónomo ahí, y juzga Perfect/Parcial/Fallo con las mismas ventanas ±0.15 / ±0.45 alrededor de ese punto. El reloj del director no se reinicia al pasar de Ataque a Defiende: un solo `requestAnimationFrame` pinta la cinta, para que no se amontonen callbacks y el scroll dé un tirón.
+Producto **0.1.9** (selector de rival + Modo libre, `js/combat/rivals.js`). Las reglas de combate siguen las de v0.1.1: `CombatDirector.VERSION` permanece **0.1.1** (HP 15/20, `hole` primero, Defend solo copia, 12 elementos, ×sala). En la UI el `hole` se llama **Ataque**. 0.1.6 dejó el **1** del Ataque en el centro del primer tiempo. Esta versión pone las cabezas de Defiende en ese mismo centro (no sobre la barra), hace sonar la melodía y el metrónomo ahí, y juzga Perfect/Parcial/Fallo con las mismas ventanas ±0.15 / ±0.45 alrededor de ese punto. El reloj del director no se reinicia al pasar de Ataque a Defiende: un solo `requestAnimationFrame` pinta la cinta, para que no se amontonen callbacks y el scroll dé un tirón.
 
 Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN. 100% client-side.
 
@@ -136,7 +136,7 @@ KO: `bossHp === 0` → victoria; `playerHp === 0` → derrota. Overlay + **Reini
 - **Pausa / Continuar** (y la tecla `P`) durante el combate. `director.pause` congela el beat; al continuar se desplaza `startTimeMs` por el tiempo en pausa, así no se resuelven compases de golpe. El AudioContext se suspende y se reanuda en ese clic. El tutorial y el overlay de victoria/derrota siguen igual: no se puede Empezar con el tutorial abierto, y al terminar se oculta Pausa.
 - Teclado en pantalla: botón **Teclado** en el HUD. Por defecto activo en viewport estrecho (≤700px), puntero grueso o táctil; si no, apagado. La última elección queda en `localStorage.onscreenKeyboard` (`on` / `off`). Las teclas usan `InstrumentTranslator.KEY_MAP` (A–K blancas, W E T Y U negras) y el mismo `noteOn` / `noteOff` que el teclado físico.
 
-Versión **0.1.8**: `VERSION`, `package.json`, query `?v=0.1.8` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot de 0.1.4 (`paused`, `ribbon`, `improvNotes`, `defendNotes`) no cambia el daño.
+Versión **0.1.9**: `VERSION`, `package.json`, query `?v=0.1.9` en scripts, CSS e imágenes de UI. El director de combate sigue en 0.1.1. El snapshot de 0.1.4 (`paused`, `ribbon`, `improvNotes`, `defendNotes`) no cambia el daño.
 
 ## Tests
 
@@ -186,7 +186,7 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 5. Ataque (`hole`): mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.
 6. Fin en HP 0 (jugador o jefe) con pantalla victoria/derrota; Reiniciar funciona.
 7. `npm test` verde.
-8. Versión de producto **0.1.8** (`?v=0.1.8`). Combate sigue en **0.1.1**.
+8. Versión de producto **0.1.9** (`?v=0.1.9`). Combate sigue en **0.1.1**.
 9. GitHub Pages desde la raíz de `main` (ver README). `.nojekyll` en la raíz.
 10. Primera visita: tutorial de 5 pasos (Saltar / Siguiente / **?**). El paso de sala dice escala y tempo. `seenTutorial` persiste.
 11. Teclado en pantalla con las mismas notas que el QWERTY, acoplado abajo, entra en el combate y **suena** (Web Audio) en cada NoteOn. Igual el teclado físico y el MIDI.

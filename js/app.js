@@ -6,8 +6,11 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.8';
-  var CHART_URL = 'charts/raindrops-thunder.json?v=' + VERSION;
+  var VERSION = '0.1.9';
+  var RIVAL_KEY = 'pmRival';
+  var chartCache = {};
+  var rivalId = null;
+  var lastPopSeq = 0;
   var KB_KEY = 'onscreenKeyboard';
 
   var director = null;
@@ -385,6 +388,8 @@
     if (banner) banner.classList.toggle('visible', !!on);
     var rb = $('btnPauseRestart');
     if (rb) rb.hidden = !(on && visible);
+    var rv = $('btnPauseRival');
+    if (rv) rv.hidden = !(on && visible);
   }
 
   function releaseHeld() {
@@ -404,6 +409,7 @@
     var state = director.tick(lastPaintMs);
     if (tape) tape.render(state);
     if (hud) hud.render(state);
+    if (state.free) showDamagePop(state.damage);
     playChartMelody(state);
 
     if (state.running && !state.paused) {
@@ -443,6 +449,12 @@
     setPauseUi(false, false);
     if (!overlay || !msg) return;
     overlay.className = 'visible';
+    var os = $('overlayStats');
+    if (os) {
+      var d = state.damage || {};
+      os.hidden = !(d.hits > 0);
+      os.textContent = 'Daño total ' + (d.total || 0) + ' · Máx ' + (d.max || 0) + ' · DPS ' + (d.dps || 0);
+    }
     if (state.outcome === 'win') {
       msg.textContent = 'Victoria';
       msg.className = 'win';
@@ -484,6 +496,9 @@
     runningLoop = true;
     setPauseUi(false, true);
     $('btnStart').className = 'hidden';
+    setPickerVisible(false);
+    lastPopSeq = 0;
+    clearPops();
     lastPaintMs = performance.now();
     // Un solo rAF. El interval no abre otra cadena: solo recupera
     // un frame si el anterior se atrasó (pestaña oculta). Si cada
@@ -918,13 +933,129 @@
     else enableMic();
   }
 
-  function boot(chart) {
+  // v0.1.9: rival elegible + Modo libre.
+  function readRival() {
+    try { return localStorage.getItem(RIVAL_KEY); } catch (e) { return null; }
+  }
+
+  function loadChart(url) {
+    if (chartCache[url]) return Promise.resolve(chartCache[url]);
+    return fetch(url + '?v=' + VERSION).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function (j) { chartCache[url] = j; return j; });
+  }
+
+  function chartForRival(opt) {
+    return loadChart(opt.chart).then(function (raw) {
+      return opt.free ? Rivals.freeChart(raw) : raw;
+    });
+  }
+
+  function makeDirector(chart, opt) {
     director = CombatDirector.create({
       chart: chart,
+      free: !!(opt && opt.free),
       now: function () { return performance.now(); }
     });
+    if (window.PianoMagic) window.PianoMagic.director = director;
+  }
+
+  function setPickerVisible(on) {
+    var pk = $('rivalPicker');
+    if (pk) pk.hidden = !on;
+  }
+
+  function buildPicker() {
+    var pk = $('rivalPicker');
+    if (!pk) return;
+    pk.textContent = '';
+    Rivals.options().forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rival-opt';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('data-rival', o.id);
+      b.setAttribute('aria-checked', o.id === rivalId ? 'true' : 'false');
+      b.textContent = o.label;
+      b.addEventListener('click', function () { selectRival(o.id); });
+      pk.appendChild(b);
+    });
+  }
+
+  function markPicker() {
+    var bs = document.querySelectorAll('#rivalPicker .rival-opt');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].setAttribute('aria-checked', bs[i].getAttribute('data-rival') === rivalId ? 'true' : 'false');
+    }
+  }
+
+  function renderIdle() {
+    if (!director) return;
+    var idle = director.snapshot(0);
+    if (hud) hud.render(idle);
+    if (tape) tape.render(idle);
+  }
+
+  function selectRival(id) {
+    if (tutorialOpen()) return Promise.resolve();
+    if (runningLoop && director && !director.snapshot(performance.now()).ended) return Promise.resolve();
+    var opt = Rivals.find(id);
+    rivalId = opt.id;
+    try { localStorage.setItem(RIVAL_KEY, rivalId); } catch (e) {}
+    markPicker();
+    return chartForRival(opt).then(function (chart) {
+      if (opt.id !== rivalId) return;
+      makeDirector(chart, opt);
+      renderIdle();
+    }).catch(function (err) {
+      showError('No se pudo cargar el rival — ' + err.message);
+    });
+  }
+
+  // Desde pausa o desde el fin: vuelve a la pantalla de elegir rival.
+  function backToPicker() {
+    if (!director || tutorialOpen()) return;
+    releaseHeld();
+    stopLoop();
+    if (audioHeldForPause && audioCtx) {
+      try { audioCtx.resume(); } catch (e) {}
+    }
+    paused = false;
+    audioHeldForPause = false;
+    director.reset();
+    hideOutcome();
+    setPauseUi(false, false);
+    clearPops();
+    $('btnStart').className = '';
+    setPickerVisible(true);
+    renderIdle();
+    ensureMic();
+  }
+
+  function clearPops() {
+    var box = $('dmgPops');
+    if (box) box.textContent = '';
+  }
+
+  function showDamagePop(d) {
+    if (!d || !d.seq || d.seq === lastPopSeq) return;
+    lastPopSeq = d.seq;
+    var box = $('dmgPops');
+    if (!box) return;
+    var n = document.createElement('span');
+    n.className = 'dmg-pop' + (d.last >= d.max && d.hits > 1 ? ' big' : '');
+    n.textContent = '−' + d.last;
+    box.appendChild(n);
+    setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 1200);
+  }
+
+  function boot(chart, opt) {
+    makeDirector(chart, opt);
     tape = Tape.create($('tape'), { version: VERSION });
     hud = Hud.create();
+    buildPicker();
+    setPickerVisible(true);
     var idle = director.snapshot(0);
     hud.render(idle);
     requestAnimationFrame(function () {
@@ -937,6 +1068,9 @@
       director: director,
       start: startFight,
       restart: restartFight,
+      selectRival: selectRival,
+      rival: function () { return rivalId; },
+      backToPicker: backToPicker,
       pause: pauseFight,
       resume: resumeFight,
       togglePause: togglePause,
@@ -990,6 +1124,8 @@
     $('btnRestart').addEventListener('click', restartFight);
     if ($('btnPauseRestart')) $('btnPauseRestart').addEventListener('click', restartFight);
     $('btnPause').addEventListener('click', togglePause);
+    if ($('btnPauseRival')) $('btnPauseRival').addEventListener('click', backToPicker);
+    if ($('btnOverlayRival')) $('btnOverlayRival').addEventListener('click', backToPicker);
     $('btnKeyboard').addEventListener('click', function () {
       if (tutorialOpen()) return;
       applyKeyboard($('keys').hidden, true);
@@ -1012,10 +1148,9 @@
 
     if (window.PianoMagic) window.PianoMagic.tutorial = tutorial;
 
-    fetch(CHART_URL).then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    }).then(boot).catch(function (err) {
+    var opt0 = Rivals.find(readRival());
+    rivalId = opt0.id;
+    chartForRival(opt0).then(function (chart) { boot(chart, opt0); }).catch(function (err) {
       showError('No se pudo cargar el chart. Sirve la carpeta con un servidor estático (python -m http.server) — ' + err.message);
       maybeTutorial();
     });

@@ -50,6 +50,13 @@
     var paused = false;
     var pausedAt = null;
     var claimedTargets = {};
+    // v0.1.9 Modo libre: solo Ataque, sin KO; cuenta el daño hecho.
+    var free = !!opts.free;
+    var dmg = freshDmg();
+
+    function freshDmg() {
+      return { total: 0, hits: 0, max: 0, last: 0, seq: 0, startBeat: null };
+    }
 
     function roomElement() {
       return Spell.elementForKey(chart.roomKey);
@@ -107,7 +114,10 @@
         });
       }
 
-      if (bossHp <= 0) {
+      if (free) {
+        bossHp = bossHpMax;
+        playerHp = playerHpMax;
+      } else if (bossHp <= 0) {
         bossHp = 0;
         finish('win', translator.beatsAt(nowFn()));
       } else if (playerHp <= 0) {
@@ -130,6 +140,13 @@
 
     function applyResult(result) {
       if (!result) return;
+      if (result.bossDamage > 0) {
+        dmg.total += result.bossDamage;
+        dmg.hits += 1;
+        dmg.last = result.bossDamage;
+        dmg.seq += 1;
+        if (result.bossDamage > dmg.max) dmg.max = result.bossDamage;
+      }
       if (result.bossDamage) bossHp = clamp(bossHp - result.bossDamage, 0, bossHpMax);
       if (result.heal) playerHp = clamp(playerHp + result.heal, 0, playerHpMax);
       if (result.playerDamage) playerHp = clamp(playerHp - result.playerDamage, 0, playerHpMax);
@@ -144,7 +161,7 @@
 
     function feedbackText(r) {
       if (!r) return '';
-      if (r.kind === 'setup') return 'Escucha · sin daño';
+      if (r.kind === 'setup') return free ? 'Modo libre · ataca cuando quieras' : 'Escucha · sin daño';
       if (r.kind === 'hole-idle') {
         if (r.extras) return 'Ataque · sin gesto';
         return 'Ataque · libre';
@@ -154,7 +171,7 @@
       if (r.kind === 'defend-perfect') return 'Perfecto';
       if (r.kind === 'hole-spell' && r.spell) {
         var el = r.spell.element ? r.spell.element.icon : '';
-        if (r.spell.action === 'attack') return 'Ataque ' + el + ' · −' + r.bossDamage + ' jefe';
+        if (r.spell.action === 'attack') return 'Ataque ' + el + ' · −' + r.bossDamage + (free ? ' daño' : ' jefe');
         if (r.spell.action === 'heal') return 'Cura · +' + r.heal + ' HP';
         if (r.spell.action === 'buff') return 'Mejora ATQ+';
       }
@@ -168,6 +185,22 @@
         listenOnly: b.listenOnly,
         notes: b.notes,
         startBeat: b.startBeat
+      };
+    }
+
+    function damageStats(beat) {
+      var bpm = chart.bpm || 60;
+      var setupBeats = (chart.setup ? chart.setup.bars : 0) * Chart.beatsPerBar(chart);
+      var fightBeats = Math.max(0, (beat || 0) - setupBeats);
+      var secs = fightBeats * 60 / bpm;
+      return {
+        total: dmg.total,
+        hits: dmg.hits,
+        max: dmg.max,
+        last: dmg.last,
+        seq: dmg.seq,
+        seconds: secs,
+        dps: secs >= 1 ? Math.round(10 * dmg.total / secs) / 10 : 0
       };
     }
 
@@ -251,7 +284,9 @@
         feedback: lastFeedback,
         metronomeBeat: Math.floor(beat + 1e-8),
         mapping: Translator.KEY_MAP,
-        labels: Translator.KEY_LABELS
+        labels: Translator.KEY_LABELS,
+        free: free,
+        damage: damageStats(beat)
       };
     }
 
@@ -270,6 +305,7 @@
       paused = false;
       pausedAt = null;
       claimedTargets = {};
+      dmg = freshDmg();
       running = true;
       translator.setBpm(chart.bpm);
       translator.setTimeSig(chart.timeSig);
@@ -292,6 +328,7 @@
       paused = false;
       pausedAt = null;
       claimedTargets = {};
+      dmg = freshDmg();
       translator.setStart(null);
       return snapshot(0);
     }

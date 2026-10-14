@@ -21,7 +21,7 @@
   };
 
   var BUFF_ICON = {
-    atk: 'assets/ui/buff-icon-2.png?v=0.1.8'
+    atk: 'assets/ui/buff-icon-2.png?v=0.1.9'
   };
 
   function el(id) {
@@ -62,7 +62,17 @@
         bossMask.style.width = (miss * 70) + '%';
       }
       setText(playerVal, state.playerHp + ' / ' + state.playerHpMax);
-      setText(bossVal, state.bossHp + ' / ' + state.bossHpMax);
+      setText(bossVal, state.free ? ('Daño ' + ((state.damage && state.damage.total) || 0)) : (state.bossHp + ' / ' + state.bossHpMax));
+      if (bossMask && state.free) bossMask.style.width = '0%';
+      var stats = el(ids.dmgStats || 'dmgStats');
+      if (stats) {
+        stats.hidden = !state.free;
+        if (state.free) {
+          var d = state.damage || {};
+          setText(stats, 'Total ' + (d.total || 0) + ' · Golpes ' + (d.hits || 0) +
+            ' · Máx ' + (d.max || 0) + ' · DPS ' + (d.dps || 0));
+        }
+      }
 
       var re = state.roomElement || {};
       setText(roomName, re.label || '');
@@ -140,7 +150,9 @@
 
       var hint = el(ids.hint || 'hint');
       if (hint) {
-        if (state.phase === 'hole') {
+        if (state.free) {
+          hint.textContent = 'Modo libre: solo atacas, sin Defiende. Mayor (C D E) = ataque · menor = mejora (sube el daño) · pentatónica = cura.';
+        } else if (state.phase === 'hole') {
           hint.textContent = 'Ataque: improvisa · mayor (C D E) = ataque · menor (C Eb G) = mejora · pentatónica (C D E G A) = cura. Tocar no resta HP.';
         } else if (state.phase === 'defend') {
           hint.textContent = 'Defiende: copia la cinta. A = C4 · S = D4 · D = E4. Perfecto / Parcial / Fallo — sin DPS al jefe.';
