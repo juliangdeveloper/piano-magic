@@ -383,6 +383,8 @@
       btn.classList.toggle('on', !!on);
     }
     if (banner) banner.classList.toggle('visible', !!on);
+    var rb = $('btnPauseRestart');
+    if (rb) rb.hidden = !(on && visible);
   }
 
   function releaseHeld() {
@@ -494,10 +496,39 @@
     requestAnimationFrame(rafLoop);
   }
 
+  // v0.1.8: reiniciar no debe dejar el micrófono mudo. Si la pista murió
+  // (iOS la corta al cambiar la sesión de audio) se reabre sola; si sigue
+  // viva se reanuda el AudioContext y se rearma el intervalo de lectura.
+  function micTrackAlive() {
+    if (!micStream) return false;
+    var tr = micStream.getAudioTracks ? micStream.getAudioTracks() : [];
+    if (!tr.length) return false;
+    for (var i = 0; i < tr.length; i++) {
+      if (tr[i].readyState === 'ended' || tr[i].muted) return false;
+    }
+    return true;
+  }
+
+  function ensureMic() {
+    if (!micWanted || micPending) return;
+    if (!micStream || !micAnalyser || !micTrackAlive()) {
+      stopMicGraph();
+      enableMic();
+      return;
+    }
+    if (audioCtx && audioCtx.state !== 'running') {
+      try { audioCtx.resume(); } catch (e) {}
+    }
+    if (micTracker && window.MicNotes) MicNotes.reset(micTracker);
+    if (micTimer) clearInterval(micTimer);
+    micTimer = setInterval(micTick, MicNotes.HOP_MS);
+  }
+
   function restartFight() {
     if (!director || tutorialOpen()) return;
     director.reset();
     startFight();
+    ensureMic();
   }
 
   function pauseFight() {
@@ -758,6 +789,9 @@
   function micTick() {
     if (!micAnalyser || !micTracker || !micBuf || paused || !window.Pitch || !window.MicNotes) return;
     if (!audioCtx) return;
+    if (audioCtx.state === 'suspended' && !audioHeldForPause) {
+      try { audioCtx.resume(); } catch (e0) {}
+    }
     try { micAnalyser.getFloatTimeDomainData(micBuf); } catch (e) { return; }
     // v0.1.8: piso de ruido adaptativo, corrección de octava y votación 3 de 5.
     var obs = MicNotes.observe(micTracker, micBuf, audioCtx.sampleRate || 48000, Pitch);
@@ -954,6 +988,7 @@
     document.addEventListener('keydown', onGestureUnlock, true);
     $('btnStart').addEventListener('click', startFight);
     $('btnRestart').addEventListener('click', restartFight);
+    if ($('btnPauseRestart')) $('btnPauseRestart').addEventListener('click', restartFight);
     $('btnPause').addEventListener('click', togglePause);
     $('btnKeyboard').addEventListener('click', function () {
       if (tutorialOpen()) return;
