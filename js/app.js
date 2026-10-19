@@ -6,7 +6,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.13';
+  var VERSION = '0.1.14';
   var RIVAL_KEY = 'pmRival';
   var chartCache = {};
   var rivalId = null;
