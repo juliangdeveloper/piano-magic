@@ -7,7 +7,7 @@
 <img src="docs/screenshot.png" alt="Combate de piano-magic contra el jefe Raindrops, Thunder con la partitura en pantalla" width="720">
 
 ## Cómo se juega
-- Elige un rival (Raindrops Thunder, Parade Feather, The Veil Boat, Tower Chime, Guardián del Bosque de Sol, Hechicera de la Torre) o el **Modo libre**.
+- Elige un rival (*Raindrops, Thunder*; *Parade Feather*; *The Veil Boat*; *Tower Chime*; *Guardián del Bosque de Sol*; *Hechicera de la Torre*) o el **Modo libre**.
 - El combate alterna compases de **Ataque** y **Defiende** sobre una partitura que avanza al ritmo del metrónomo.
 - En **Ataque** improvisas: escalas mayores atacan, menores te mejoran y pentatónicas te curan.
 - En **Defiende** copias las notas que trae la partitura; se califican como perfecto, parcial o fallo.
