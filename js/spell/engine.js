@@ -383,13 +383,6 @@
     };
   }
 
-  function gestureStrength(spell) {
-    var n = (spell && spell.pcs) ? spell.pcs.length : 0;
-    if (n >= 3) return 1;
-    if (n >= MIN_GESTURE_PCS) return 0.5;
-    return 0;
-  }
-
   /**
    * Onset de una nota de Defend contra su blanco.
    * perfect: |error| ≤ ventana cerrada (por defecto 0.15 beats).
