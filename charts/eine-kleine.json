@@ -9,7 +9,7 @@
   },
   "id": "eine-kleine",
   "title": "Eine Kleine Nachtmusik",
-  "tune": "Eine kleine Nachtmusik, opening (Mozart), simplified",
+  "tune": "Eine kleine Nachtmusik, opening (Mozart)",
   "bpm": 120,
   "timeSig": [
     4,
@@ -41,9 +41,21 @@
           "hand": "R"
         },
         {
-          "pitch": "D5",
+          "pitch": "D4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
           "beat": 2,
           "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],
@@ -55,24 +67,30 @@
         {
           "pitch": "G4",
           "beat": 0,
-          "dur": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 1,
+          "dur": 0.5,
           "hand": "R"
         },
         {
           "pitch": "B4",
-          "beat": 1,
-          "dur": 1,
+          "beat": 1.5,
+          "dur": 0.5,
           "hand": "R"
         },
         {
           "pitch": "D5",
           "beat": 2,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G5",
-          "beat": 3,
           "dur": 1,
           "hand": "R"
         }
@@ -89,21 +107,21 @@
           "hand": "R"
         },
         {
-          "pitch": "E5",
-          "beat": 1,
-          "dur": 1,
+          "pitch": "A4",
+          "beat": 1.5,
+          "dur": 0.5,
           "hand": "R"
         },
         {
-          "pitch": "G5",
+          "pitch": "C5",
           "beat": 2,
           "dur": 1,
           "hand": "R"
         },
         {
-          "pitch": "E5",
-          "beat": 3,
-          "dur": 1,
+          "pitch": "A4",
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],
@@ -113,9 +131,33 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D5",
+          "pitch": "C5",
           "beat": 0,
-          "dur": 3,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 2,
+          "dur": 1,
           "hand": "R"
         }
       ],
@@ -130,27 +172,33 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "C5",
+          "pitch": "G4",
           "beat": 0,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 1,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "A4",
-          "beat": 2,
-          "dur": 1,
+          "dur": 0.5,
           "hand": "R"
         },
         {
           "pitch": "G4",
+          "beat": 1,
+          "dur": 1.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
           "beat": 3,
-          "dur": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],
@@ -162,13 +210,37 @@
         {
           "pitch": "G4",
           "beat": 0,
-          "dur": 1,
+          "dur": 0.5,
           "hand": "R"
         },
         {
-          "pitch": "D5",
-          "beat": 2,
-          "dur": 1,
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 1.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C5",
+          "beat": 3,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],
@@ -178,27 +250,39 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G4",
+          "pitch": "A4",
           "beat": 0,
-          "dur": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 1,
+          "dur": 1.5,
           "hand": "R"
         },
         {
           "pitch": "B4",
-          "beat": 1,
-          "dur": 1,
+          "beat": 2.5,
+          "dur": 0.5,
           "hand": "R"
         },
         {
-          "pitch": "D5",
-          "beat": 2,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G5",
+          "pitch": "A4",
           "beat": 3,
-          "dur": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],
@@ -210,7 +294,37 @@
         {
           "pitch": "G4",
           "beat": 0,
-          "dur": 4,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 1.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C5",
+          "beat": 3,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],

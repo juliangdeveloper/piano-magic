@@ -186,13 +186,7 @@
         {
           "pitch": "A4",
           "beat": 0,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "A4",
-          "beat": 1,
-          "dur": 1,
+          "dur": 2,
           "hand": "R"
         },
         {
@@ -392,21 +386,33 @@
           "hand": "R"
         },
         {
-          "pitch": "A4",
+          "pitch": "B4",
           "beat": 1,
-          "dur": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C5",
+          "beat": 1.5,
+          "dur": 0.5,
           "hand": "R"
         },
         {
           "pitch": "B4",
           "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2.5,
           "dur": 1,
           "hand": "R"
         },
         {
           "pitch": "A4",
-          "beat": 3,
-          "dur": 1,
+          "beat": 3.5,
+          "dur": 0.5,
           "hand": "R"
         }
       ],

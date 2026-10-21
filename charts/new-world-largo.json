@@ -10,7 +10,7 @@
   "id": "new-world-largo",
   "title": "New World Largo",
   "tune": "Largo from the New World Symphony (Dvořák, 1893)",
-  "bpm": 60,
+  "bpm": 104,
   "timeSig": [
     4,
     4
@@ -39,8 +39,7 @@
           "beat": 0,
           "dur": 1.5,
           "hand": "R",
-          "dynamic": "p",
-          "accent": true
+          "dynamic": "p"
         },
         {
           "pitch": "G4",
@@ -67,8 +66,7 @@
           "beat": 0,
           "dur": 1.5,
           "hand": "R",
-          "dynamic": "p",
-          "accent": true
+          "dynamic": "p"
         },
         {
           "pitch": "D4",
@@ -95,8 +93,7 @@
           "beat": 0,
           "dur": 1.5,
           "hand": "R",
-          "dynamic": "p",
-          "accent": true
+          "dynamic": "p"
         },
         {
           "pitch": "E4",
@@ -130,8 +127,7 @@
           "beat": 0,
           "dur": 4,
           "hand": "R",
-          "dynamic": "p",
-          "accent": true
+          "dynamic": "p"
         }
       ],
       "i": 4
@@ -149,8 +145,7 @@
           "beat": 0,
           "dur": 1.5,
           "hand": "R",
-          "dynamic": "f",
-          "accent": true
+          "dynamic": "f"
         },
         {
           "pitch": "G4",
@@ -177,8 +172,7 @@
           "beat": 0,
           "dur": 1.5,
           "hand": "R",
-          "dynamic": "f",
-          "accent": true
+          "dynamic": "f"
         },
         {
           "pitch": "D4",
@@ -205,8 +199,7 @@
           "beat": 0,
           "dur": 1,
           "hand": "R",
-          "dynamic": "f",
-          "accent": true
+          "dynamic": "f"
         },
         {
           "pitch": "E4",
@@ -240,8 +233,7 @@
           "beat": 0,
           "dur": 4,
           "hand": "R",
-          "dynamic": "f",
-          "accent": true
+          "dynamic": "f"
         }
       ],
       "i": 9

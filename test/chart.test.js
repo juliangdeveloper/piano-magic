@@ -80,14 +80,15 @@ test('C6: chart inválido lanza ChartError', () => {
   assert.throws(() => Chart.parse(null), /vacío/);
 });
 
-test('C7: el segundo defend es C E y una blanca en D', () => {
+test('C7: el segundo defend es C E D G, todas negras', () => {
   const c = load();
-  const pitches = c.loop[2].notes.map((n) => n.pitch);
-  assert.deepStrictEqual(pitches, ['C4', 'E4', 'D4']);
-  const beats = c.loop[2].notes.map((n) => n.beat);
-  assert.deepStrictEqual(beats, [0, 1, 2]);
-  const durs = c.loop[2].notes.map((n) => n.dur);
-  assert.deepStrictEqual(durs, [1, 1, 2]);
+  const notes = c.loop[2].notes.map((n) => [n.pitch, n.beat, n.dur, n.hand]);
+  assert.deepStrictEqual(notes, [
+    ['C4', 0, 1, 'R'],
+    ['E4', 1, 1, 'R'],
+    ['D4', 2, 1, 'R'],
+    ['G3', 3, 1, 'R']
+  ]);
 });
 
 test('C8: el centro del tiempo es continuo al cruzar Ataque → Defiende', () => {
@@ -134,12 +135,38 @@ test('C11: Tower Chime abre con el primer cambio y cierra el ciclo en E', () => 
   assert.strictEqual(last[last.length - 1].dur, 1.5);
 });
 
-test('C12: New World Largo lleva piano y forte, y acentos', () => {
+test('C12: New World Largo lleva piano y forte, sin acentos', () => {
   const c = load('new-world-largo');
+  assert.strictEqual(c.bpm, 104);
   const notes = c.loop.flatMap((b) => b.notes);
   assert.ok(notes.some((n) => n.dynamic === 'p'));
   assert.ok(notes.some((n) => n.dynamic === 'f'));
-  assert.ok(notes.some((n) => n.accent === true));
+  assert.ok(notes.every((n) => n.accent !== true));
   assert.strictEqual(c.loop[1].notes[0].pitch, 'E4');
   assert.strictEqual(c.loop[1].notes[0].dur, 1.5);
+});
+
+test('C13: Camptown compases 7 y 15, y Eine Kleine baja de G a D', () => {
+  const camp = load('camptown-races').loop.filter((b) => b.kind === 'defend');
+  assert.deepStrictEqual(camp[6].notes.map((n) => [n.pitch, n.beat, n.dur]), [
+    ['A4', 0, 2],
+    ['B4', 2, 1],
+    ['A4', 3, 1]
+  ]);
+  assert.deepStrictEqual(camp[14].notes.map((n) => [n.pitch, n.beat, n.dur]), [
+    ['A4', 0, 1],
+    ['B4', 1, 0.5],
+    ['C5', 1.5, 0.5],
+    ['B4', 2, 0.5],
+    ['A4', 2.5, 1],
+    ['A4', 3.5, 0.5]
+  ]);
+  const eine = load('eine-kleine').loop.filter((b) => b.kind === 'defend');
+  assert.deepStrictEqual(eine[0].notes.map((n) => [n.pitch, n.beat, n.dur]), [
+    ['G4', 0, 1],
+    ['D4', 1.5, 0.5],
+    ['G4', 2, 1],
+    ['D4', 3.5, 0.5]
+  ]);
+  assert.strictEqual(eine[7].notes[eine[7].notes.length - 1].pitch, 'F#4');
 });

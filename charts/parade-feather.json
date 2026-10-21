@@ -79,7 +79,13 @@
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 2,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "G3",
+          "beat": 3,
+          "dur": 1,
           "hand": "R"
         }
       ],
