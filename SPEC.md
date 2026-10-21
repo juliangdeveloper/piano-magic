@@ -4,7 +4,7 @@ Producto **0.1.9** (selector de rival + Modo libre, `js/combat/rivals.js`). Las 
 
 Juego de combate con piano, un jefe. Página estática para GitHub Pages. Sin CDN. 100% client-side.
 
-`piano-game` es **otro repo**. El YIN de `js/pitch.js` está **copiado** aquí (no hay fetch ni dependencia en runtime).
+La detección de notas no vive en este repo. Cada carga pide el motor publicado de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) en `https://juliangdeveloper.github.io/piano-transcribe/engine/v1/`: `version.txt` con caché `no-store`, luego `import()` de `capture.js?v=<versión>`. No hay copia vendida ni tarea que la sincronice. Perfil `combat` (C3–C6). Si el módulo no carga, el teclado y el MIDI siguen, y se muestra: «No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.»
 
 ## Combate (bloqueado)
 
@@ -31,7 +31,7 @@ Entrada M0:
 
 - Teclado QWERTY → pitches del chart (y vecinos para mayor/menor/pentatónica).
 - Web MIDI si existe (`requestMIDIAccess`).
-- Micrófono **opcional** (botón Micrófono). YIN monofónico (`js/pitch.js`, vendored de piano-game) + `MicNotes.hop` (dos hops para NoteOn, tres huecos para NoteOff). `getUserMedia` solo al encender. Permiso denegado: texto en español y el botón vuelve a off. El mismo `noteOn` / `noteOff` que el teclado; si la nota ya está sostenida por OSK, QWERTY o MIDI, el mic no abre otro hechizo ni otro daño. El mic no hace sonar el oscilador (evitaría un acople). Mientras el mic está abierto no suenan la melodía del jefe ni el metrónomo, para que el altavoz no cuente como nota.
+- Micrófono **opcional** (botón Micrófono). El motor hace el hop (`session.hop` cada `HOP_MS`, 20 ms, analizador `fftSize` 2048): dos hops para NoteOn, tres huecos para NoteOff. `getUserMedia` solo al encender. Permiso denegado: texto del motor, en español, y el botón vuelve a off. Pantalla, QWERTY y MIDI entran por `session.press` / `session.release`. El hop del mic ya fusiona: no se vuelve a llamar a `press`. Si la nota ya está sostenida por OSK, QWERTY o MIDI, el mic no abre otro hechizo ni otro daño. El mic no hace sonar el oscilador (evitaría un acople). Mientras el mic está abierto no suenan la melodía del jefe ni el metrónomo, para que el altavoz no cuente como nota.
 
 Mapeo documentado en pantalla:
 
@@ -150,8 +150,6 @@ Node nativo (`node --test`), sin `npm install`. Puros:
 - `test/chart.test.js`
 - `test/director.test.js`
 - `test/ui.test.js`
-- `test/pitch.test.js` — YIN sobre senos
-- `test/mic-notes.test.js` — hops, anti-eco, fusión de fuentes
 - `test/beats.test.js` — marcas 1–2–3–4 del Ataque y el mismo centro en las notas de Defiende
 
 ## Reparto de archivos
@@ -159,9 +157,7 @@ Node nativo (`node --test`), sin `npm install`. Puros:
 ```
 index.html
 css/ui.css
-js/app.js
-js/pitch.js                 YIN vendored (piano-game), sin red
-js/instrument/mic-notes.js  hops → NoteOn/NoteOff, anti-eco
+js/app.js                   carga engine/v1 y lee sus notas
 js/instrument/translator.js
 js/spell/engine.js
 js/combat/director.js

@@ -1,12 +1,16 @@
 // js/app.js — cinta, HUD, tutorial, pausa, teclado y micrófono opcional.
-// Cada NoteOn (pantalla, QWERTY, MIDI) pasa por InstrumentTranslator y suena.
-// El mic usa el mismo noteOn/noteOff, sin segundo disparo si el teclado ya sostiene la nota.
+// El motor de notas se carga en vivo desde piano-transcribe (engine/v1).
+// Este juego solo lee las notas; el combate lo dibuja él. No hay copia local.
+// Cada NoteOn (pantalla, QWERTY, MIDI) pasa por la sesión y suena.
+// El mic usa session.hop. El hop ya fusiona, así que no vuelve a llamar a press.
 // El AudioContext se desbloquea en el gesto: beep audible + audioSession playback,
 // y el oscilador arranca en pointerdown sin esperar a resume().then().
 'use strict';
 
 (function () {
-  var VERSION = '0.1.14';
+  var VERSION = '0.1.15';
+  var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
+  var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
   var chartCache = {};
   var rivalId = null;
@@ -27,7 +31,6 @@
   var lastPaintMs = 0;
   var paused = false;
   var lastClickBeat = -1;
-  var heldKeys = {};
   var midiStatus = '';
   var tickTimer = null;
   var midiReady = false;
@@ -49,9 +52,12 @@
   var micHp = null;
   var micBuf = null;
   var micTimer = null;
-  var micTracker = null;
   var micSilentTicks = 0;
   var micRewires = 0;
+  var engine = null;
+  var session = null;
+  var engineState = 'loading';
+  var localHeld = {};
 
   function $(id) { return document.getElementById(id); }
 
@@ -60,6 +66,149 @@
     if (!box) return;
     box.textContent = msg;
     box.className = 'visible';
+  }
+
+  // Carga genérica del motor publicado. version.txt sin caché, luego el módulo.
+  // Si esa petición falla, reintenta con la última versión que sí cargó.
+  function loadPianoEngine(root) {
+    return fetch(root + 'version.txt?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('version');
+        return res.text();
+      })
+      .then(function (text) {
+        var version = text.trim();
+        try { localStorage.setItem('piano-transcribe.engine', version); } catch (e) {}
+        return import(root + 'capture.js?v=' + encodeURIComponent(version));
+      })
+      .catch(function () {
+        var version = '';
+        try { version = localStorage.getItem('piano-transcribe.engine') || ''; } catch (e) {}
+        return import(root + 'capture.js' + (version ? ('?v=' + encodeURIComponent(version)) : ''));
+      })
+      .then(function (mod) {
+        if (!mod || mod.INTERFACE !== 1 || typeof mod.createCapture !== 'function') {
+          throw new Error('interface');
+        }
+        return mod;
+      });
+  }
+
+  function canonicalPitch(pitch) {
+    if (pitch == null || pitch === '') return null;
+    if (window.InstrumentTranslator && InstrumentTranslator.normalizeName) {
+      return InstrumentTranslator.normalizeName(pitch);
+    }
+    return String(pitch);
+  }
+
+  // Solo teclado, teclado en pantalla y MIDI si el motor no llega.
+  function localPress(pitch, source) {
+    var slot = localHeld[pitch];
+    var fresh = !slot;
+    if (!slot) {
+      slot = {};
+      localHeld[pitch] = slot;
+    }
+    var added = !slot[source];
+    slot[source] = true;
+    return {
+      pitch: pitch,
+      fresh: fresh,
+      sound: added && source !== 'mic',
+      combat: fresh,
+      released: false
+    };
+  }
+
+  function localRelease(pitch, source) {
+    var slot = localHeld[pitch];
+    if (!slot) return { pitch: pitch, released: false };
+    if (source) delete slot[source];
+    else {
+      delete localHeld[pitch];
+      return { pitch: pitch, released: true };
+    }
+    var left = 0;
+    var k;
+    for (k in slot) {
+      if (Object.prototype.hasOwnProperty.call(slot, k)) left += 1;
+    }
+    if (left) return { pitch: pitch, released: false };
+    delete localHeld[pitch];
+    return { pitch: pitch, released: true };
+  }
+
+  function adoptLocalHeld() {
+    if (!session) return;
+    var names = Object.keys(localHeld);
+    var i;
+    var k;
+    var slot;
+    var pack;
+    var ev;
+    var next;
+    for (i = 0; i < names.length; i++) {
+      slot = localHeld[names[i]];
+      next = {};
+      for (k in slot) {
+        if (!Object.prototype.hasOwnProperty.call(slot, k) || !slot[k]) continue;
+        pack = session.press(names[i], k, performance.now());
+        ev = pack && pack.events && pack.events[0];
+        if (!ev) next[k] = true;
+      }
+      if (Object.keys(next).length) localHeld[names[i]] = next;
+      else delete localHeld[names[i]];
+    }
+  }
+
+  function pressHeld(pitch, source) {
+    if (session) {
+      var pack = session.press(pitch, source, performance.now());
+      var ev = pack && pack.events && pack.events[0];
+      if (ev) return ev;
+      return { pitch: pitch, fresh: false, sound: false, combat: false, released: false };
+    }
+    return localPress(pitch, source);
+  }
+
+  function releaseHeldNote(pitch, source) {
+    var ev = null;
+    if (session) {
+      var pack = session.release(pitch, source, performance.now());
+      ev = pack && pack.events && pack.events[0];
+    }
+    if (localHeld[pitch]) {
+      var local = localRelease(pitch, source);
+      if (local.released && (!ev || !ev.released)) return local;
+    }
+    if (ev) return ev;
+    return { pitch: pitch, released: false };
+  }
+
+  function applyEngineEvents(pack) {
+    var events = (pack && pack.events) || [];
+    var i;
+    var ev;
+    for (i = 0; i < events.length; i++) {
+      ev = events[i];
+      if (!ev || !ev.pitch) continue;
+      if (ev.type === 'on') noteOn(ev.pitch, ev.source || 'mic', { silent: true, merged: ev });
+      else noteOff(ev.pitch, ev.source || 'mic', ev);
+    }
+  }
+
+  function showEngineFailure() {
+    engineState = 'failed';
+    engine = null;
+    session = null;
+    if (!micStream) {
+      micWanted = false;
+      micPending = false;
+      setMicButton(false);
+    }
+    showError(ENGINE_FAIL);
+    setMicStatus(ENGINE_FAIL);
   }
 
   function hz(pitch) {
@@ -77,10 +226,12 @@
   // playback: altavoz, ignora el silencio del iPhone. play-and-record con el mic.
   // No volvemos a "auto": en Safari eso respeta el mute y a veces deja el speaker mudo.
   function preferSpeaker(micOn) {
-    var session = (typeof navigator !== 'undefined') ? navigator.audioSession : null;
-    if (!session) return false;
+    var audioSession = (typeof navigator !== 'undefined') ? navigator.audioSession : null;
+    if (!audioSession) return false;
     try {
-      session.type = window.MicNotes ? MicNotes.sessionType(!!micOn) : (micOn ? 'play-and-record' : 'playback');
+      audioSession.type = (engine && engine.sessionType)
+        ? engine.sessionType(!!micOn)
+        : (micOn ? 'play-and-record' : 'playback');
       return true;
     } catch (e) {
       return false;
@@ -238,8 +389,8 @@
   }
 
   function blockSynth(freq, dur) {
-    if (!window.Pitch || !freq) return;
-    var note = Pitch.noteFromFreq(freq, 440);
+    if (!engine || !freq) return;
+    var note = engine.noteFromFreq(freq, 440);
     if (!note) return;
     var now = performance.now();
     synthBlocks.push({ midi: note.midi, until: now + (dur || 0.2) * 1000 + 110 });
@@ -395,14 +546,29 @@
   }
 
   function releaseHeld() {
-    var pitches = Object.keys(heldKeys);
+    var seen = {};
     var i;
-    for (i = 0; i < pitches.length; i++) {
-      markKey(pitches[i], false);
-      if (director) director.noteOff(pitches[i], performance.now());
+    var ev;
+    var name;
+    if (session) {
+      var pack = session.reset(performance.now());
+      var events = (pack && pack.events) || [];
+      for (i = 0; i < events.length; i++) {
+        ev = events[i];
+        if (!ev || !ev.pitch || seen[ev.pitch]) continue;
+        seen[ev.pitch] = true;
+        markKey(ev.pitch, false);
+        if (director) director.noteOff(ev.pitch, performance.now());
+      }
     }
-    heldKeys = {};
-    if (micTracker && window.MicNotes) MicNotes.reset(micTracker);
+    var names = Object.keys(localHeld);
+    for (i = 0; i < names.length; i++) {
+      name = names[i];
+      if (seen[name]) continue;
+      markKey(name, false);
+      if (director) director.noteOff(name, performance.now());
+    }
+    localHeld = {};
   }
 
   function render() {
@@ -544,6 +710,7 @@
 
   function ensureMic() {
     if (!micWanted || micPending) return;
+    if (!engine || !session) return;
     if (!micStream || !micAnalyser || !micTrackAlive()) {
       stopMicGraph();
       micWanted = true;
@@ -555,9 +722,9 @@
     }
     rewireMic();
     micRewires = 0;
-    if (micTracker && window.MicNotes) MicNotes.reset(micTracker);
+    if (session) applyEngineEvents(session.releaseSource('mic', performance.now()));
     if (micTimer) clearInterval(micTimer);
-    micTimer = setInterval(micTick, MicNotes.HOP_MS);
+    micTimer = setInterval(micTick, engine.HOP_MS);
   }
 
   function restartFight() {
@@ -616,25 +783,38 @@
   function noteOn(pitch, source, opts) {
     opts = opts || {};
     source = source || 'key';
-    if (paused || !pitch || !window.MicNotes) return;
-    var merged = MicNotes.mergePress(heldKeys, pitch, source);
-    if (merged.sound && !opts.silent) playPitch(pitch);
-    if (!merged.fresh) {
-      markKey(pitch, true);
-      return;
+    if (paused || !pitch) return;
+    pitch = canonicalPitch(pitch);
+    if (!pitch) return;
+    // El hop del mic ya fusionó. Volver a press contaría la nota dos veces.
+    var merged = opts.merged || null;
+    if (!merged) {
+      if (source === 'mic') return;
+      merged = pressHeld(pitch, source);
     }
-    markKey(pitch, true);
+    var name = merged.pitch || pitch;
+    if (merged.sound && !opts.silent) playPitch(name);
+    markKey(name, true);
+    if (!merged.fresh) return;
     // El tutorial puede sonar (desbloquea el audio) pero no entra al combate.
     if (tutorialOpen()) return;
-    if (merged.combat && director) director.noteOn(pitch, performance.now());
+    if (merged.combat && director) director.noteOn(name, performance.now());
   }
 
-  function noteOff(pitch, source) {
-    if (!pitch || !window.MicNotes) return;
-    var merged = MicNotes.mergeRelease(heldKeys, pitch, source);
+  function noteOff(pitch, source, precomputed) {
+    if (!pitch) return;
+    pitch = canonicalPitch(pitch);
+    if (!pitch) return;
+    source = source || 'key';
+    var merged = precomputed || null;
+    if (!merged) {
+      if (source === 'mic') return;
+      merged = releaseHeldNote(pitch, source);
+    }
     if (!merged.released) return;
-    markKey(pitch, false);
-    if (director) director.noteOff(pitch, performance.now());
+    var name = merged.pitch || pitch;
+    markKey(name, false);
+    if (director) director.noteOff(name, performance.now());
   }
 
   function markKey(pitch, down) {
@@ -820,10 +1000,8 @@
   }
 
   function releaseMicNotes() {
-    var pitches = Object.keys(heldKeys);
-    var i;
-    for (i = 0; i < pitches.length; i++) noteOff(pitches[i], 'mic');
-    if (micTracker && window.MicNotes) MicNotes.reset(micTracker);
+    if (!session) return;
+    applyEngineEvents(session.releaseSource('mic', performance.now()));
   }
 
   function stopMicGraph() {
@@ -848,7 +1026,7 @@
   }
 
   function micTick() {
-    if (!micAnalyser || !micTracker || !micBuf || paused || !window.Pitch || !window.MicNotes) return;
+    if (!micAnalyser || !session || !engine || !micBuf || paused) return;
     if (!audioCtx) return;
     if (audioCtx.state !== 'running' && !audioHeldForPause) {
       try { audioCtx.resume(); } catch (e0) {}
@@ -870,14 +1048,11 @@
     }
     micSilentTicks = 0;
     micRewires = 0;
-    // v0.1.8: piso de ruido adaptativo, corrección de octava y votación 3 de 5.
-    var obs = MicNotes.observe(micTracker, micBuf, audioCtx.sampleRate || 48000, Pitch);
-    var midi = obs.midi;
-    var name = obs.name;
-    if (name && MicNotes.isBlocked(synthBlocks, midi, performance.now())) { name = null; midi = null; }
-    var ev = MicNotes.hop(micTracker, { midi: name ? midi : null, name: name });
-    if (ev.off) noteOff(ev.off, 'mic');
-    if (ev.on) noteOn(ev.on, 'mic', { silent: true });
+    // Mismo hop de 20 ms. El motor mide, vota y fusiona; aquí solo se leen las notas.
+    var out = session.hop(micBuf, audioCtx.sampleRate || 48000, performance.now(), {
+      blocked: synthBlocks
+    });
+    applyEngineEvents(out);
   }
 
   function attachMic(stream) {
@@ -913,23 +1088,29 @@
     micAnalyser.connect(micMute);
     micMute.connect(ctx.destination);
     micStream = stream;
-    micTracker = MicNotes.create();
     if (micTimer) clearInterval(micTimer);
-    micTimer = setInterval(micTick, MicNotes.HOP_MS);
+    micTimer = setInterval(micTick, engine.HOP_MS);
     setMicButton(true);
-    setMicStatus(MicNotes.statusLine({ ios: iosLike() }));
+    setMicStatus(engine.statusLine({ ios: iosLike() }));
   }
 
   function enableMic() {
     if (micStream || micPending) return;
     primeAudio();
-    if (!window.MicNotes || !window.Pitch) {
-      setMicStatus('Detección de notas no disponible.');
+    if (engineState === 'loading') {
+      micWanted = true;
+      setMicButton(true);
+      setMicStatus('Cargando el motor de notas…');
+      return;
+    }
+    if (!engine || !session) {
+      micWanted = false;
       setMicButton(false);
+      setMicStatus(ENGINE_FAIL);
       return;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setMicStatus(MicNotes.denyMessage('NotSupportedError'));
+      setMicStatus(engine.denyMessage('NotSupportedError'));
       setMicButton(false);
       return;
     }
@@ -964,7 +1145,7 @@
           micWanted = false;
           setMicButton(false);
           preferSpeaker(false);
-          setMicStatus(MicNotes.denyMessage(err2 && err2.name));
+          setMicStatus(engine.denyMessage(err2 && err2.name));
         });
         return;
       }
@@ -972,7 +1153,7 @@
       micWanted = false;
       setMicButton(false);
       preferSpeaker(false);
-      setMicStatus(MicNotes.denyMessage(err && err.name));
+      setMicStatus(engine.denyMessage(err && err.name));
     });
   }
 
@@ -991,7 +1172,7 @@
 
   function toggleMic() {
     if (tutorialOpen()) return;
-    if (micStream || micPending) disableMic();
+    if (micStream || micPending || micWanted) disableMic();
     else enableMic();
   }
 
@@ -1227,6 +1408,23 @@
   }
 
   try { primeWavUrl(); } catch (e) {}
+
+  loadPianoEngine(ENGINE_ROOT).then(function (mod) {
+    engine = mod;
+    session = mod.createCapture({ profile: 'combat' });
+    engineState = 'ready';
+    adoptLocalHeld();
+    if (micWanted && !micStream && !micPending) enableMic();
+  }).catch(function () {
+    engineState = 'failed';
+    engine = null;
+    session = null;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showEngineFailure);
+    } else {
+      showEngineFailure();
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

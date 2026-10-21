@@ -1,6 +1,6 @@
 // js/instrument/translator.js — NoteOn/Off + time → beats y límites de compás.
 // Stub M0: nombres de nota, teclado QWERTY y Web MIDI.
-// El micrófono (YIN) vive en pitch.js + mic-notes.js y entra por el mismo noteOn.
+// El micrófono entra por el mismo noteOn. La detección vive en el motor de piano-transcribe.
 // UMD: module.exports + window.InstrumentTranslator.
 'use strict';
 

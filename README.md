@@ -15,7 +15,7 @@
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 
 ## Stack
-JavaScript vanilla, Web Audio, Web MIDI y detección de tono YIN. Sin CDN ni dependencias en runtime.
+JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia local del detector.
 
 ```
 python3 -m http.server 8000   # abrir http://localhost:8000 (file:// no carga los charts)
@@ -23,7 +23,7 @@ npm test                      # tests en Node, sin npm install
 ```
 
 ## Relacionado
-🎼 [piano-game](https://github.com/juliangdeveloper/piano-game): toca y ve tus notas en una partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-game/)
+🎼 [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe): motor de notas y partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-transcribe/)
 
 ---
 
