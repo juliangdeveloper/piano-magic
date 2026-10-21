@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.16';
+  var VERSION = '0.1.17';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -20,6 +20,9 @@
   var director = null;
   var tape = null;
   var hud = null;
+  var bossSprite = null;
+  var bossPreviewOn = false;
+  var bossPreviewRaf = 0;
   var tutorial = null;
   var audioCtx = null;
   var masterGain = null;
@@ -577,6 +580,9 @@
     var state = director.tick(lastPaintMs);
     if (tape) tape.render(state);
     if (hud) hud.render(state);
+    if (bossSprite && document.body.classList.contains('sprite-boss')) {
+      bossSprite.paint(state.beat, window.BossAnim.attackHits(state.ribbon));
+    }
     if (state.free) showDamagePop(state.damage);
     playChartMelody(state);
 
@@ -666,6 +672,7 @@
     stopLoop();
     director.start(performance.now());
     runningLoop = true;
+    stopBossPreview();
     setPauseUi(false, true);
     $('btnStart').className = 'hidden';
     setPickerVisible(false);
@@ -1259,10 +1266,57 @@
     });
     if (window.PianoMagic) window.PianoMagic.director = director;
     document.body.setAttribute('data-rival', (opt && opt.id) || chart.id || '');
+    setBossVisual((opt && opt.id) || chart.id || '');
+  }
+
+  function stopBossPreview() {
+    bossPreviewOn = false;
+    if (bossPreviewRaf) {
+      cancelAnimationFrame(bossPreviewRaf);
+      bossPreviewRaf = 0;
+    }
+  }
+
+  function bossPreviewLoop() {
+    var snap;
+    var bpm;
+    var beat;
+    bossPreviewRaf = 0;
+    if (!bossPreviewOn || runningLoop) return;
+    bpm = 72;
+    if (director) {
+      snap = director.snapshot(0);
+      if (snap && snap.bpm) bpm = snap.bpm;
+    }
+    beat = (performance.now() / 1000) * (bpm / 60);
+    if (!bossPreviewOn || runningLoop) return;
+    if (bossSprite) bossSprite.paint(beat, []);
+    if (!bossPreviewOn || runningLoop) return;
+    bossPreviewRaf = requestAnimationFrame(bossPreviewLoop);
+  }
+
+  function startBossPreview() {
+    if (runningLoop || !document.body.classList.contains('sprite-boss')) {
+      stopBossPreview();
+      return;
+    }
+    if (bossPreviewOn) return;
+    bossPreviewOn = true;
+    bossPreviewRaf = requestAnimationFrame(bossPreviewLoop);
+  }
+
+  function setBossVisual(id) {
+    var on = id === 'parade-feather';
+    var canvas = $('bossSprite');
+    var img = $('bossPortrait');
+    document.body.classList.toggle('sprite-boss', on);
+    if (canvas) canvas.hidden = !on;
+    if (img) img.hidden = on;
+    if (on && !runningLoop) startBossPreview();
+    else if (!on) stopBossPreview();
   }
 
   var RIVAL_LOOK = {
-    'parade-feather': 'hue-rotate(32deg) saturate(1.35) brightness(1.05)',
     'veil-boat': 'hue-rotate(185deg) saturate(1.15)',
     'tower-chime': 'hue-rotate(262deg) saturate(1.3)',
     'bosque-de-sol': 'hue-rotate(95deg) saturate(1.2)',
@@ -1293,8 +1347,13 @@
       } else {
         var img = document.createElement('img');
         img.alt = '';
-        img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
-        if (RIVAL_LOOK[o.id]) img.style.filter = RIVAL_LOOK[o.id];
+        if (o.id === 'parade-feather') {
+          img.className = 'portrait';
+          img.src = 'assets/ui/parade-feather-portrait.jpg?v=' + VERSION;
+        } else {
+          img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
+          if (RIVAL_LOOK[o.id]) img.style.filter = RIVAL_LOOK[o.id];
+        }
         b.appendChild(img);
       }
       b.addEventListener('click', function () { selectRival(o.id); });
@@ -1350,6 +1409,7 @@
     $('btnStart').className = '';
     setPickerVisible(true);
     renderIdle();
+    if (document.body.classList.contains('sprite-boss')) startBossPreview();
     ensureMic();
   }
 
@@ -1371,6 +1431,11 @@
   }
 
   function boot(chart, opt) {
+    if (!bossSprite && window.BossAnim) {
+      bossSprite = BossAnim.create($('bossSprite'), {
+        src: 'assets/ui/parade-feather-sheet.png?v=' + VERSION
+      });
+    }
     makeDirector(chart, opt);
     tape = Tape.create($('tape'), { version: VERSION });
     hud = Hud.create();
@@ -1451,7 +1516,12 @@
       applyKeyboard($('keys').hidden, true);
     });
     // v0.1.10: la cinta se ajusta al girar o al cambiar las barras de Safari.
-    window.addEventListener('resize', function () { requestAnimationFrame(refreshTape); });
+    window.addEventListener('resize', function () {
+      requestAnimationFrame(function () {
+        refreshTape();
+        if (bossSprite) bossSprite.repaint();
+      });
+    });
     window.addEventListener('orientationchange', function () { setTimeout(refreshTape, 250); });
     if (window.ResizeObserver && $('tapeFrame')) {
       try { new ResizeObserver(function () { refreshTape(); }).observe($('tapeFrame')); } catch (eRo) {}

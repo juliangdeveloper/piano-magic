@@ -39,12 +39,12 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.16, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.16');
+test('U3: versión 0.1.17, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.17');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.16');
+  assert.strictEqual(pkg.version, '0.1.17');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.16/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.17/);
   assert.equal(html.includes('boss-cloud.png'), false);
   assert.equal(html.includes('0.1.2'), false);
   assert.equal(html.includes('0.1.3'), false);
