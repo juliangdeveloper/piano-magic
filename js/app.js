@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.15';
+  var VERSION = '0.1.16';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -533,9 +533,9 @@
     var banner = $('pauseBanner');
     if (btn) {
       btn.hidden = !visible;
-      btn.textContent = on ? 'Continuar' : 'Pausa';
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.setAttribute('aria-label', on ? 'Continuar' : 'Pausa');
+      btn.title = on ? 'Continuar' : 'Pausa';
       btn.classList.toggle('on', !!on);
     }
     if (banner) banner.classList.toggle('visible', !!on);
@@ -621,14 +621,17 @@
     if (os) {
       var d = state.damage || {};
       os.hidden = !(d.hits > 0);
-      os.textContent = 'Daño total ' + (d.total || 0) + ' · Máx ' + (d.max || 0) + ' · DPS ' + (d.dps || 0);
+      os.textContent = (d.total || 0) + ' · ' + (d.max || 0) + ' · ' + (d.dps || 0);
+      os.setAttribute('aria-label', 'Daño total ' + (d.total || 0) + ' · Máx ' + (d.max || 0) + ' · DPS ' + (d.dps || 0));
     }
     if (state.outcome === 'win') {
-      msg.textContent = 'Victoria';
+      msg.textContent = '✓';
       msg.className = 'win';
+      msg.setAttribute('aria-label', 'Victoria');
     } else {
-      msg.textContent = 'Derrota';
+      msg.textContent = '✕';
       msg.className = 'lose';
+      msg.setAttribute('aria-label', 'Derrota');
     }
     if (hud) hud.render(state);
     if (tape) tape.render(state);
@@ -944,7 +947,6 @@
     if (btn) {
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.classList.toggle('on', !!on);
-      btn.textContent = on ? 'Teclado: sí' : 'Teclado';
     }
     if (persist) {
       try { localStorage.setItem(KB_KEY, on ? 'on' : 'off'); } catch (e) {}
@@ -991,12 +993,55 @@
     if (el) el.textContent = text || '';
   }
 
+  var micHeardUntil = 0;
+
+  function bufLevel(buf) {
+    if (!buf || !buf.length) return 0;
+    var sum = 0;
+    var n = 0;
+    var i;
+    for (i = 0; i < buf.length; i += 8) {
+      sum += buf[i] * buf[i];
+      n++;
+    }
+    var rms = Math.sqrt(sum / (n || 1));
+    var db = 20 * Math.log10(rms + 1e-9);
+    var t = (db + 58) / 46;
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
+    return t;
+  }
+
+  function updateMicHeard(reading, level) {
+    var fill = $('micMeterFill');
+    var note = $('micNote');
+    if (fill && typeof level === 'number') fill.style.height = Math.round(level * 100) + '%';
+    if (!note) return;
+    var pitch = '';
+    if (reading && reading.pitch && (reading.accepted || reading.midi != null)) {
+      pitch = String(reading.pitch);
+      micHeardUntil = performance.now() + 360;
+    } else if (performance.now() < micHeardUntil && note.textContent) {
+      return;
+    }
+    note.textContent = pitch;
+  }
+
+  function setMicLive(on) {
+    var live = $('micLive');
+    if (live) live.hidden = !on;
+    if (!on) {
+      micHeardUntil = 0;
+      updateMicHeard(null, 0);
+    }
+  }
+
   function setMicButton(on) {
     var btn = $('btnMic');
     if (!btn) return;
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     btn.classList.toggle('on', !!on);
-    btn.textContent = on ? 'Micrófono: sí' : 'Micrófono';
+    setMicLive(!!on);
   }
 
   function releaseMicNotes() {
@@ -1044,6 +1089,7 @@
         if (micRewires <= 2 && micTrackAlive()) rewireMic();
         else { micRewires = 0; stopMicGraph(); micWanted = true; enableMic(); }
       }
+      updateMicHeard(null, 0);
       return;
     }
     micSilentTicks = 0;
@@ -1053,6 +1099,7 @@
       blocked: synthBlocks
     });
     applyEngineEvents(out);
+    updateMicHeard(out && out.reading, bufLevel(micBuf));
   }
 
   function attachMic(stream) {
@@ -1062,6 +1109,7 @@
       micWanted = false;
       setMicButton(false);
       setMicStatus('Web Audio no está disponible; el micrófono no puede afinar.');
+      showError('Web Audio no está disponible; el micrófono no puede afinar.');
       preferSpeaker(false);
       return;
     }
@@ -1092,6 +1140,11 @@
     micTimer = setInterval(micTick, engine.HOP_MS);
     setMicButton(true);
     setMicStatus(engine.statusLine({ ios: iosLike() }));
+    var errBox = $('error');
+    if (errBox && errBox.textContent !== ENGINE_FAIL) {
+      errBox.textContent = '';
+      errBox.className = '';
+    }
   }
 
   function enableMic() {
@@ -1111,6 +1164,7 @@
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setMicStatus(engine.denyMessage('NotSupportedError'));
+      showError(engine.denyMessage('NotSupportedError'));
       setMicButton(false);
       return;
     }
@@ -1146,6 +1200,7 @@
           setMicButton(false);
           preferSpeaker(false);
           setMicStatus(engine.denyMessage(err2 && err2.name));
+          showError(engine.denyMessage(err2 && err2.name));
         });
         return;
       }
@@ -1154,6 +1209,7 @@
       setMicButton(false);
       preferSpeaker(false);
       setMicStatus(engine.denyMessage(err && err.name));
+      showError(engine.denyMessage(err && err.name));
     });
   }
 
@@ -1205,9 +1261,18 @@
     document.body.setAttribute('data-rival', (opt && opt.id) || chart.id || '');
   }
 
+  var RIVAL_LOOK = {
+    'parade-feather': 'hue-rotate(32deg) saturate(1.35) brightness(1.05)',
+    'veil-boat': 'hue-rotate(185deg) saturate(1.15)',
+    'tower-chime': 'hue-rotate(262deg) saturate(1.3)',
+    'bosque-de-sol': 'hue-rotate(95deg) saturate(1.2)',
+    'torre-de-escalas': 'hue-rotate(220deg) saturate(1.3)'
+  };
+
   function setPickerVisible(on) {
     var pk = $('rivalPicker');
     if (pk) pk.hidden = !on;
+    document.body.classList.toggle('picking', !!on);
   }
 
   function buildPicker() {
@@ -1217,11 +1282,21 @@
     Rivals.options().forEach(function (o) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'rival-opt';
+      b.className = 'rival-opt' + (o.free ? ' free' : '');
       b.setAttribute('role', 'radio');
       b.setAttribute('data-rival', o.id);
       b.setAttribute('aria-checked', o.id === rivalId ? 'true' : 'false');
-      b.textContent = o.label;
+      b.setAttribute('aria-label', o.label);
+      b.title = o.label;
+      if (o.free) {
+        b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+      } else {
+        var img = document.createElement('img');
+        img.alt = '';
+        img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
+        if (RIVAL_LOOK[o.id]) img.style.filter = RIVAL_LOOK[o.id];
+        b.appendChild(img);
+      }
       b.addEventListener('click', function () { selectRival(o.id); });
       pk.appendChild(b);
     });

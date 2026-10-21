@@ -158,6 +158,17 @@
       return bottomLine - step * (lineGap / 2);
     }
 
+    // Líneas adicionales por debajo de Mi4 (paso 0) y por encima de Fa5 (paso 8).
+    function drawLedgers(c, x, step, bottomLine, lineGap) {
+      var ls;
+      if (step <= -2) {
+        for (ls = -2; ls >= step; ls -= 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
+      }
+      if (step >= 10) {
+        for (ls = 10; ls <= step; ls += 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
+      }
+    }
+
     function drawLedger(c, x, y, lineGap) {
       var hw = lineGap * 0.95;
       c.beginPath();
@@ -218,14 +229,7 @@
       c.strokeStyle = INK;
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.lineCap = 'butt';
-      var ls;
-      if (step === -2) drawLedger(c, x, yFor(-2, bottomLine, lineGap), lineGap);
-      if (step <= -14) {
-        for (ls = -14; ls >= step; ls -= 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
-      }
-      if (step >= 10) {
-        for (ls = 10; ls <= step; ls += 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
-      }
+      drawLedgers(c, x, step, bottomLine, lineGap);
       var up = stemDown ? false : (step <= -3 ? step < -8 : step < 4);
       var stemH = lineGap * 3.15;
       c.strokeStyle = color;
@@ -288,9 +292,7 @@
         // drawNote siempre dibuja plica arriba/abajo; para redonda la tapamos con una sin plica
         c.save();
         c.globalAlpha = 1;
-        if (h.step === -2) drawLedger(c, h.x, yFor(-2, bottomLine, lineGap), lineGap);
-        if (h.step <= -14) for (var ls = -14; ls >= h.step; ls -= 2) drawLedger(c, h.x, yFor(ls, bottomLine, lineGap), lineGap);
-        if (h.step >= 10) for (var ls2 = 10; ls2 <= h.step; ls2 += 2) drawLedger(c, h.x, yFor(ls2, bottomLine, lineGap), lineGap);
+        drawLedgers(c, h.x, h.step, bottomLine, lineGap);
         c.translate(h.x, h.y); c.rotate(-0.42); c.beginPath();
         c.ellipse(0, 0, rx, Math.max(2.8, lineGap * 0.38), 0, 0, Math.PI * 2);
         if (hollow) { c.fillStyle = 'rgba(255,250,240,0.94)'; c.fill(); c.strokeStyle = col; c.lineWidth = Math.max(1.5, lineGap * 0.14); c.stroke(); }
@@ -348,39 +350,49 @@
       });
     }
 
-    // Llave del gran pentagrama (equivalente a StaveConnector brace).
-    function drawBrace(c, y0, y1, lineGap) {
-      var x = 2.5, mid = (y0 + y1) / 2, wv = Math.max(3, lineGap * 0.55);
+    // Marca de zona, sin palabras: arcos (escucha), rayo (ataque), escudo (defiende).
+    function drawZoneMark(c, x, y, kind, s) {
       c.save();
-      c.fillStyle = INK;
-      c.beginPath();
-      c.moveTo(x + wv, y0);
-      c.bezierCurveTo(x - wv * 0.2, y0 + (mid - y0) * 0.3, x + wv * 0.9, mid - (mid - y0) * 0.3, x - wv * 0.2, mid);
-      c.bezierCurveTo(x + wv * 0.9, mid + (y1 - mid) * 0.3, x - wv * 0.2, y1 - (y1 - mid) * 0.3, x + wv, y1);
-      c.bezierCurveTo(x + wv * 0.1, y1 - (y1 - mid) * 0.3, x + wv * 1.5, mid + (y1 - mid) * 0.3, x + wv * 0.3, mid);
-      c.bezierCurveTo(x + wv * 1.5, mid - (mid - y0) * 0.3, x + wv * 0.1, y0 + (mid - y0) * 0.3, x + wv, y0);
-      c.fill();
-      c.restore();
-    }
-
-    // Clave de fa dibujada (sin fuente): cabeza en la línea de F3 y dos puntos.
-    function drawBassClef(c, bassTop, lineGap) {
-      var x = 8 + lineGap * 0.4, fy = bassTop + lineGap; // F3 = 2ª línea desde arriba
-      c.save();
-      c.strokeStyle = INK; c.fillStyle = INK;
-      c.lineWidth = Math.max(1.6, lineGap * 0.22);
-      c.beginPath();
-      c.arc(x + lineGap * 0.35, fy, lineGap * 0.32, 0, Math.PI * 2);
-      c.fill();
-      c.beginPath();
-      c.moveTo(x + lineGap * 0.1, fy - lineGap * 0.15);
-      c.bezierCurveTo(x + lineGap * 0.6, fy - lineGap * 1.3, x + lineGap * 2.2, fy - lineGap * 1.0, x + lineGap * 2.0, fy + lineGap * 0.3);
-      c.bezierCurveTo(x + lineGap * 1.8, fy + lineGap * 1.6, x + lineGap * 0.9, fy + lineGap * 2.4, x, fy + lineGap * 2.9);
-      c.stroke();
-      c.beginPath();
-      c.arc(x + lineGap * 2.6, fy - lineGap * 0.5, lineGap * 0.17, 0, Math.PI * 2);
-      c.arc(x + lineGap * 2.6, fy + lineGap * 0.5, lineGap * 0.17, 0, Math.PI * 2);
-      c.fill();
+      c.translate(x, y);
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      if (kind === 'hole') {
+        c.fillStyle = '#8a5a12';
+        c.beginPath();
+        c.moveTo(s * 0.12, -s * 0.62);
+        c.lineTo(-s * 0.32, s * 0.02);
+        c.lineTo(-s * 0.02, s * 0.02);
+        c.lineTo(-s * 0.18, s * 0.62);
+        c.lineTo(s * 0.38, -s * 0.06);
+        c.lineTo(s * 0.04, -s * 0.06);
+        c.closePath();
+        c.fill();
+      } else if (kind === 'defend') {
+        c.fillStyle = 'rgba(150, 214, 170, 0.95)';
+        c.strokeStyle = '#1b6b42';
+        c.lineWidth = Math.max(1.3, s * 0.1);
+        c.beginPath();
+        c.moveTo(0, -s * 0.58);
+        c.lineTo(s * 0.5, -s * 0.26);
+        c.lineTo(s * 0.38, s * 0.36);
+        c.quadraticCurveTo(0, s * 0.68, -s * 0.38, s * 0.36);
+        c.lineTo(-s * 0.5, -s * 0.26);
+        c.closePath();
+        c.fill();
+        c.stroke();
+      } else {
+        c.strokeStyle = '#1d4e89';
+        c.lineWidth = Math.max(1.5, s * 0.12);
+        c.beginPath();
+        c.arc(0, s * 0.1, s * 0.22, Math.PI * 1.15, Math.PI * 1.85, true);
+        c.stroke();
+        c.beginPath();
+        c.arc(0, s * 0.1, s * 0.46, Math.PI * 1.2, Math.PI * 1.8, true);
+        c.stroke();
+        c.beginPath();
+        c.arc(0, s * 0.1, s * 0.7, Math.PI * 1.25, Math.PI * 1.75, true);
+        c.stroke();
+      }
       c.restore();
     }
 
@@ -450,14 +462,19 @@
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
 
-      // v0.1.11: gran pentagrama. Clave de sol arriba y clave de fa abajo, contiguas
-      // como en el piano: E4 = línea inferior de sol (paso 0), C4 = línea adicional
-      // central (paso −2), A3 = línea superior de fa (paso −4). MIDI < 60 cae en fa.
-      var lineGap = Math.max(5.5, Math.min(13, (h - 24) / 13.2));
+      // Una clave de sol. El teclado va de G3 a A5 y los charts viven en C4–E4,
+      // así que el fa solo añadía un segundo pentagrama. En el alto del iPad
+      // las dos claves quedaban montadas sobre las mismas cinco líneas.
+      // G3–B3 salen con líneas adicionales bajo Mi4 (paso 0).
+      // El pentagrama ocupa el alto libre. La clave de sol cabe si el hueco
+      // no pasa de ~(alto/2) / 4.75: su cola baja eso bajo el centro.
+      var lineGap = (h - 20) / 6.2;
+      var clefFit = (h / 2 - 12) / 4.75;
+      if (lineGap > clefFit) lineGap = clefFit;
+      lineGap = Math.max(8, Math.min(64, lineGap));
       var staffH = lineGap * 4;
-      var topLine = Math.max(14, (h - lineGap * 11) / 2 + lineGap * 0.6);
+      var topLine = Math.max(18, (h - staffH) / 2);
       var bottomLine = topLine + staffH;
-      var bassTop = yFor(-4, bottomLine, lineGap);
       var historyBeats = 3.2;
       var futureBeats = 11;
       var pxPerBeat = Math.max(8, (w - 8) / (historyBeats + futureBeats));
@@ -474,14 +491,7 @@
         ctx.moveTo(0, sy);
         ctx.lineTo(w, sy);
         ctx.stroke();
-        var by = bassTop + s * lineGap;
-        ctx.beginPath();
-        ctx.moveTo(0, by);
-        ctx.lineTo(w, by);
-        ctx.stroke();
       }
-      drawBrace(ctx, topLine, bassTop + staffH, lineGap);
-      drawBassClef(ctx, bassTop, lineGap);
 
       var clefH = lineGap * 7.15;
       var clefW = clefH * (ready(clefImg) ? (clefImg.naturalWidth / clefImg.naturalHeight) : 0.36);
@@ -505,7 +515,7 @@
         ctx.lineCap = 'round';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.font = '700 10px Georgia, serif';
+        ctx.font = '700 13px Georgia, serif';
         for (mi = 0; mi < marks.length; mi++) {
           m = marks[mi];
           x = xAt(m.beat);
@@ -534,43 +544,39 @@
         x1 = xAt(bar.startBeat + bpb);
         if (x1 < -8 || x0 > w + 8) continue;
 
+        var zone = bar.listenOnly ? 'setup' : bar.kind;
+        var wash = zone === 'hole' ? 'rgba(214, 170, 70, 0.30)'
+          : (zone === 'defend' ? 'rgba(70, 180, 120, 0.26)' : 'rgba(80, 160, 220, 0.30)');
+        var zx0 = Math.max(x0, 0);
+        var zx1 = Math.min(x1, w);
+        if (zx1 - zx0 > 2) {
+          ctx.fillStyle = wash;
+          ctx.fillRect(zx0, topLine - 2, zx1 - zx0, staffH + 4);
+        }
+
         ctx.strokeStyle = 'rgba(90, 68, 40, 0.55)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x0, topLine);
-        ctx.lineTo(x0, bassTop + staffH);
+        ctx.lineTo(x0, bottomLine);
         ctx.stroke();
 
-        if (bar.kind === 'hole') {
-          var hx0 = Math.max(x0, clefRight);
-          var hx1 = Math.min(x1, w);
-          if (hx1 - hx0 > 6) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(214, 176, 92, 0.16)';
-            ctx.strokeStyle = '#b8893a';
-            ctx.lineWidth = 1.4;
-            ctx.setLineDash([4, 3]);
-            roundRect(ctx, hx0 + 1, topLine - 3, hx1 - hx0 - 2, (bassTop + staffH - topLine) + 6, 5);
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
-          }
-          drawAttackGuide(bar);
+        var markX = Math.max(x0 + lineGap * 0.35, clefRight + 2);
+        if (markX < x1 - lineGap * 0.8 && markX < w - 8) {
+          drawZoneMark(ctx, markX, (topLine + bottomLine) / 2, zone, Math.max(14, lineGap * 1.05));
         }
 
-        ctx.fillStyle = '#5c4630';
-        ctx.font = '700 10px Georgia, serif';
+        ctx.fillStyle = KIND_INK[zone] || '#5c4630';
+        ctx.font = '700 ' + Math.round(Math.max(14, lineGap * 0.95)) + 'px Georgia, serif';
         ctx.textAlign = 'center';
-        var numX = (Math.max(x0, 0) + Math.min(x1, w)) / 2;
-        if (numX > 18 && numX < w - 10) ctx.fillText(String((bar.globalBar || 0) + 1), numX, 11);
+        ctx.textBaseline = 'bottom';
+        var numX = (Math.max(x0, clefRight) + Math.min(x1, w)) / 2;
+        if (x1 - x0 > 22 && numX > clefRight + 8 && numX < w - 8) {
+          ctx.fillText(String((bar.globalBar || 0) + 1), numX, topLine - 2);
+        }
+        ctx.textBaseline = 'alphabetic';
 
-        ctx.textAlign = 'left';
-        ctx.font = '700 8px Georgia, serif';
-        ctx.fillStyle = KIND_INK[bar.kind] || '#5c4630';
-        var label = KIND_LABEL[bar.kind] || bar.kind;
-        if (bar.listenOnly) label = 'ESCUCHA';
-        var labelX = Math.max(x0 + 3, clefRight);
-        if (labelX < x1 - 28 && labelX < w - 36) ctx.fillText(label, labelX, h - 3);
+        if (bar.kind === 'hole') drawAttackGuide(bar);
 
         if (bar.kind === 'hole') continue;
         var notes = bar.notes || [];
@@ -636,7 +642,7 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(playheadX, topLine - 6);
-      ctx.lineTo(playheadX, bassTop + staffH + 6);
+      ctx.lineTo(playheadX, bottomLine + 6);
       ctx.stroke();
       ctx.fillStyle = pulse ? '#ffe7a3' : '#f7fbff';
       ctx.beginPath();

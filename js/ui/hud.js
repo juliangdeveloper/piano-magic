@@ -20,9 +20,7 @@
     lose: 'Derrota'
   };
 
-  var BUFF_ICON = {
-    atk: 'assets/ui/buff-icon-2.png?v=0.1.9'
-  };
+  var CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M6 14.5 12 7l6 7.5"/></svg>';
 
   function el(id) {
     return (typeof document === 'undefined') ? null : document.getElementById(id);
@@ -38,44 +36,57 @@
     function render(state) {
       if (!state) return;
       var title = el(ids.songTitle || 'songTitle');
-      var playerBar = el(ids.playerHpBar || 'playerHpBar');
+      var playerMask = el(ids.playerHpMask || 'playerHpMask');
       var bossMask = el(ids.bossHpMask || 'bossHpMask');
       var playerVal = el(ids.playerHpVal || 'playerHpVal');
       var bossVal = el(ids.bossHpVal || 'bossHpVal');
       var roomName = el(ids.roomName || 'roomName');
+      var roomCard = el(ids.roomCard || 'roomCard');
       var roomKey = el(ids.roomKeyTag || 'roomKeyTag');
       var roomIcon = el(ids.roomIcon || 'roomIcon');
       var roomEmoji = el(ids.roomEmoji || 'roomEmoji');
       var bpm = el(ids.bpmVal || 'bpmVal');
       var orb = el(ids.bpmOrb || 'bpmOrb');
-      var phase = el(ids.phaseBadge || 'phaseBadge');
       var beats = el(ids.beats || 'beats');
       var buffs = el(ids.buffs || 'buffs');
-      var feedback = el(ids.feedback || 'feedback');
 
       setText(title, state.title || '');
+      if (title && state.title) title.setAttribute('aria-label', state.title);
       var pPct = state.playerHpMax ? (100 * state.playerHp / state.playerHpMax) : 0;
       var bPct = state.bossHpMax ? (100 * state.bossHp / state.bossHpMax) : 0;
-      if (playerBar) playerBar.style.width = Math.max(0, Math.min(100, pPct)) + '%';
+      if (playerMask) {
+        var pMiss = Math.max(0, Math.min(1, 1 - (pPct / 100)));
+        playerMask.style.width = (pMiss * 70) + '%';
+      }
       if (bossMask) {
         var miss = Math.max(0, Math.min(1, 1 - (bPct / 100)));
         bossMask.style.width = (miss * 70) + '%';
       }
       setText(playerVal, state.playerHp + ' / ' + state.playerHpMax);
-      setText(bossVal, state.free ? ('Daño ' + ((state.damage && state.damage.total) || 0)) : (state.bossHp + ' / ' + state.bossHpMax));
+      if (playerVal) playerVal.setAttribute('aria-label', 'HP ' + state.playerHp + ' / ' + state.playerHpMax);
+      if (state.free) {
+        var dealt = (state.damage && state.damage.total) || 0;
+        setText(bossVal, String(dealt));
+        if (bossVal) bossVal.setAttribute('aria-label', 'Daño ' + dealt);
+      } else {
+        setText(bossVal, state.bossHp + ' / ' + state.bossHpMax);
+        if (bossVal) bossVal.setAttribute('aria-label', 'HP ' + state.bossHp + ' / ' + state.bossHpMax);
+      }
       if (bossMask && state.free) bossMask.style.width = '0%';
       var stats = el(ids.dmgStats || 'dmgStats');
       if (stats) {
         stats.hidden = !state.free;
         if (state.free) {
           var d = state.damage || {};
-          setText(stats, 'Total ' + (d.total || 0) + ' · Golpes ' + (d.hits || 0) +
+          setText(stats, (d.total || 0) + ' · ' + (d.hits || 0) + ' · ' + (d.max || 0) + ' · ' + (d.dps || 0));
+          stats.setAttribute('aria-label', 'Total ' + (d.total || 0) + ' · Golpes ' + (d.hits || 0) +
             ' · Máx ' + (d.max || 0) + ' · DPS ' + (d.dps || 0));
         }
       }
 
       var re = state.roomElement || {};
       setText(roomName, re.label || '');
+      if (roomCard) roomCard.setAttribute('aria-label', re.label || '');
       setText(roomKey, state.roomKey || 'C');
       var agua = (re.id || 'agua') === 'agua';
       if (roomIcon) roomIcon.hidden = !agua;
@@ -93,10 +104,6 @@
         var pulsing = !!(state.running && !state.paused && frac >= center && frac < center + 0.18);
         orb.classList.toggle('pulse', pulsing);
       }
-
-      var ph = state.phase || 'idle';
-      setText(phase, PHASE_LABEL[ph] || ph);
-      if (phase) phase.className = ph;
 
       if (beats) {
         var dots = beats.querySelectorAll('i');
@@ -123,43 +130,14 @@
           for (var bi = 0; bi < list.length; bi++) {
             var b = list[bi];
             var chip = document.createElement('div');
-            chip.className = 'chip live';
-            var img = document.createElement('img');
-            img.src = BUFF_ICON[b.id] || BUFF_ICON.atk;
-            img.alt = '';
-            var span = document.createElement('span');
-            span.textContent = (b.label || b.id) + ' · ' + b.remaining;
-            chip.appendChild(img);
-            chip.appendChild(span);
+            chip.className = 'chip live minor';
+            chip.setAttribute('aria-label', (b.label || 'Mejora') + ' ' + b.remaining);
+            chip.innerHTML = CHEVRON + '<span class="n">' + b.remaining + '</span>';
             buffs.appendChild(chip);
           }
         }
       }
 
-      if (feedback) {
-        var reIdle = state.roomElement || {};
-        var idleMsg = 'Sala en ' + (state.roomKey || 'C') + ' · ' + (reIdle.label || 'Agua') + ' · drone C / toca libre en el setup';
-        feedback.textContent = state.feedback || (state.running ? '' : idleMsg);
-        feedback.className = '';
-        if (state.lastResolve) {
-          if (state.lastResolve.kind === 'setup') feedback.className = 'setup';
-          if (state.lastResolve.kind === 'defend-partial') feedback.className = 'partial';
-          if (!state.lastResolve.ok) feedback.className = 'miss';
-        }
-      }
-
-      var hint = el(ids.hint || 'hint');
-      if (hint) {
-        if (state.free) {
-          hint.textContent = 'Modo libre: solo atacas. Nota de la escala a tiempo = 2 · tríada mayor de la tónica = 4 · tríada menor = mejora · pentatónica = cura 3. Fuera de escala o de tiempo no cuenta.';
-        } else if (state.phase === 'hole') {
-          hint.textContent = 'Ataque (en la escala de la sala, a tiempo): nota suelta = 2 · tríada mayor de la tónica = 4 · tríada menor de la tónica = mejora +50% · pentatónica = cura 3. Lo de fuera no cuenta.';
-        } else if (state.phase === 'defend') {
-          hint.textContent = 'Defiende: copia la cinta nota por nota. Perfecto / Parcial / Fallo — sin daño al jefe.';
-        } else {
-          hint.textContent = 'Tras la escucha: 1 compás de Ataque y 4 de Defiende. Teclado: V B N = G3 A3 B3 · A S D F G H J K L Ñ \' X C = C4…A5.';
-        }
-      }
     }
 
     return { render: render, PHASE_LABEL: PHASE_LABEL };

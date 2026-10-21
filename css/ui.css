@@ -71,11 +71,25 @@ body {
 }
 
 .wordmark {
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(246, 241, 230, 0.72);
+  color: rgba(246, 241, 230, 0.88);
   margin-right: auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+.wordmark svg { width: 26px; height: 26px; display: block; }
+
+.vh {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 #btnKeyboard, #btnMic, #btnHelp, #btnPause {
@@ -87,13 +101,20 @@ body {
   font-family: Georgia, serif;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-#btnKeyboard, #btnMic {
-  font-size: 13px;
-  padding: 6px 12px;
+#btnKeyboard, #btnMic, #btnHelp {
+  width: 36px;
+  height: 36px;
   min-height: 36px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
 }
+#btnKeyboard svg, #btnMic svg { width: 20px; height: 20px; display: block; }
 
 #btnKeyboard.on {
   background: rgba(226, 194, 122, 0.28);
@@ -105,25 +126,52 @@ body {
   color: #f4fbff;
 }
 
-#btnHelp {
-  width: 36px;
+.mic-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 36px;
-  font-size: 18px;
-  line-height: 1;
+}
+.mic-live[hidden] { display: none !important; }
+.mic-meter {
+  width: 9px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(8, 18, 36, 0.45);
+  border: 1px solid rgba(126, 200, 255, 0.75);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+#micMeterFill {
+  display: block;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, #e8f6ff, #3d8cff 55%, #1d4e89);
+}
+#micNote {
+  min-width: 2.1em;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #f4fbff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  font-variant-numeric: tabular-nums;
 }
 
 #stageTop {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.3fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "util util util"
     "room boss bpm";
-  align-items: start;
-  gap: 2px 12px;
+  align-items: center;
+  gap: 2px 10px;
   padding: 2px 12px 0;
 }
 
-.room-card { grid-area: room; display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.room-card { grid-area: room; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding-top: 2px; }
 .boss-card {
   grid-area: boss;
   text-align: center;
@@ -132,116 +180,93 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.boss-stage {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .bpm-orb { grid-area: bpm; justify-self: end; padding-top: 2px; }
 
-#roomIcon {
-  width: 68px;
-  height: auto;
+.room-mark {
+  position: relative;
+  width: 62px;
+  height: 62px;
   flex: 0 0 auto;
+}
+#roomIcon, .room-emoji {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  display: block;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
 }
-
 .room-emoji {
-  font-size: 32px;
-  width: 68px;
+  font-size: 34px;
+  line-height: 62px;
   text-align: center;
 }
 
-.room-title {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-#roomName {
-  font-size: 26px;
-  line-height: 1;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
 #roomKeyTag {
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #f6edd9;
+  color: #2a2118;
+  border: 1px solid #c6a15a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
-  color: var(--dim);
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  line-height: 1;
 }
 
 .player-hp {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  min-width: 150px;
+  width: 210px;
+  margin-top: 2px;
 }
 
-.hp-k {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--dim);
+.hp-num, #bpmVal, #version, .key {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.player-hp .track {
-  flex: 1;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(6, 16, 32, 0.35);
-  border: 1px solid rgba(226, 194, 122, 0.75);
-  overflow: hidden;
-  min-width: 64px;
-}
-
-#playerHpBar {
-  display: block;
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(180deg, #b9dcff, #2f6fdd);
-}
-
-.player-hp .val, .boss-hp-num, #bpmVal, #version, #midiStatus, .key, #phaseBadge {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.player-hp .val {
-  font-size: 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  min-width: 52px;
-}
-
-#songTitle {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-  margin-bottom: 2px;
-}
-
-.boss-hp {
+.hp-chrome {
   position: relative;
   z-index: 2;
-  width: min(280px, 74%);
+  width: 100%;
+}
+.boss-hp {
+  position: relative;
+  width: min(300px, 86%);
   margin: 0 auto 2px;
 }
-
-.boss-hp img {
+.hp-chrome img {
   display: block;
   width: 100%;
   height: auto;
 }
-
-.boss-hp-num {
+.hp-num {
   position: absolute;
-  right: 8%;
-  top: 11%;
-  font-size: 12px;
+  right: 7%;
+  top: 18%;
+  font-size: 15px;
   font-weight: 800;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+  line-height: 1;
 }
-
-.boss-hp-mask {
+.hp-mask {
   position: absolute;
   top: 14%;
   height: 22%;
@@ -253,11 +278,12 @@ body {
 }
 
 #bossPortrait {
-  width: min(460px, 96%);
+  width: 100%;
+  max-width: 100%;
   height: auto;
-  max-height: 168px;
+  max-height: clamp(160px, 34dvh, 380px);
   object-fit: contain;
-  object-position: center top;
+  object-position: center center;
   display: block;
   margin: 0 auto;
   background: transparent;
@@ -269,14 +295,6 @@ body {
 .bpm-orb {
   width: 86px;
   text-align: center;
-}
-
-.bpm-k {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  color: #e7f2ff;
-  margin-bottom: 2px;
 }
 
 .orb-face {
@@ -355,30 +373,46 @@ body {
 #pauseBanner.visible { display: flex; }
 
 #pauseBanner span {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
   background: #f6edd9;
   color: #2a2118;
   border: 2px solid #c6a15a;
-  border-radius: 999px;
-  padding: 8px 18px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 15px;
+  border-radius: 50%;
+  padding: 0;
 }
+#pauseBanner svg { width: 32px; height: 32px; display: block; }
 
-#btnPause, #btnPauseRestart {
-  font-size: 17px;
-  padding: 12px 36px;
-  min-width: 180px;
-  min-height: 46px;
-  border-radius: 999px;
+#btnPause, #btnPauseRestart, #btnPauseRival, #btnStart, #btnRestart, .ghost-btn {
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#btnPause svg, #btnPauseRestart svg, #btnPauseRival svg, #btnStart svg, #btnRestart svg, .ghost-btn svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+#btnPause .ico-play { display: none; }
+#btnPause.on .ico-pause { display: none; }
+#btnPause.on .ico-play { display: block; }
+
+#btnPause, #btnStart, #btnRestart {
   border: 1px solid #f8e7b8;
   background: linear-gradient(#f6e2ad, #d7a84a);
   color: var(--ink);
 }
 
 #btnPause[hidden], #btnPauseRestart[hidden] { display: none !important; }
-#btnPauseRestart { background: transparent; color: #f8e7b8; min-width: 140px; }
+#btnPauseRestart, #btnPauseRival { background: transparent; color: #f8e7b8; }
 
 #btnPause.on {
   background: linear-gradient(#f4f8ff, #9ec0ea);
@@ -397,28 +431,34 @@ body {
 .buff-live { padding-top: 6px; }
 
 .chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(8, 18, 36, 0.38);
-  border: 1px solid rgba(226, 194, 122, 0.55);
-  border-radius: 999px;
-  padding: 2px 12px 2px 2px;
-  color: var(--fg);
-  font-size: 12px;
-  line-height: 1.15;
-  text-align: left;
-}
-
-.chip img {
   width: 40px;
   height: 40px;
-  object-fit: contain;
-  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(8, 18, 36, 0.38);
+  border: 1px solid rgba(226, 194, 122, 0.55);
+  border-radius: 50%;
+  padding: 0;
+  color: var(--fg);
 }
-
+.chip svg { width: 22px; height: 22px; display: block; }
+.chip.major { color: #f0d48a; }
+.chip.minor { color: #8ec8ff; }
+.chip.penta { color: #8ddeaf; }
 .chip.live {
+  width: auto;
+  min-width: 40px;
+  border-radius: 999px;
+  padding: 0 10px 0 8px;
   background: rgba(226, 194, 122, 0.22);
+}
+.chip .n {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 #statusRow {
@@ -466,38 +506,49 @@ body {
 
 footer {
   flex: 0 0 auto;
-  padding: 4px 12px 8px;
+  position: relative;
+  padding: 4px 28px 8px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+}
+.fight-actions, .overlay-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #btnStart, #btnRestart, #tutNext {
   appearance: none;
   border: 1px solid #f8e7b8;
-  border-radius: 999px;
   background: linear-gradient(#f6e2ad, #d7a84a);
   color: var(--ink);
   font-family: Georgia, serif;
-  font-size: 17px;
   font-weight: 700;
-  padding: 12px 36px;
-  min-width: 180px;
-  min-height: 46px;
   cursor: pointer;
+}
+#tutNext {
+  border-radius: 999px;
+  font-size: 16px;
+  padding: 8px 18px;
+  min-width: 120px;
+  min-height: 42px;
 }
 
 #btnStart:active, #btnRestart:active, #tutNext:active { filter: brightness(0.95); }
 #btnStart.hidden { display: none; }
 
-#midiStatus, #micStatus, #version {
-  font-size: 11px;
-  color: var(--dim);
-  text-align: center;
+#version {
+  position: absolute;
+  right: 8px;
+  bottom: 2px;
+  font-size: 9px;
+  line-height: 1;
+  color: rgba(197, 212, 234, 0.55);
+  pointer-events: none;
 }
-
-#micStatus:empty { display: none; }
 
 #speakerUnlock {
   position: absolute;
@@ -568,10 +619,10 @@ footer {
 }
 
 
-.key .k { font-size: 13px; font-weight: 800; line-height: 1; }
-.key .p { font-size: 10px; font-weight: 700; opacity: 0.8; line-height: 1.1; }
+.key .k { font-size: 14px; font-weight: 800; line-height: 1; }
+.key .p { font-size: 12px; font-weight: 800; opacity: 0.9; line-height: 1.15; letter-spacing: -0.02em; }
 .key.black .k { font-size: 12px; }
-.key.black .p { font-size: 9px; }
+.key.black .p { font-size: 11px; }
 
 .key.white.down, .key.white:active {
   background: linear-gradient(#fff4cc, #e7c56a);
@@ -596,8 +647,9 @@ footer {
 #overlay.visible { display: flex; }
 
 #overlayMsg {
-  font-size: 32px;
+  font-size: 72px;
   font-weight: 800;
+  line-height: 1;
   text-align: center;
 }
 
@@ -709,75 +761,73 @@ footer {
   min-height: 42px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 820px) {
   #stageTop {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      "util util"
-      "room bpm"
-      "boss boss";
+      "room util bpm"
+      "boss boss boss";
+    align-items: center;
   }
-  #roomName { font-size: 22px; }
-  #roomIcon { width: 56px; }
-  #bossPortrait { max-height: 132px; }
-  #songTitle { font-size: 16px; }
-  #tapeFrame { height: 156px; }
-  .piano { height: 124px; }
-  .boss-hp-num { font-size: 12px; top: 14%; }
-}
-
-@media (max-height: 700px) {
-  #bossPortrait { max-height: 96px; }
-  #tapeFrame { height: 140px; }
-  #hint { display: none; }
-  .chip img { width: 32px; height: 32px; }
+  .room-card { flex-direction: row; gap: 6px; padding-top: 0; }
+  .room-mark, #roomIcon, .room-emoji { width: 52px; height: 52px; }
+  .room-emoji { line-height: 52px; }
+  .player-hp { width: 168px; }
+  .utility { padding-top: 0; }
+  .piano { height: 112px; }
 }
 
 /* v0.1.9: selector de rival, Modo libre y encaje iPad mini sin scroll. */
 .rival-picker {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: calc(100% - 64px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.rival-picker::-webkit-scrollbar { display: none; }
 .rival-picker[hidden] { display: none; }
-.rival-picker::before {
-  content: "Rival";
-  align-self: center;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--dim);
-  margin-right: 2px;
-}
 .rival-opt {
   appearance: none;
-  font-family: Georgia, serif;
-  font-size: 15px;
-  font-weight: 700;
-  min-height: 40px;
-  padding: 8px 16px;
-  border-radius: 999px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  border-radius: 50%;
   border: 1px solid rgba(226, 194, 122, 0.6);
-  background: rgba(8, 18, 36, 0.4);
+  background: rgba(8, 18, 36, 0.45);
   color: var(--fg);
   cursor: pointer;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
 }
+.rival-opt img {
+  width: 150%;
+  height: 150%;
+  object-fit: contain;
+  object-position: center 35%;
+  pointer-events: none;
+}
+.rival-opt svg { width: 28px; height: 28px; display: block; }
 .rival-opt[aria-checked="true"] {
-  background: rgba(226, 194, 122, 0.9);
-  color: var(--ink);
   border-color: #f8e7b8;
+  box-shadow: 0 0 0 3px rgba(248, 231, 184, 0.95);
+  background: rgba(226, 194, 122, 0.28);
 }
 .pause-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .pause-actions:not(:has(button:not([hidden]))) { display: none; }
 #btnPauseRival, .ghost-btn {
   appearance: none;
-  font-family: Georgia, serif;
-  font-size: 17px;
-  font-weight: 700;
-  padding: 12px 28px;
-  min-height: 46px;
-  border-radius: 999px;
   border: 1px solid #f8e7b8;
   background: transparent;
   color: #f8e7b8;
@@ -819,32 +869,43 @@ footer {
 html, body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 #frame { height: 100vh; height: 100dvh; max-width: min(1180px, 100vw); overflow: hidden; padding-bottom: var(--safe-bottom); }
 #scroll { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
-#stageTop, #gestureLegend, #buffs, #statusRow, #hint { flex: 0 0 auto; }
-#tapeFrame { flex: 1 1 auto; height: auto; min-height: 110px; max-height: 340px; }
-#bossPortrait { max-height: clamp(64px, 15dvh, 200px); }
-#hint { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+#stageTop, #gestureLegend, #buffs { flex: 0 0 auto; }
+#tapeFrame { flex: 1 1 auto; height: auto; min-height: 120px; max-height: none; margin: 4px 10px; }
 footer { flex: 0 0 auto; }
 #keys { flex: 0 0 auto; }
-.piano { height: clamp(96px, 16dvh, 190px); max-width: 900px; }
-.key .k { font-size: clamp(13px, 1.9dvh, 18px); }
-.key .p { font-size: clamp(10px, 1.4dvh, 14px); }
-@media (min-width: 700px) {
-  #songTitle { font-size: clamp(18px, 2.6dvh, 28px); }
-  .rival-opt { font-size: clamp(15px, 2dvh, 19px); }
-}
-/* Horizontal con poco alto (iPad mini apaisado ≈ 1133×~650 útil). */
+.piano { height: clamp(84px, 14dvh, 150px); max-width: 980px; }
+.key .k { font-size: clamp(12px, 1.8dvh, 16px); }
+.key .p { font-size: clamp(11px, 1.5dvh, 14px); }
+body.picking #bossPortrait { max-height: clamp(150px, 30dvh, 320px); }
+body.kb-on #bossPortrait { max-height: clamp(120px, 24dvh, 260px); }
+body.picking.kb-on #bossPortrait { max-height: clamp(110px, 20dvh, 200px); }
 @media (orientation: landscape) and (max-height: 820px) {
-  #hint { display: none; }
-  #bossPortrait { max-height: clamp(56px, 12dvh, 120px); }
-  .chip img { width: 30px; height: 30px; }
-  footer { flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 12px; row-gap: 2px; padding-top: 4px; padding-bottom: 4px; }
-  #midiStatus, #micStatus, #version { flex-basis: 100%; }
-  .piano { height: clamp(90px, 17dvh, 150px); }
+  .room-mark, #roomIcon, .room-emoji { width: 52px; height: 52px; }
+  .room-emoji { line-height: 52px; font-size: 28px; }
+  .player-hp { width: 196px; }
+  .bpm-orb { width: 68px; }
+  #bpmVal { font-size: 16px; }
+  .chip { width: 34px; height: 34px; }
+  .chip svg { width: 18px; height: 18px; }
+  .rival-opt { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
+  #btnStart, #btnPause, #btnRestart, #btnPauseRestart, #btnPauseRival, .ghost-btn {
+    width: 46px; min-width: 46px; height: 46px; min-height: 46px;
+  }
+  #bossPortrait { max-height: clamp(150px, 32dvh, 260px); }
+  body.picking #bossPortrait { max-height: clamp(140px, 30dvh, 240px); }
+  body.kb-on #bossPortrait { max-height: clamp(120px, 24dvh, 190px); }
+  body.picking.kb-on #bossPortrait { max-height: clamp(108px, 20dvh, 160px); }
+  footer { padding-top: 2px; padding-bottom: 4px; }
+  .piano { height: clamp(72px, 13dvh, 108px); }
+  #tapeFrame { min-height: 112px; }
 }
 
 /* v0.1.11: retrato teñido por rival (sin arte nuevo). */
-body[data-rival="bosque-de-sol"] #bossPortrait { filter: hue-rotate(95deg) saturate(1.2); }
-body[data-rival="torre-de-escalas"] #bossPortrait { filter: hue-rotate(220deg) saturate(1.3); }
+body[data-rival="parade-feather"] #bossPortrait { filter: hue-rotate(32deg) saturate(1.35) brightness(1.05) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35)); }
+body[data-rival="veil-boat"] #bossPortrait { filter: hue-rotate(185deg) saturate(1.15) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35)); }
+body[data-rival="tower-chime"] #bossPortrait { filter: hue-rotate(262deg) saturate(1.3) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35)); }
+body[data-rival="bosque-de-sol"] #bossPortrait { filter: hue-rotate(95deg) saturate(1.2) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35)); }
+body[data-rival="torre-de-escalas"] #bossPortrait { filter: hue-rotate(220deg) saturate(1.3) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35)); }
 /* v0.1.11: iOS ignora user-scalable=no; sin doble toque-zoom ni rebote que parezcan scroll. */
 html, body { overscroll-behavior: none; touch-action: manipulation; }
 #frame, #scroll, footer, #keys { overscroll-behavior: none; }
