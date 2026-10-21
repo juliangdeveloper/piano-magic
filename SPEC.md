@@ -16,11 +16,11 @@ La detección de notas no vive en este repo. Cada carga pide el motor publicado 
 
 ## Chart M0
 
-`charts/raindrops-thunder.json`
+`charts/*.json`
 
-- `bpm` 60, `timeSig` [4, 4], `roomKey` `"C"`.
-- `setup`: `{ listenOnly: true, bars: 1 }` — 1 compás. Tocar libre / drone C no hace daño.
-- `loop`: 1 `hole` (notas vacías) + 4 `defend` (mismas notas C/D/E). El ataque **primero**.
+- Cada chart trae su `bpm`, `timeSig` y `roomKey`. El primero, Parade Feather, es 72, [4, 4], sala C.
+- `setup`: `{ listenOnly: true, bars: 1 }` — 1 compás. Tocar libre en el setup no hace daño.
+- `loop`: grupos de 1 `hole` (notas vacías) + 4 `defend`. El ataque **primero**.
 - La cinta recorre setup y después el `loop` sin saltos hasta que jugador o jefe llega a 0 HP.
 
 ## InstrumentTranslator (stub M0)
@@ -165,7 +165,7 @@ js/combat/chart.js
 js/ui/tape.js
 js/ui/hud.js
 js/ui/tutorial.js
-charts/raindrops-thunder.json
+charts/*.json
 assets/ui/
 test/
 SPEC.md README.md package.json VERSION .nojekyll
@@ -175,8 +175,8 @@ Módulos de lógica: UMD (`module.exports` + `window.*`), sin DOM.
 
 ## Criterios M0.1
 
-1. Abrir `index.html` (servidor estático): cinta + HUD de Raindrops, Thunder. Sala C = **Agua**.
-2. Setup: 1 compás listen-only a BPM del chart (60), `roomKey` C, sin daño.
+1. Abrir `index.html` (servidor estático): cinta + HUD de Parade Feather. Sala C = **Agua**.
+2. Setup: 1 compás listen-only al BPM del chart, `roomKey` C, sin daño.
 3. Loop 1 hole + 4 defend (ataque primero en la UI; kind `hole`); teclado A/S/D = C4/D4/E4; teclado ampliado para gestos en el Ataque.
 4. Defend: solo Perfect/Partial/Fail. Cero daño al jefe, cero buff/cura por modo.
 5. Ataque (`hole`): mayor daña al jefe, menor buff, pent cura; tocar no resta HP; silencio no pune.

@@ -1,7 +1,15 @@
 {
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
   "id": "parade-feather",
   "title": "Parade Feather",
-  "source": "grimorio Unidad 2 · Cámara del Rocío · leaf Yankee Doodle (parade-feather.ly)",
+  "tune": "Yankee Doodle",
   "bpm": 72,
   "timeSig": [
     4,
@@ -17,10 +25,6 @@
     "A",
     "B"
   ],
-  "setup": {
-    "listenOnly": true,
-    "bars": 1
-  },
   "loop": [
     {
       "kind": "hole",
@@ -33,22 +37,26 @@
         {
           "pitch": "C4",
           "beat": 0,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "C4",
           "beat": 1,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "E4",
           "beat": 3,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         }
       ],
       "i": 1
@@ -59,17 +67,20 @@
         {
           "pitch": "C4",
           "beat": 0,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "E4",
           "beat": 1,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 2
+          "dur": 2,
+          "hand": "R"
         }
       ],
       "i": 2
@@ -80,22 +91,26 @@
         {
           "pitch": "C4",
           "beat": 0,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "C4",
           "beat": 1,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "E4",
           "beat": 3,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         }
       ],
       "i": 3
@@ -106,12 +121,14 @@
         {
           "pitch": "C4",
           "beat": 0,
-          "dur": 2
+          "dur": 2,
+          "hand": "R"
         },
         {
           "pitch": "B3",
           "beat": 2,
-          "dur": 2
+          "dur": 2,
+          "hand": "R"
         }
       ],
       "i": 4
@@ -127,22 +144,26 @@
         {
           "pitch": "C4",
           "beat": 0,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "C4",
           "beat": 1,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "E4",
           "beat": 3,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         }
       ],
       "i": 6
@@ -153,22 +174,26 @@
         {
           "pitch": "F4",
           "beat": 0,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "E4",
           "beat": 1,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "C4",
           "beat": 3,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         }
       ],
       "i": 7
@@ -179,22 +204,26 @@
         {
           "pitch": "B3",
           "beat": 0,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "G3",
           "beat": 1,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "A3",
           "beat": 2,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         },
         {
           "pitch": "B3",
           "beat": 3,
-          "dur": 1
+          "dur": 1,
+          "hand": "R"
         }
       ],
       "i": 8
@@ -205,19 +234,17 @@
         {
           "pitch": "C4",
           "beat": 0,
-          "dur": 1
+          "dur": 2,
+          "hand": "R"
         },
         {
           "pitch": "C4",
-          "beat": 1,
-          "dur": 1
+          "beat": 2,
+          "dur": 2,
+          "hand": "R"
         }
       ],
       "i": 9
     }
-  ],
-  "hp": {
-    "player": 15,
-    "boss": 20
-  }
+  ]
 }

@@ -29,7 +29,13 @@
       fail('nota[' + i + '] beat inválido');
     }
     var dur = (typeof n.dur === 'number' && n.dur > 0) ? n.dur : 1;
-    return { pitch: n.pitch, beat: n.beat, dur: dur };
+    var hand = (n.hand === 'L' || n.hand === 'l') ? 'L' : 'R';
+    var note = { pitch: n.pitch, beat: n.beat, dur: dur, hand: hand };
+    if (n.accent === true) note.accent = true;
+    if (n.dynamic === 'f' || n.dynamic === 'p' || n.dynamic === 'mf' || n.dynamic === 'mp' || n.dynamic === 'ff') {
+      note.dynamic = n.dynamic;
+    }
+    return note;
   }
 
   function normalizeBar(bar, idx) {

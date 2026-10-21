@@ -76,7 +76,7 @@ test('A7: ligaduras: 1.25 = negra⁀semicorchea; cruza mitad y barra', () => {
   assert.ok(s[0].tied && !s[1].tied);
 });
 
-const CHARTS = ['raindrops-thunder', 'parade-feather', 'veil-boat', 'tower-chime', 'bosque-de-sol', 'torre-de-escalas'];
+const CHARTS = ['parade-feather', 'veil-boat', 'tower-chime', 'new-world-largo', 'camptown-races', 'eine-kleine'];
 for (const id of CHARTS) {
   test('A8: chart ' + id + ' válido, escala de sala, rango G3–A5 y en el teclado', () => {
     const raw = JSON.parse(fs.readFileSync(path.join(root, 'charts', id + '.json'), 'utf8'));
@@ -92,6 +92,7 @@ for (const id of CHARTS) {
         const m = T.pitchToMidi(n.pitch);
         assert.ok(m >= 48 && m <= 84, n.pitch + ' en detector');
         assert.ok(osk.has(m), n.pitch + ' en teclado en pantalla');
+        assert.ok(n.hand === 'L' || n.hand === 'R', 'mano');
         assert.ok(n.beat + n.dur <= Chart.beatsPerBar(c) + 1e-9);
         assert.ok(n.beat >= end - 1e-9, 'sin solapes');
         end = n.beat + n.dur;

@@ -11,21 +11,60 @@
   var FREE_ID = 'libre';
   var FREE_HP = 999999;
 
-  // Solo los rivales con chart en charts/. Para sumar otro: un JSON más aquí.
+  // Cada rival: chart en charts/. sprite (sheet 1152×384, celdas 192) lo anima;
+  // sin sprite se usa el retrato estático y, si hay hue, ese tinte.
+  // Un spritesheet nuevo es una línea: sprite: 'assets/ui/<id>-sheet.png'.
   var LIST = [
-    { id: 'raindrops-thunder', label: 'Raindrops, Thunder', chart: 'charts/raindrops-thunder.json' },
-    // Grimorio Unidad 2 · Cámara del Rocío (piano-magic-grimoire-unit2.docx + *.ly).
-    { id: 'parade-feather', label: 'Parade Feather', chart: 'charts/parade-feather.json', grimoire: true },
-    { id: 'veil-boat', label: 'The Veil Boat', chart: 'charts/veil-boat.json', grimoire: true },
-    { id: 'tower-chime', label: 'Tower Chime', chart: 'charts/tower-chime.json', grimoire: true },
-    // PROVISIONALES (progresión Faber), fáciles de quitar: borrar estas dos líneas.
-    { id: 'bosque-de-sol', label: 'Guardián del Bosque de Sol', chart: 'charts/bosque-de-sol.json' },
-    { id: 'torre-de-escalas', label: 'Hechicera de la Torre', chart: 'charts/torre-de-escalas.json' }
+    {
+      id: 'parade-feather',
+      label: 'Parade Feather',
+      chart: 'charts/parade-feather.json',
+      sprite: 'assets/ui/parade-feather-sheet.png',
+      portrait: 'assets/ui/parade-feather-portrait.jpg'
+    },
+    {
+      id: 'veil-boat',
+      label: 'The Veil Boat',
+      chart: 'charts/veil-boat.json',
+      hue: 'hue-rotate(185deg) saturate(1.15)'
+    },
+    {
+      id: 'tower-chime',
+      label: 'Tower Chime',
+      chart: 'charts/tower-chime.json',
+      hue: 'hue-rotate(262deg) saturate(1.3)'
+    },
+    {
+      id: 'new-world-largo',
+      label: 'New World Largo',
+      chart: 'charts/new-world-largo.json',
+      hue: 'hue-rotate(330deg) saturate(1.45) brightness(1.08)'
+    },
+    {
+      id: 'camptown-races',
+      label: 'Camptown Races',
+      chart: 'charts/camptown-races.json',
+      hue: 'hue-rotate(95deg) saturate(0.25) brightness(1.45)'
+    },
+    {
+      id: 'eine-kleine',
+      label: 'Eine Kleine Nachtmusik',
+      chart: 'charts/eine-kleine.json',
+      hue: 'hue-rotate(200deg) saturate(0.85) brightness(0.75)'
+    }
   ];
 
   function options() {
     return LIST.map(function (r) {
-      return { id: r.id, label: r.label, chart: r.chart, free: false };
+      return {
+        id: r.id,
+        label: r.label,
+        chart: r.chart,
+        free: false,
+        sprite: r.sprite || null,
+        portrait: r.portrait || null,
+        hue: r.hue || null
+      };
     }).concat([{ id: FREE_ID, label: 'Modo libre', chart: LIST[0].chart, free: true }]);
   }
 

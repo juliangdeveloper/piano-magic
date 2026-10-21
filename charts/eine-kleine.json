@@ -1,0 +1,220 @@
+{
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
+  "id": "eine-kleine",
+  "title": "Eine Kleine Nachtmusik",
+  "tune": "Eine kleine Nachtmusik, opening (Mozart), simplified",
+  "bpm": 120,
+  "timeSig": [
+    4,
+    4
+  ],
+  "roomKey": "G",
+  "roomScale": [
+    "G",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F#"
+  ],
+  "loop": [
+    {
+      "kind": "hole",
+      "notes": [],
+      "i": 0
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ],
+      "i": 1
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "G5",
+          "beat": 3,
+          "dur": 1,
+          "hand": "R"
+        }
+      ],
+      "i": 2
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C5",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "E5",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "G5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "E5",
+          "beat": 3,
+          "dur": 1,
+          "hand": "R"
+        }
+      ],
+      "i": 3
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 3,
+          "hand": "R"
+        }
+      ],
+      "i": 4
+    },
+    {
+      "kind": "hole",
+      "notes": [],
+      "i": 5
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C5",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 3,
+          "dur": 1,
+          "hand": "R"
+        }
+      ],
+      "i": 6
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ],
+      "i": 7
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "G5",
+          "beat": 3,
+          "dur": 1,
+          "hand": "R"
+        }
+      ],
+      "i": 8
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G4",
+          "beat": 0,
+          "dur": 4,
+          "hand": "R"
+        }
+      ],
+      "i": 9
+    }
+  ]
+}

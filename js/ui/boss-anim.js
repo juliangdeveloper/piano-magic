@@ -1,4 +1,4 @@
-// js/ui/boss-anim.js — pose de Parade Feather sobre el reloj del combate.
+// js/ui/boss-anim.js — pose de un spritesheet sobre el reloj del combate.
 // Idle: un cuadro por pulso, alineado con Chart.centerReached.
 // Cast: seis cuadros en un tiempo; el cuadro 3 (golpe) empieza en el hit.
 // El hit es el centro del tiempo, el mismo instante que la melodía del jefe.
@@ -134,16 +134,22 @@
 
   function create(canvas, opts) {
     var img = null;
+    var src = '';
     var lastBeat = 0;
     var lastHits = [];
     opts = opts || {};
-    if (canvas && opts.src && typeof Image !== 'undefined') {
+    function use(next) {
+      if (!canvas || !next || typeof Image === 'undefined') return;
+      if (next === src && img) return;
+      src = next;
       img = new Image();
       img.decoding = 'async';
       img.onload = function () { draw(canvas, img, lastBeat, lastHits); };
-      img.src = opts.src;
+      img.src = next;
     }
+    if (opts.src) use(opts.src);
     return {
+      load: use,
       paint: function (beat, hits) {
         lastBeat = beat;
         lastHits = hits || [];

@@ -1,26 +1,30 @@
 {
-  "id": "tower-chime",
-  "title": "Tower Chime",
-  "source": "grimorio Unidad 2 · Cámara del Rocío · leaf Original guild pattern (tower-chime.ly, versión 3/4)",
-  "bpm": 72,
-  "timeSig": [
-    3,
-    4
-  ],
-  "roomKey": "C",
-  "roomScale": [
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "A",
-    "B"
-  ],
   "setup": {
     "listenOnly": true,
     "bars": 1
   },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
+  "id": "tower-chime",
+  "title": "Tower Chime",
+  "tune": "Westminster Quarters (1793)",
+  "bpm": 60,
+  "timeSig": [
+    3,
+    4
+  ],
+  "roomKey": "E",
+  "roomScale": [
+    "E",
+    "F#",
+    "G#",
+    "A",
+    "B",
+    "C#",
+    "D#"
+  ],
   "loop": [
     {
       "kind": "hole",
@@ -31,41 +35,63 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "C4",
+          "pitch": "G#4",
           "beat": 0,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
         },
         {
-          "pitch": "D4",
-          "beat": 1,
-          "dur": 1
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
         },
         {
           "pitch": "E4",
-          "beat": 2,
-          "dur": 1
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B3",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 1
     },
     {
       "kind": "defend",
-      "notes": [
-        {
-          "pitch": "C4",
-          "beat": 0,
-          "dur": 3
-        }
-      ],
+      "notes": [],
       "i": 2
     },
     {
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G3",
+          "pitch": "E4",
           "beat": 0,
-          "dur": 3
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B3",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 3
@@ -76,17 +102,26 @@
         {
           "pitch": "E4",
           "beat": 0,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
         },
         {
-          "pitch": "D4",
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G#4",
           "beat": 1,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
         },
         {
-          "pitch": "C4",
-          "beat": 2,
-          "dur": 1
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 4
@@ -100,9 +135,28 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "E4",
+          "pitch": "G#4",
           "beat": 0,
-          "dur": 3
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B3",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 6
@@ -111,9 +165,28 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G3",
+          "pitch": "B3",
           "beat": 0,
-          "dur": 3
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 7
@@ -122,32 +195,161 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D4",
+          "pitch": "G#4",
           "beat": 0,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
         },
         {
           "pitch": "E4",
           "beat": 1,
-          "dur": 2
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B3",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 8
     },
     {
       "kind": "defend",
+      "notes": [],
+      "i": 9
+    },
+    {
+      "kind": "hole",
+      "notes": [],
+      "i": 10
+    },
+    {
+      "kind": "defend",
       "notes": [
         {
-          "pitch": "C4",
+          "pitch": "E4",
           "beat": 0,
-          "dur": 3
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B3",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
-      "i": 9
+      "i": 11
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E4",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
+        }
+      ],
+      "i": 12
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G#4",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B3",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
+        }
+      ],
+      "i": 13
+    },
+    {
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "B3",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F#4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G#4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
+        }
+      ],
+      "i": 14
     }
-  ],
-  "hp": {
-    "player": 15,
-    "boss": 20
-  }
+  ]
 }

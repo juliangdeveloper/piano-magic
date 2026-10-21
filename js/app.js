@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.17';
+  var VERSION = '0.1.18';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -1266,7 +1266,7 @@
     });
     if (window.PianoMagic) window.PianoMagic.director = director;
     document.body.setAttribute('data-rival', (opt && opt.id) || chart.id || '');
-    setBossVisual((opt && opt.id) || chart.id || '');
+    setBossVisual(opt || Rivals.find(chart.id));
   }
 
   function stopBossPreview() {
@@ -1305,23 +1305,25 @@
     bossPreviewRaf = requestAnimationFrame(bossPreviewLoop);
   }
 
-  function setBossVisual(id) {
-    var on = id === 'parade-feather';
+  function setBossVisual(opt) {
+    if (typeof opt === 'string') opt = Rivals.find(opt);
+    opt = opt || {};
+    var sheet = (!opt.free && opt.sprite) || null;
+    var on = !!sheet;
     var canvas = $('bossSprite');
     var img = $('bossPortrait');
     document.body.classList.toggle('sprite-boss', on);
     if (canvas) canvas.hidden = !on;
-    if (img) img.hidden = on;
+    if (on && bossSprite) bossSprite.load(sheet + '?v=' + VERSION);
+    if (img) {
+      img.hidden = on;
+      img.style.filter = (!on && opt.hue)
+        ? (opt.hue + ' drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35))')
+        : '';
+    }
     if (on && !runningLoop) startBossPreview();
     else if (!on) stopBossPreview();
   }
-
-  var RIVAL_LOOK = {
-    'veil-boat': 'hue-rotate(185deg) saturate(1.15)',
-    'tower-chime': 'hue-rotate(262deg) saturate(1.3)',
-    'bosque-de-sol': 'hue-rotate(95deg) saturate(1.2)',
-    'torre-de-escalas': 'hue-rotate(220deg) saturate(1.3)'
-  };
 
   function setPickerVisible(on) {
     var pk = $('rivalPicker');
@@ -1347,12 +1349,12 @@
       } else {
         var img = document.createElement('img');
         img.alt = '';
-        if (o.id === 'parade-feather') {
+        if (o.portrait) {
           img.className = 'portrait';
-          img.src = 'assets/ui/parade-feather-portrait.jpg?v=' + VERSION;
+          img.src = o.portrait + '?v=' + VERSION;
         } else {
           img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
-          if (RIVAL_LOOK[o.id]) img.style.filter = RIVAL_LOOK[o.id];
+          if (o.hue) img.style.filter = o.hue;
         }
         b.appendChild(img);
       }
@@ -1432,9 +1434,7 @@
 
   function boot(chart, opt) {
     if (!bossSprite && window.BossAnim) {
-      bossSprite = BossAnim.create($('bossSprite'), {
-        src: 'assets/ui/parade-feather-sheet.png?v=' + VERSION
-      });
+      bossSprite = BossAnim.create($('bossSprite'));
     }
     makeDirector(chart, opt);
     tape = Tape.create($('tape'), { version: VERSION });

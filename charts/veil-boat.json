@@ -1,11 +1,19 @@
 {
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
   "id": "veil-boat",
   "title": "The Veil Boat",
-  "source": "grimorio Unidad 2 · Cámara del Rocío · leaf Row, Row, Row Your Boat (veil-boat.ly)",
+  "tune": "Row, Row, Row Your Boat",
   "bpm": 84,
   "timeSig": [
-    3,
-    4
+    6,
+    8
   ],
   "roomKey": "C",
   "roomScale": [
@@ -17,10 +25,6 @@
     "A",
     "B"
   ],
-  "setup": {
-    "listenOnly": true,
-    "bars": 1
-  },
   "loop": [
     {
       "kind": "hole",
@@ -31,9 +35,16 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G3",
+          "pitch": "C4",
           "beat": 0,
-          "dur": 3
+          "dur": 1.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C4",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 1
@@ -42,9 +53,22 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G3",
+          "pitch": "C4",
           "beat": 0,
-          "dur": 3
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1.5,
+          "hand": "R"
         }
       ],
       "i": 2
@@ -53,9 +77,28 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G3",
+          "pitch": "E4",
           "beat": 0,
-          "dur": 3
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "F4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
         }
       ],
       "i": 3
@@ -64,9 +107,10 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "A3",
+          "pitch": "G4",
           "beat": 0,
-          "dur": 3
+          "dur": 3,
+          "hand": "R"
         }
       ],
       "i": 4
@@ -80,9 +124,40 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "B3",
+          "pitch": "C5",
           "beat": 0,
-          "dur": 3
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C5",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C5",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
         }
       ],
       "i": 6
@@ -91,19 +166,40 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "B3",
+          "pitch": "E4",
           "beat": 0,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
         },
         {
-          "pitch": "A3",
+          "pitch": "E4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
           "beat": 1,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
         },
         {
-          "pitch": "B3",
+          "pitch": "C4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C4",
           "beat": 2,
-          "dur": 1
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
         }
       ],
       "i": 7
@@ -112,9 +208,28 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "C4",
+          "pitch": "G4",
           "beat": 0,
-          "dur": 2
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "F4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
         }
       ],
       "i": 8
@@ -123,16 +238,13 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D4",
+          "pitch": "C4",
           "beat": 0,
-          "dur": 3
+          "dur": 3,
+          "hand": "R"
         }
       ],
       "i": 9
     }
-  ],
-  "hp": {
-    "player": 15,
-    "boss": 20
-  }
+  ]
 }

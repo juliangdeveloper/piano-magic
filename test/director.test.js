@@ -2,12 +2,32 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
-const fs = require('node:fs');
 const path = require('node:path');
 const Chart = require(path.join(__dirname, '..', 'js', 'combat', 'chart.js'));
 const Director = require(path.join(__dirname, '..', 'js', 'combat', 'director.js'));
 
-const raw = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', 'raindrops-thunder.json'), 'utf8'));
+function n(pitch, beat) {
+  return { pitch, beat, dur: 1 };
+}
+
+// Sala de prueba a 60 BPM. El combate se mide en esta rejilla, no en un chart publicado.
+const raw = {
+  id: 'sala-c',
+  title: 'Sala C',
+  bpm: 60,
+  timeSig: [4, 4],
+  roomKey: 'C',
+  roomScale: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+  setup: { listenOnly: true, bars: 1 },
+  loop: [
+    { i: 0, kind: 'hole', notes: [] },
+    { i: 1, kind: 'defend', notes: [n('C4', 0), n('C4', 1), n('C4', 2), n('C4', 3)] },
+    { i: 2, kind: 'defend', notes: [n('C4', 0), n('D4', 1), n('E4', 2), n('E4', 3)] },
+    { i: 3, kind: 'defend', notes: [n('E4', 0), n('D4', 1), n('C4', 2), n('C4', 3)] },
+    { i: 4, kind: 'defend', notes: [n('C4', 0), n('E4', 1), n('C4', 2), n('E4', 3)] }
+  ],
+  hp: { player: 15, boss: 20 }
+};
 
 function make() {
   let t = 0;
@@ -52,7 +72,7 @@ test('D1: al empezar, setup listen-only, HP 15/20, BPM 60, sala C = Agua', () =>
   assert.strictEqual(s.roomElement.id, 'agua');
   assert.strictEqual(s.roomElement.label, 'Agua');
   assert.strictEqual(s.currentBar.listenOnly, true);
-  assert.strictEqual(s.title, 'Raindrops, Thunder');
+  assert.strictEqual(s.title, 'Sala C');
   assert.strictEqual(s.version, '0.1.1');
 });
 
@@ -181,11 +201,11 @@ test('D9: translator convierte 1000ms @60bpm en 1 beat y bar boundaries', () => 
   assert.ok(Math.abs(m.beatInBar - 0.5) < 1e-9);
 });
 
-test('D10: chart parseado coincide con el archivo canónico', () => {
+test('D10: chart parseado conserva HP y el id de la sala', () => {
   const parsed = Chart.parse(raw);
   assert.strictEqual(parsed.hp.player, 15);
   assert.strictEqual(parsed.hp.boss, 20);
-  assert.strictEqual(Director.create({ chart: raw }).chart.id, 'raindrops-thunder');
+  assert.strictEqual(Director.create({ chart: raw }).chart.id, 'sala-c');
 });
 
 test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {

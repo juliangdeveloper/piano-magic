@@ -1,4 +1,4 @@
-// test/chart.test.js — carga y timeline del chart Raindrops, Thunder.
+// test/chart.test.js — carga y timeline de Parade Feather, y las melodías publicadas.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -6,17 +6,22 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Chart = require(path.join(__dirname, '..', 'js', 'combat', 'chart.js'));
 
-const CHART_PATH = path.join(__dirname, '..', 'charts', 'raindrops-thunder.json');
+const CHART_PATH = path.join(__dirname, '..', 'charts', 'parade-feather.json');
 
-function load() {
-  return Chart.parse(JSON.parse(fs.readFileSync(CHART_PATH, 'utf8')));
+function load(id) {
+  const file = id ? path.join(__dirname, '..', 'charts', id + '.json') : CHART_PATH;
+  return Chart.parse(JSON.parse(fs.readFileSync(file, 'utf8')));
 }
 
-test('C1: raindrops-thunder.json parsea con HP 15/20, BPM 60, sala C', () => {
+function raw(id) {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', id + '.json'), 'utf8'));
+}
+
+test('C1: parade-feather.json parsea con HP 15/20, BPM 72, sala C', () => {
   const c = load();
-  assert.strictEqual(c.id, 'raindrops-thunder');
-  assert.strictEqual(c.title, 'Raindrops, Thunder');
-  assert.strictEqual(c.bpm, 60);
+  assert.strictEqual(c.id, 'parade-feather');
+  assert.strictEqual(c.title, 'Parade Feather');
+  assert.strictEqual(c.bpm, 72);
   assert.deepStrictEqual(c.timeSig, [4, 4]);
   assert.strictEqual(c.roomKey, 'C');
   assert.strictEqual(c.hp.player, 15);
@@ -25,20 +30,21 @@ test('C1: raindrops-thunder.json parsea con HP 15/20, BPM 60, sala C', () => {
   assert.strictEqual(c.setup.bars, 1);
 });
 
-test('C2: loop es 1 hole + 4 defend (agujero primero)', () => {
+test('C2: loop es grupos de hole + 4 defend, y el compás 8 son dos blancas', () => {
   const c = load();
-  assert.strictEqual(c.loop.length, 5);
-  assert.deepStrictEqual(c.loop.map((b) => b.kind), ['hole', 'defend', 'defend', 'defend', 'defend']);
+  assert.strictEqual(c.loop.length, 10);
+  assert.deepStrictEqual(c.loop.slice(0, 5).map((b) => b.kind), ['hole', 'defend', 'defend', 'defend', 'defend']);
   assert.strictEqual(c.loop[0].notes.length, 0);
-  assert.strictEqual(c.loop[1].notes.length, 4);
   assert.strictEqual(c.loop[1].notes[0].pitch, 'C4');
+  const last = c.loop[9].notes.map((n) => [n.pitch, n.beat, n.dur, n.hand]);
+  assert.deepStrictEqual(last, [['C4', 0, 2, 'R'], ['C4', 2, 2, 'R']]);
 });
 
 test('C3: beatsPerBar 4/4 → 4', () => {
   assert.strictEqual(Chart.beatsPerBar(load()), 4);
 });
 
-test('C4: bar 0 = setup; bar 1 hole; bars 2–5 defend; bar 6 vuelve al hole', () => {
+test('C4: bar 0 = setup; bar 1 hole; el ciclo vuelve al hole', () => {
   const c = load();
   const b0 = Chart.barAt(c, 0);
   assert.strictEqual(b0.kind, 'setup');
@@ -55,15 +61,11 @@ test('C4: bar 0 = setup; bar 1 hole; bars 2–5 defend; bar 6 vuelve al hole', (
   assert.strictEqual(b2.i, 1);
   assert.strictEqual(b2.notes[0].pitch, 'C4');
 
-  const b5 = Chart.barAt(c, 5);
-  assert.strictEqual(b5.kind, 'defend');
-  assert.strictEqual(b5.i, 4);
-
-  const b6 = Chart.barAt(c, 6);
-  assert.strictEqual(b6.kind, 'hole');
-  assert.strictEqual(b6.i, 0);
-  assert.strictEqual(b6.cycle, 1);
-  assert.strictEqual(b6.startBeat, 24);
+  const b11 = Chart.barAt(c, 11);
+  assert.strictEqual(b11.kind, 'hole');
+  assert.strictEqual(b11.loopIndex, 0);
+  assert.strictEqual(b11.cycle, 1);
+  assert.strictEqual(b11.startBeat, 44);
 });
 
 test('C5: upcoming desde 0 devuelve setup + hole + primeros 2 defend', () => {
@@ -78,12 +80,14 @@ test('C6: chart inválido lanza ChartError', () => {
   assert.throws(() => Chart.parse(null), /vacío/);
 });
 
-test('C7: notas del segundo defend son C D E E', () => {
+test('C7: el segundo defend es C E y una blanca en D', () => {
   const c = load();
   const pitches = c.loop[2].notes.map((n) => n.pitch);
-  assert.deepStrictEqual(pitches, ['C4', 'D4', 'E4', 'E4']);
+  assert.deepStrictEqual(pitches, ['C4', 'E4', 'D4']);
   const beats = c.loop[2].notes.map((n) => n.beat);
-  assert.deepStrictEqual(beats, [0, 1, 2, 3]);
+  assert.deepStrictEqual(beats, [0, 1, 2]);
+  const durs = c.loop[2].notes.map((n) => n.dur);
+  assert.deepStrictEqual(durs, [1, 1, 2]);
 });
 
 test('C8: el centro del tiempo es continuo al cruzar Ataque → Defiende', () => {
@@ -95,4 +99,47 @@ test('C8: el centro del tiempo es continuo al cruzar Ataque → Defiende', () =>
   assert.strictEqual(Chart.centerReached(8), 7);
   assert.strictEqual(Chart.centerReached(8.5), 8);
   assert.strictEqual(Chart.centerReached(8.5) - Chart.centerReached(7.5), 1);
+});
+
+test('C9: la mano falta vale R, y L se conserva', () => {
+  const base = raw('parade-feather');
+  const parsed = Chart.parse(base);
+  assert.ok(parsed.loop[1].notes.every((n) => n.hand === 'R'));
+  base.loop[1].notes[0].hand = 'L';
+  base.loop[1].notes[1].hand = 'l';
+  const again = Chart.parse(base);
+  assert.strictEqual(again.loop[1].notes[0].hand, 'L');
+  assert.strictEqual(again.loop[1].notes[1].hand, 'L');
+  assert.strictEqual(again.loop[1].notes[2].hand, 'R');
+});
+
+test('C10: Veil Boat es Row Your Boat entero en 6/8, desde C4 hasta el dream', () => {
+  const c = load('veil-boat');
+  assert.deepStrictEqual(c.timeSig, [6, 8]);
+  assert.strictEqual(Chart.beatsPerBar(c), 3);
+  assert.strictEqual(c.loop[1].notes[0].pitch, 'C4');
+  assert.strictEqual(c.loop[1].notes[0].dur, 1.5);
+  assert.deepStrictEqual(c.loop[6].notes.map((n) => n.pitch), ['C5', 'C5', 'C5', 'G4', 'G4', 'G4']);
+  const end = c.loop[9].notes;
+  assert.deepStrictEqual(end.map((n) => [n.pitch, n.dur]), [['C4', 3]]);
+});
+
+test('C11: Tower Chime abre con el primer cambio y cierra el ciclo en E', () => {
+  const c = load('tower-chime');
+  assert.deepStrictEqual(c.timeSig, [3, 4]);
+  assert.strictEqual(c.roomKey, 'E');
+  assert.deepStrictEqual(c.loop[1].notes.map((n) => n.pitch), ['G#4', 'F#4', 'E4', 'B3']);
+  const last = c.loop[c.loop.length - 1].notes;
+  assert.strictEqual(last[last.length - 1].pitch, 'E4');
+  assert.strictEqual(last[last.length - 1].dur, 1.5);
+});
+
+test('C12: New World Largo lleva piano y forte, y acentos', () => {
+  const c = load('new-world-largo');
+  const notes = c.loop.flatMap((b) => b.notes);
+  assert.ok(notes.some((n) => n.dynamic === 'p'));
+  assert.ok(notes.some((n) => n.dynamic === 'f'));
+  assert.ok(notes.some((n) => n.accent === true));
+  assert.strictEqual(c.loop[1].notes[0].pitch, 'E4');
+  assert.strictEqual(c.loop[1].notes[0].dur, 1.5);
 });

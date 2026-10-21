@@ -6,21 +6,31 @@ const path = require('node:path');
 const Rivals = require('../js/combat/rivals.js');
 const Chart = require('../js/combat/chart.js');
 const Director = require('../js/combat/director.js');
-const raw = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', 'raindrops-thunder.json'), 'utf8'));
+const raw = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', 'parade-feather.json'), 'utf8'));
 
-test('options: cada rival tiene chart existente y Modo libre va al final', () => {
+test('options: Parade Feather es el primero, Modo libre el último, y los ejercicios no están', () => {
   const o = Rivals.options();
+  assert.strictEqual(o[0].id, 'parade-feather');
+  assert.strictEqual(o[0].sprite, 'assets/ui/parade-feather-sheet.png');
   assert.strictEqual(o[o.length - 1].id, 'libre');
   assert.ok(o[o.length - 1].free);
+  assert.strictEqual(o[o.length - 1].chart, o[0].chart);
   for (const r of o) assert.ok(fs.existsSync(path.join(__dirname, '..', r.chart)), r.chart);
   assert.strictEqual(Rivals.find('nada').id, o[0].id);
+  for (const gone of ['raindrops-thunder', 'bosque-de-sol', 'torre-de-escalas']) {
+    assert.equal(o.some((r) => r.id === gone), false);
+    assert.equal(fs.existsSync(path.join(__dirname, '..', 'charts', gone + '.json')), false);
+  }
+  assert.ok(o.some((r) => r.id === 'new-world-largo' && r.hue));
+  assert.ok(o.some((r) => r.id === 'camptown-races'));
+  assert.ok(o.some((r) => r.id === 'eine-kleine'));
 });
 
 test('freeChart: solo Ataque, sin Defiende, chart válido', () => {
   const c = Chart.parse(Rivals.freeChart(raw));
   assert.deepStrictEqual(c.loop.map(b => b.kind), ['hole']);
   for (let i = 1; i < 12; i++) assert.notStrictEqual(Chart.barAt(c, i).kind, 'defend');
-  assert.strictEqual(raw.loop.length, 5, 'no muta el chart base');
+  assert.strictEqual(raw.loop.length, 10, 'no muta el chart base');
 });
 
 function attackBar(dir, setT, startMs) {
