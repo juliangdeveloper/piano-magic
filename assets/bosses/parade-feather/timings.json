@@ -1,0 +1,12 @@
+{
+  "cell": [192, 192],
+  "anchor": { "x": 96, "y": 188 },
+  "refBpm": 72,
+  "idle": { "row": 0, "frames": 4, "frameBeats": 1 },
+  "cast": {
+    "row": 1,
+    "frameMs": [133, 117, 167, 150, 133, 133],
+    "peakFrame": 2,
+    "peakOffsetMs": 250
+  }
+}

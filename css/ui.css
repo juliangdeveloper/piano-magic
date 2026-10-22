@@ -292,6 +292,10 @@ body {
   position: relative;
   z-index: 1;
 }
+#bossSprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 #bossSprite[hidden] { display: none !important; }
 body.sprite-boss #bossPortrait { display: none !important; }
 

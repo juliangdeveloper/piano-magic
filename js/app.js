@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.22';
+  var VERSION = '0.1.23';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -581,7 +581,7 @@
     if (tape) tape.render(state);
     if (hud) hud.render(state);
     if (bossSprite && document.body.classList.contains('sprite-boss')) {
-      bossSprite.paint(state.beat, window.BossAnim.attackHits(state.ribbon));
+      bossSprite.paint(state.beat, window.BossAnim.attackHits(state.ribbon), state.beatsPerBar);
     }
     if (state.free) showDamagePop(state.damage);
     playChartMelody(state);
@@ -1281,16 +1281,19 @@
     var snap;
     var bpm;
     var beat;
+    var bpb;
     bossPreviewRaf = 0;
     if (!bossPreviewOn || runningLoop) return;
     bpm = 72;
+    bpb = 4;
     if (director) {
       snap = director.snapshot(0);
       if (snap && snap.bpm) bpm = snap.bpm;
+      if (snap && snap.beatsPerBar) bpb = snap.beatsPerBar;
     }
     beat = (performance.now() / 1000) * (bpm / 60);
     if (!bossPreviewOn || runningLoop) return;
-    if (bossSprite) bossSprite.paint(beat, []);
+    if (bossSprite) bossSprite.paint(beat, [], bpb);
     if (!bossPreviewOn || runningLoop) return;
     bossPreviewRaf = requestAnimationFrame(bossPreviewLoop);
   }
@@ -1305,24 +1308,46 @@
     bossPreviewRaf = requestAnimationFrame(bossPreviewLoop);
   }
 
+  function applyBossPortrait(opt, own) {
+    var img = $('bossPortrait');
+    var canvas = $('bossSprite');
+    document.body.classList.remove('sprite-boss');
+    stopBossPreview();
+    if (canvas) canvas.hidden = true;
+    if (!img) return;
+    img.hidden = false;
+    if (own && opt && opt.portrait) {
+      img.src = opt.portrait + '?v=' + VERSION;
+      img.style.filter = '';
+    } else {
+      img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
+      img.style.filter = (opt && opt.hue)
+        ? (opt.hue + ' drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35))')
+        : '';
+    }
+  }
+
+  function showBossSprite() {
+    var img = $('bossPortrait');
+    var canvas = $('bossSprite');
+    document.body.classList.add('sprite-boss');
+    if (canvas) canvas.hidden = false;
+    if (img) img.hidden = true;
+    if (!runningLoop) startBossPreview();
+  }
+
   function setBossVisual(opt) {
     if (typeof opt === 'string') opt = Rivals.find(opt);
     opt = opt || {};
     var sheet = (!opt.free && opt.sprite) || null;
-    var on = !!sheet;
-    var canvas = $('bossSprite');
-    var img = $('bossPortrait');
-    document.body.classList.toggle('sprite-boss', on);
-    if (canvas) canvas.hidden = !on;
-    if (on && bossSprite) bossSprite.load(sheet + '?v=' + VERSION);
-    if (img) {
-      img.hidden = on;
-      img.style.filter = (!on && opt.hue)
-        ? (opt.hue + ' drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35))')
-        : '';
+    var timings = (!opt.free && opt.timings) || null;
+    if (bossSprite) bossSprite.cancel();
+    if (!sheet || !timings || !bossSprite) {
+      applyBossPortrait(opt, false);
+      return;
     }
-    if (on && !runningLoop) startBossPreview();
-    else if (!on) stopBossPreview();
+    applyBossPortrait(opt, true);
+    bossSprite.load(sheet + '?v=' + VERSION, timings + '?v=' + VERSION);
   }
 
   function setPickerVisible(on) {
@@ -1434,7 +1459,17 @@
 
   function boot(chart, opt) {
     if (!bossSprite && window.BossAnim) {
-      bossSprite = BossAnim.create($('bossSprite'));
+      bossSprite = BossAnim.create($('bossSprite'), {
+        onReady: showBossSprite,
+        onError: function () {
+          var canvas = $('bossSprite');
+          document.body.classList.remove('sprite-boss');
+          if (canvas) canvas.hidden = true;
+          var img = $('bossPortrait');
+          if (img) img.hidden = false;
+          stopBossPreview();
+        }
+      });
     }
     makeDirector(chart, opt);
     tape = Tape.create($('tape'), { version: VERSION });
@@ -1465,6 +1500,7 @@
       tutorial: tutorial,
       setKeyboard: function (on) { applyKeyboard(!!on, true); },
       keyboardOn: function () { return !$('keys').hidden; },
+      bossFrame: function () { return bossSprite && bossSprite.current ? bossSprite.current() : null; },
       setMic: function (on) { if (on) enableMic(); else disableMic(); },
       micOn: function () { return !!micStream; },
       audioSessionType: function () {

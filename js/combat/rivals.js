@@ -11,16 +11,16 @@
   var FREE_ID = 'libre';
   var FREE_HP = 999999;
 
-  // Cada rival: chart en charts/. sprite (sheet 1152×384, celdas 192) lo anima;
+  // Cada rival: chart en charts/. sprite + timings lo animan;
   // sin sprite se usa el retrato estático y, si hay hue, ese tinte.
-  // Un spritesheet nuevo es una línea: sprite: 'assets/ui/<id>-sheet.png'.
   var LIST = [
     {
       id: 'parade-feather',
       label: 'Parade Feather',
       chart: 'charts/parade-feather.json',
-      sprite: 'assets/ui/parade-feather-sheet.png',
-      portrait: 'assets/ui/parade-feather-portrait.jpg'
+      sprite: 'assets/bosses/parade-feather/spritesheet.png',
+      timings: 'assets/bosses/parade-feather/timings.json',
+      portrait: 'assets/bosses/parade-feather/portrait.png'
     },
     {
       id: 'veil-boat',
@@ -62,6 +62,7 @@
         chart: r.chart,
         free: false,
         sprite: r.sprite || null,
+        timings: r.timings || null,
         portrait: r.portrait || null,
         hue: r.hue || null
       };
