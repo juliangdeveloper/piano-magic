@@ -2,6 +2,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
 const path = require('node:path');
 const Chart = require(path.join(__dirname, '..', 'js', 'combat', 'chart.js'));
 const Director = require(path.join(__dirname, '..', 'js', 'combat', 'director.js'));
@@ -398,4 +399,36 @@ test('D19: un par en voices es perfecto; una sola voz es parcial; el segundo eve
   s = one.tick(12000);
   assert.strictEqual(s.lastResolve.grade, 'partial');
   assert.strictEqual(s.playerHp, 13);
+});
+
+test('D20: Tower Chime se recorre entero: ataques tras 7 y 14, silencio sin daño, campana E3', () => {
+  const chart = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', 'tower-chime.json'), 'utf8'));
+  let t = 0;
+  const dir = Director.create({ chart: chart, now: () => t });
+  dir.start(0);
+  const bpb = 3;
+  const ms = 1000;
+  const holes = [];
+  const total = 1 + chart.loop.length;
+  for (let g = 0; g < total; g++) {
+    t = g * bpb * ms + 20;
+    let s = dir.tick(t);
+    if (s.phase === 'hole') holes.push(g);
+    if (s.phase !== 'defend') continue;
+    for (const note of s.currentBar.notes) {
+      t = (s.currentBar.startBeat + note.beat + 0.5) * ms;
+      dir.noteOn(note.pitch, t);
+      dir.noteOff(note.pitch, t + 80);
+    }
+  }
+  t = total * bpb * ms + 20;
+  const end = dir.tick(t);
+  assert.deepStrictEqual(holes, [8, 16]);
+  assert.strictEqual(end.playerHp, 15);
+  assert.strictEqual(end.bossHp, 20);
+  assert.strictEqual(end.lastResolve.grade, 'perfect');
+  const bell = chart.loop[chart.loop.length - 1];
+  assert.strictEqual(bell.kind, 'defend');
+  assert.strictEqual(bell.notes[0].pitch, 'E3');
+  assert.strictEqual(bell.notes[0].hand, 'L');
 });

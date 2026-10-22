@@ -10,6 +10,7 @@
   "id": "camptown-races",
   "title": "Camptown Races",
   "tune": "Camptown Races (Foster, 1850)",
+  "remark": "Foster 1850 (original in D, 2/4), here in G, 4/4 with note values doubled; verse then chorus.",
   "bpm": 104,
   "timeSig": [
     4,

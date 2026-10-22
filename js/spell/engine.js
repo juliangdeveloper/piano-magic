@@ -319,7 +319,9 @@
     var expectedCount = matched.expectedCount;
     var hitCount = matched.hitCount;
     var extras = matched.extras.length;
+    // Compás vacío: silencio escrito. Tocar ahí es fallo; no tocar es perfecto.
     if (expectedCount <= 0) {
+      if (extras === 0) return { grade: 'perfect', accuracy: 1 };
       return { grade: 'fail', accuracy: 0 };
     }
     var accuracy = hitCount / expectedCount;

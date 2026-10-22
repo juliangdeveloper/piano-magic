@@ -83,11 +83,17 @@ for (const id of CHARTS) {
     const c = Chart.parse(raw);
     assert.ok(Array.isArray(c.roomScale) && c.roomScale.length === 7);
     assert.strictEqual(T.pitchClass(c.roomScale[0] + '4'), T.pitchClass(c.roomKey + '4'));
-    assert.strictEqual(c.loop.length % 5, 0);
     const osk = new Set(Object.values(T.KEY_MAP).map((p) => T.pitchToMidi(p)));
     const bpb = Chart.beatsPerBar(c);
+    if (id === 'tower-chime') {
+      const holes = c.loop.map((b, i) => (b.kind === 'hole' ? i : -1)).filter((i) => i >= 0);
+      assert.deepStrictEqual(holes, [7, 15]);
+      assert.strictEqual(c.loop.filter((b) => b.kind === 'defend').length, 24);
+    } else {
+      assert.strictEqual(c.loop.length % 5, 0);
+    }
     c.loop.forEach((b, i) => {
-      assert.strictEqual(b.kind, i % 5 === 0 ? 'hole' : 'defend');
+      if (id !== 'tower-chime') assert.strictEqual(b.kind, i % 5 === 0 ? 'hole' : 'defend');
       const notes = b.notes.slice().sort((a, z) => a.beat - z.beat || (a.hand === 'L' ? -1 : 1));
       let active = [];
       for (const n of notes) {

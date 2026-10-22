@@ -92,6 +92,15 @@ test('S7: defend perfecto CCCC → 0 daño jefe, 0 daño jugador, grade perfect'
   assert.strictEqual(r.playerDamage, 0);
 });
 
+test('S21: un compás de silencio no daña si no se toca', () => {
+  const silent = Spell.resolveDefend([], [], 'E');
+  assert.strictEqual(silent.grade, 'perfect');
+  assert.strictEqual(silent.playerDamage, 0);
+  const noisy = Spell.resolveDefend([{ pitch: 'E4', beatInBar: 0.5, beat: 0.5 }], [], 'E');
+  assert.strictEqual(noisy.grade, 'fail');
+  assert.strictEqual(noisy.playerDamage, Spell.MISS_DAMAGE);
+});
+
 test('S8: defend sin notas → fail, 3 daño al jugador, 0 al jefe', () => {
   const r = Spell.resolveDefend([], EXPECT_C, 'C');
   assert.strictEqual(r.ok, false);
