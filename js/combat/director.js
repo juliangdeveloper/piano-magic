@@ -262,7 +262,8 @@
             barIndex: cn.barIndex,
             sync: cn.sync || 'fail',
             targetBeat: (typeof cn.targetBeat === 'number') ? cn.targetBeat : null,
-            error: (typeof cn.error === 'number') ? cn.error : null
+            error: (typeof cn.error === 'number') ? cn.error : null,
+            hand: cn.hand === 'L' ? 'L' : (cn.hand === 'R' ? 'R' : null)
           });
         }
       }
@@ -396,48 +397,92 @@
           best = i;
         }
       }
-      if (best < 0) return { sync: 'fail', targetBeat: null, error: null };
+      if (best < 0) return { sync: 'fail', targetBeat: null, error: null, hand: null };
       claimedTargets[ev.barIndex + ':' + best] = true;
       return {
         sync: Spell.judgeNoteSync(bestDist),
         targetBeat: meta.startBeat + Chart.hitOnset(notes[best].beat),
-        error: bestDist
+        error: bestDist,
+        hand: notes[best].hand === 'L' ? 'L' : 'R'
       };
     }
 
     var MERGE_MS = 60;
 
-    function noteOn(pitch, timeMs) {
+    function voiceNames(pitch, voices) {
+      var list = [];
+      var seen = {};
+      function add(p) {
+        var name = Translator.normalizeName(p);
+        if (!name || seen[name]) return;
+        seen[name] = true;
+        list.push(name);
+      }
+      if (Array.isArray(voices)) {
+        for (var i = 0; i < voices.length; i++) {
+          var v = voices[i];
+          if (v && typeof v === 'object') add(v.pitch || v.note);
+          else add(v);
+        }
+      }
+      if (!list.length) add(pitch);
+      return list;
+    }
+
+    function pitchOpen(name) {
+      var i;
+      for (i = collected.length - 1; i >= 0; i--) {
+        if (collected[i].durBeats == null && samePitch(collected[i].pitch, name)) return true;
+      }
+      return false;
+    }
+
+    function registerPitch(pitch, t) {
+      var ev = translator.noteOn(pitch, t);
+      if (!(running && !ended && ev.pitch)) return ev;
+      // v0.1.11: parpadeo del mic — mismo tono re-detectado <60 ms tras soltar = misma nota.
+      for (var r = collected.length - 1; r >= 0 && r >= collected.length - 6; r--) {
+        var pr = collected[r];
+        if (pr.pitch === ev.pitch && pr.offMs != null && t - pr.offMs < MERGE_MS) {
+          pr.durBeats = null; pr.offMs = null; pr.merged = (pr.merged || 0) + 1;
+          return ev;
+        }
+      }
+      var row = {
+        pitch: ev.pitch,
+        midi: ev.midi,
+        timeMs: t,
+        beat: ev.beat,
+        beatInBar: ev.beatInBar,
+        barIndex: ev.barIndex
+      };
+      var judged = judgeDefend(ev);
+      if (judged) {
+        row.sync = judged.sync;
+        row.targetBeat = judged.targetBeat;
+        row.error = judged.error;
+        if (judged.hand) row.hand = judged.hand;
+      }
+      collected.push(row);
+      return ev;
+    }
+
+    // voices: acordes del motor (máx. 2). Una nota ya abierta no se vuelve a contar.
+    // Sin voices se conserva el NoteOn suelto (repite aunque la anterior siga abierta).
+    function noteOn(pitch, timeMs, voices) {
       var t = (typeof timeMs === 'number') ? timeMs : nowFn();
       if (paused) return { type: 'on', pitch: null, ignored: true, timeMs: t };
       tickTo(t);
-      var ev = translator.noteOn(pitch, t);
-      if (running && !ended && ev.pitch) {
-        // v0.1.11: parpadeo del mic — mismo tono re-detectado <60 ms tras soltar = misma nota.
-        for (var r = collected.length - 1; r >= 0 && r >= collected.length - 6; r--) {
-          var pr = collected[r];
-          if (pr.pitch === ev.pitch && pr.offMs != null && t - pr.offMs < MERGE_MS) {
-            pr.durBeats = null; pr.offMs = null; pr.merged = (pr.merged || 0) + 1;
-            return ev;
-          }
-        }
-        var row = {
-          pitch: ev.pitch,
-          midi: ev.midi,
-          timeMs: t,
-          beat: ev.beat,
-          beatInBar: ev.beatInBar,
-          barIndex: ev.barIndex
-        };
-        var judged = judgeDefend(ev);
-        if (judged) {
-          row.sync = judged.sync;
-          row.targetBeat = judged.targetBeat;
-          row.error = judged.error;
-        }
-        collected.push(row);
+      var guard = Array.isArray(voices);
+      var list = voiceNames(pitch, voices);
+      var ev = null;
+      var i;
+      for (i = 0; i < list.length; i++) {
+        if (guard && pitchOpen(list[i])) continue;
+        ev = registerPitch(list[i], t) || ev;
       }
-      return ev;
+      if (ev) return ev;
+      return { type: 'on', pitch: Translator.normalizeName(pitch), timeMs: t, ignored: true };
     }
 
     function noteOff(pitch, timeMs) {

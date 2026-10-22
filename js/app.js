@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.19';
+  var VERSION = '0.1.20';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -808,7 +808,7 @@
     if (!merged.fresh) return;
     // El tutorial puede sonar (desbloquea el audio) pero no entra al combate.
     if (tutorialOpen()) return;
-    if (merged.combat && director) director.noteOn(name, performance.now());
+    if (merged.combat && director) director.noteOn(name, performance.now(), merged.voices);
   }
 
   function noteOff(pitch, source, precomputed) {
@@ -864,7 +864,7 @@
     if (!piano || !window.InstrumentTranslator) return;
     piano.textContent = '';
     var labels = InstrumentTranslator.KEY_LABELS;
-    // v0.1.11: C4–A5 (13 blancas). Las negras se ubican por posición, no por CSS fijo.
+    // C3–A5. Las blancas salen en el orden de KEY_LABELS; las negras se ubican por la blanca de abajo.
     function isBlack(it) { return /[#b]/.test(it.pitch.replace(/^[A-G]/, '').replace(/\d+$/, '')); }
     var whites = labels.filter(function (it) { return !isBlack(it); });
     var W = whites.length || 1;
@@ -1556,7 +1556,7 @@
 
   loadPianoEngine(ENGINE_ROOT).then(function (mod) {
     engine = mod;
-    session = mod.createCapture({ profile: 'combat' });
+    session = mod.createCapture({ profile: 'combat', maxVoices: 2 });
     engineState = 'ready';
     adoptLocalHeld();
     if (micWanted && !micStream && !micPending) enableMic();

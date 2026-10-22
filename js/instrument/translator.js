@@ -19,8 +19,9 @@
     'C♭': 'B', 'D♭': 'C#', 'E♭': 'D#', 'F♭': 'E', 'G♭': 'F#', 'A♭': 'G#', 'B♭': 'A#'
   };
 
-  // Home row blancas; fila superior negras. Documentado en pantalla.
+  // Home row blancas; fila superior negras. Graves (Do3–Fa3) a la izquierda.
   var KEY_MAP = {
+    q: 'C3', '2': 'C#3', m: 'D3', '3': 'D#3', ',': 'E3', '.': 'F3', '4': 'F#3',
     v: 'G3', r: 'G#3', b: 'A3', i: 'A#3', n: 'B3',
     a: 'C4', w: 'C#4', s: 'D4', e: 'D#4', d: 'E4',
     f: 'F4', t: 'F#4', g: 'G4', y: 'G#4', h: 'A4',
@@ -29,6 +30,10 @@
   };
 
   var KEY_LABELS = [
+    { key: 'Q', pitch: 'C3' },
+    { key: 'M', pitch: 'D3' },
+    { key: ',', pitch: 'E3' },
+    { key: '.', pitch: 'F3' },
     { key: 'V', pitch: 'G3' },
     { key: 'B', pitch: 'A3' },
     { key: 'N', pitch: 'B3' },
@@ -54,7 +59,10 @@
     { key: 'U', pitch: 'Bb4' },
     { key: 'O', pitch: 'C#5' },
     { key: 'P', pitch: 'Eb5' },
-    { key: 'Z', pitch: 'F#5' }
+    { key: 'Z', pitch: 'F#5' },
+    { key: '2', pitch: 'C#3' },
+    { key: '3', pitch: 'Eb3' },
+    { key: '4', pitch: 'F#3' }
   ];
 
   function normalizeName(raw) {

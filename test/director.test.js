@@ -366,3 +366,36 @@ test('D14: la cinta mira dos compases atrás cuando ya hay historia', () => {
   assert.strictEqual(s.playerHp, 6);
   assert.strictEqual(s.bossHp, 20);
 });
+
+test('D19: un par en voices es perfecto; una sola voz es parcial; el segundo evento no duplica', () => {
+  const chord = JSON.parse(JSON.stringify(raw));
+  chord.loop[1].notes = [
+    { pitch: 'C4', beat: 0, dur: 1, hand: 'R' },
+    { pitch: 'C3', beat: 0, dur: 1, hand: 'L' }
+  ];
+  let t = 0;
+  const both = Director.create({ chart: chord, now: () => t });
+  both.start(0);
+  const voices = [{ pitch: 'C3', midi: 48 }, { pitch: 'C4', midi: 60 }];
+  t = 8520;
+  both.noteOn('C4', 8520, voices);
+  both.noteOn('C3', 8520, voices);
+  let s = both.snapshot(8520);
+  assert.strictEqual(s.defendNotes.length, 2);
+  assert.ok(s.defendNotes.every((n) => n.sync === 'perfect'));
+  assert.deepStrictEqual(s.defendNotes.map((n) => n.hand).sort(), ['L', 'R']);
+  t = 12000;
+  s = both.tick(12000);
+  assert.strictEqual(s.lastResolve.grade, 'perfect');
+  assert.strictEqual(s.playerHp, 15);
+
+  t = 0;
+  const one = Director.create({ chart: chord, now: () => t });
+  one.start(0);
+  t = 8520;
+  one.noteOn('C4', 8520, [{ pitch: 'C4' }]);
+  t = 12000;
+  s = one.tick(12000);
+  assert.strictEqual(s.lastResolve.grade, 'partial');
+  assert.strictEqual(s.playerHp, 13);
+});

@@ -54,6 +54,18 @@
           "dur": 2,
           "hand": "R",
           "dynamic": "p"
+        },
+        {
+          "pitch": "C3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "G3",
+          "beat": 2,
+          "dur": 2,
+          "hand": "L"
         }
       ],
       "i": 1
@@ -81,6 +93,18 @@
           "dur": 2,
           "hand": "R",
           "dynamic": "p"
+        },
+        {
+          "pitch": "C3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "C3",
+          "beat": 2,
+          "dur": 2,
+          "hand": "L"
         }
       ],
       "i": 2
@@ -115,6 +139,18 @@
           "dur": 0.5,
           "hand": "R",
           "dynamic": "p"
+        },
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "C3",
+          "beat": 2,
+          "dur": 2,
+          "hand": "L"
         }
       ],
       "i": 3
@@ -128,6 +164,12 @@
           "dur": 4,
           "hand": "R",
           "dynamic": "p"
+        },
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 4,
+          "hand": "L"
         }
       ],
       "i": 4
@@ -160,6 +202,18 @@
           "dur": 2,
           "hand": "R",
           "dynamic": "f"
+        },
+        {
+          "pitch": "C3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "G3",
+          "beat": 2,
+          "dur": 2,
+          "hand": "L"
         }
       ],
       "i": 6
@@ -187,6 +241,18 @@
           "dur": 2,
           "hand": "R",
           "dynamic": "f"
+        },
+        {
+          "pitch": "C3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "C3",
+          "beat": 2,
+          "dur": 2,
+          "hand": "L"
         }
       ],
       "i": 7
@@ -221,6 +287,18 @@
           "dur": 0.5,
           "hand": "R",
           "dynamic": "f"
+        },
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "C3",
+          "beat": 2,
+          "dur": 2,
+          "hand": "L"
         }
       ],
       "i": 8
@@ -234,6 +312,12 @@
           "dur": 4,
           "hand": "R",
           "dynamic": "f"
+        },
+        {
+          "pitch": "C3",
+          "beat": 0,
+          "dur": 4,
+          "hand": "L"
         }
       ],
       "i": 9

@@ -78,24 +78,29 @@ test('A7: ligaduras: 1.25 = negra⁀semicorchea; cruza mitad y barra', () => {
 
 const CHARTS = ['parade-feather', 'veil-boat', 'tower-chime', 'new-world-largo', 'camptown-races', 'eine-kleine'];
 for (const id of CHARTS) {
-  test('A8: chart ' + id + ' válido, escala de sala, rango G3–A5 y en el teclado', () => {
+  test('A8: chart ' + id + ' válido, escala de sala, rango C3–A5, una nota por mano', () => {
     const raw = JSON.parse(fs.readFileSync(path.join(root, 'charts', id + '.json'), 'utf8'));
     const c = Chart.parse(raw);
     assert.ok(Array.isArray(c.roomScale) && c.roomScale.length === 7);
     assert.strictEqual(T.pitchClass(c.roomScale[0] + '4'), T.pitchClass(c.roomKey + '4'));
     assert.strictEqual(c.loop.length % 5, 0);
     const osk = new Set(Object.values(T.KEY_MAP).map((p) => T.pitchToMidi(p)));
+    const bpb = Chart.beatsPerBar(c);
     c.loop.forEach((b, i) => {
       assert.strictEqual(b.kind, i % 5 === 0 ? 'hole' : 'defend');
-      let end = 0;
-      for (const n of b.notes) {
+      const notes = b.notes.slice().sort((a, z) => a.beat - z.beat || (a.hand === 'L' ? -1 : 1));
+      let active = [];
+      for (const n of notes) {
         const m = T.pitchToMidi(n.pitch);
-        assert.ok(m >= 48 && m <= 84, n.pitch + ' en detector');
+        assert.ok(m >= 48 && m <= 81, n.pitch + ' en C3–A5');
+        if (n.hand === 'L') assert.ok(m <= 71, n.pitch + ' grave de la izquierda');
         assert.ok(osk.has(m), n.pitch + ' en teclado en pantalla');
         assert.ok(n.hand === 'L' || n.hand === 'R', 'mano');
-        assert.ok(n.beat + n.dur <= Chart.beatsPerBar(c) + 1e-9);
-        assert.ok(n.beat >= end - 1e-9, 'sin solapes');
-        end = n.beat + n.dur;
+        assert.ok(n.beat + n.dur <= bpb + 1e-9);
+        active = active.filter((a) => a.end > n.beat + 1e-9);
+        assert.ok(!active.some((a) => a.hand === n.hand), 'la misma mano no se pisa');
+        assert.ok(active.length < 2, 'como mucho dos voces');
+        active.push({ hand: n.hand, end: n.beat + n.dur });
       }
     });
     assert.ok(Rivals.options().some((o) => o.chart === 'charts/' + id + '.json'));

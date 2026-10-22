@@ -86,7 +86,7 @@
           "pitch": "G3",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         }
       ],
       "i": 2
@@ -134,7 +134,7 @@
           "pitch": "B3",
           "beat": 2,
           "dur": 2,
-          "hand": "R"
+          "hand": "L"
         }
       ],
       "i": 4
@@ -211,25 +211,25 @@
           "pitch": "B3",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
           "pitch": "G3",
           "beat": 1,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
           "pitch": "A3",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
           "pitch": "B3",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         }
       ],
       "i": 8

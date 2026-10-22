@@ -39,18 +39,15 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.19, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.19');
+test('U3: versión 0.1.20, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.20');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.19');
+  assert.strictEqual(pkg.version, '0.1.20');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.19/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.20/);
   assert.equal(html.includes('boss-cloud.png'), false);
-  assert.equal(html.includes('0.1.2'), false);
-  assert.equal(html.includes('0.1.3'), false);
-  assert.equal(html.includes('0.1.4'), false);
-  assert.equal(html.includes('0.1.5'), false);
-  assert.equal(html.includes('0.1.6'), false);
+  assert.equal(html.includes('0.1.19'), false);
+  assert.equal(/0\.1\.(?:2|3|4|5|6)(?!\d)/.test(html), false);
   assert.match(html, /id="bossPortrait"/);
   const portraits = html.match(/id="bossPortrait"/g) || [];
   assert.strictEqual(portraits.length, 1);
@@ -123,7 +120,7 @@ test('U6: micrófono opcional, guía de pulso y audio de altavoz sin CDN', () =>
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
   assert.match(app, /loadPianoEngine/);
   assert.match(app, /https:\/\/juliangdeveloper\.github\.io\/piano-transcribe\/engine\/v1\//);
-  assert.match(app, /createCapture\(\{ profile: 'combat' \}\)/);
+  assert.match(app, /createCapture\(\{ profile: 'combat', maxVoices: 2 \}\)/);
   assert.match(app, /No se pudo cargar el motor de notas/);
   assert.match(app, /latencyHint/);
   assert.match(app, /play-and-record/);
@@ -138,4 +135,17 @@ test('U6: micrófono opcional, guía de pulso y audio de altavoz sin CDN', () =>
   assert.equal(/requestAnimationFrame\(render\)/.test(app), false);
   const css = fs.readFileSync(path.join(root, 'css', 'ui.css'), 'utf8');
   assert.match(css, /#btnMic\.on/);
+});
+
+test('U7: la mano izquierda cae en clave de fa y la derecha en sol', () => {
+  assert.strictEqual(Tape.placeNote('C4', 'R').staff, 'treble');
+  assert.strictEqual(Tape.placeNote('C4', 'R').step, -2);
+  const c3 = Tape.placeNote('C3', 'L');
+  assert.strictEqual(c3.staff, 'bass');
+  assert.strictEqual(c3.step, 3);
+  assert.strictEqual(Tape.placeNote('G3', 'L').step, 7);
+  assert.strictEqual(Tape.placeNote('B3', 'L').step, 9);
+  assert.strictEqual(Tape.placeNote('C4', 'L').step, 10);
+  assert.strictEqual(Tape.HAND_INK.R, '#1e4d8c');
+  assert.strictEqual(Tape.HAND_INK.L, '#c2410c');
 });

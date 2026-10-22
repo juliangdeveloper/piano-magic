@@ -10,8 +10,8 @@
 - Elige un rival (*Parade Feather*; *The Veil Boat*; *Tower Chime*; *New World Largo*; *Camptown Races*; *Eine Kleine Nachtmusik*) o el **Modo libre**.
 - El combate alterna compases de **Ataque** y **Defiende** sobre una partitura que avanza al ritmo del metrónomo.
 - En **Ataque** improvisas: escalas mayores atacan, menores te mejoran y pentatónicas te curan.
-- En **Defiende** copias las notas que trae la partitura; se califican como perfecto, parcial o fallo.
-- Toca con el teclado QWERTY (`A S D F G H J K` blancas, `W E T Y U` negras), el teclado en pantalla, un teclado MIDI o el micrófono.
+- En **Defiende** copias las dos manos. Un par a la vez es perfecto si suenan las dos notas, y parcial si solo entra una.
+- Toca con el teclado QWERTY (baja hasta el Do3: `Q M , .`), el teclado en pantalla, un teclado MIDI o el micrófono. Cada mano tiene su color.
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 
 ## Stack
