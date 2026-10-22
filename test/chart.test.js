@@ -179,3 +179,31 @@ test('C13: Camptown compases 7 y 15, y Eine Kleine baja de G a D', () => {
   assert.ok(rh(eine[0]).every((n) => n.hand === 'R'));
   assert.strictEqual(rh(eine[7])[rh(eine[7]).length - 1].pitch, 'F#4');
 });
+
+test('C14: la mano izquierda corregida, y "2.5" no es una duración', () => {
+  const lh = (id, measure) => {
+    const bars = load(id).loop.filter((b) => b.kind === 'defend');
+    return bars[measure - 1].notes.filter((n) => n.hand === 'L').map((n) => [n.pitch, n.beat, n.dur]);
+  };
+  assert.deepStrictEqual(lh('new-world-largo', 7), [['F3', 0, 2], ['G3', 2, 2]]);
+  assert.deepStrictEqual(lh('camptown-races', 7), [['D3', 0, 4]]);
+  assert.deepStrictEqual(lh('camptown-races', 9), [['G3', 0, 2], ['G3', 2, 2]]);
+  assert.deepStrictEqual(lh('camptown-races', 12), [['G3', 0, 4]]);
+  assert.deepStrictEqual(lh('camptown-races', 15), [['C3', 0, 2], ['D3', 2, 2]]);
+  assert.deepStrictEqual(lh('eine-kleine', 3), [['D3', 0, 2], ['A3', 2, 2]]);
+  assert.deepStrictEqual(lh('tower-chime', 6), [['B3', 0, 0.5]]);
+  assert.deepStrictEqual(lh('tower-chime', 12), [['B3', 0, 0.5]]);
+
+  assert.strictEqual(Chart.beatsForDuration('2.5'), null);
+  assert.strictEqual(Chart.beatsForDuration('eighth'), 0.5);
+  assert.strictEqual(Chart.beatsForDuration('quarter'), 1);
+  const tower = raw('tower-chime');
+  tower.loop[1].notes[0].dur = '2.5';
+  assert.throws(() => Chart.parse(tower), /duración inválida/);
+  tower.loop[1].notes[0].dur = 'eighth';
+  assert.strictEqual(Chart.parse(tower).loop[1].notes[0].dur, 0.5);
+  const named = raw('tower-chime');
+  delete named.loop[1].notes[0].dur;
+  named.loop[1].notes[0].duration = '2.5';
+  assert.throws(() => Chart.parse(named), /duración inválida/);
+});

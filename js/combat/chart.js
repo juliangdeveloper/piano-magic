@@ -23,12 +23,39 @@
     return typeof p === 'string' && /^[A-Ga-g][#b♭♯]?-?\d+$/.test(p.trim());
   }
 
+  // Nombres de figura. Un texto como "2.5" no es una duración: se rechaza.
+  var DURATION_BEATS = {
+    sixteenth: 0.25,
+    eighth: 0.5,
+    'dotted eighth': 0.75,
+    quarter: 1,
+    'dotted quarter': 1.5,
+    half: 2,
+    'dotted half': 3,
+    whole: 4
+  };
+
+  function beatsForDuration(value) {
+    if (typeof value === 'number' && isFinite(value) && value > 0) return value;
+    if (typeof value === 'string' && Object.prototype.hasOwnProperty.call(DURATION_BEATS, value)) {
+      return DURATION_BEATS[value];
+    }
+    return null;
+  }
+
   function normalizeNote(n, i) {
     if (!n || !isPitch(n.pitch)) fail('nota[' + i + '] pitch inválido');
     if (typeof n.beat !== 'number' || !isFinite(n.beat) || n.beat < 0) {
       fail('nota[' + i + '] beat inválido');
     }
-    var dur = (typeof n.dur === 'number' && n.dur > 0) ? n.dur : 1;
+    var rawDur = n.dur != null ? n.dur : n.duration;
+    var dur = 1;
+    if (typeof rawDur === 'string' || (rawDur != null && typeof rawDur !== 'number')) {
+      dur = beatsForDuration(rawDur);
+      if (dur == null) fail('nota[' + i + '] duración inválida');
+    } else if (typeof rawDur === 'number') {
+      dur = (isFinite(rawDur) && rawDur > 0) ? rawDur : 1;
+    }
     var hand = (n.hand === 'L' || n.hand === 'l') ? 'L' : 'R';
     var note = { pitch: n.pitch, beat: n.beat, dur: dur, hand: hand };
     if (n.accent === true) note.accent = true;
@@ -164,6 +191,8 @@
 
   return {
     parse: parse,
+    beatsForDuration: beatsForDuration,
+    DURATION_BEATS: DURATION_BEATS,
     barAt: barAt,
     upcoming: upcoming,
     beatsPerBar: beatsPerBar,
