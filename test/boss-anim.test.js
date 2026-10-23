@@ -98,6 +98,58 @@ test('B4: el cast escala con el bpm y el pico sigue en el mismo tiempo', () => {
   assert.strictEqual(Boss.pose(10, [10], spec, 4).frame, 2);
 });
 
+test('B6: Veil Boat en 6/8, el cuadro 0 y el 2 en los pulsos de negra con puntillo', () => {
+  const veilRaw = JSON.parse(fs.readFileSync(path.join(root, 'assets', 'bosses', 'veil-boat', 'timings.json'), 'utf8'));
+  const veil = Boss.compile(veilRaw);
+  const chart = Chart.parse(JSON.parse(fs.readFileSync(path.join(root, 'charts', 'veil-boat.json'), 'utf8')));
+  const bpb = Chart.beatsPerBar(chart);
+  const starts = Boss.idleStarts(veil, bpb);
+  const beatMs = 60000 / 84;
+  assert.strictEqual(chart.bpm, 84);
+  assert.deepStrictEqual(chart.timeSig, [6, 8]);
+  assert.strictEqual(bpb, 3);
+  assert.deepStrictEqual(veilRaw.idle.frameMs, [536, 536, 536, 535]);
+  assert.equal(/workspace|pipeline|gif/i.test(JSON.stringify(veilRaw)), false);
+  assert.strictEqual(starts[0], 0);
+  assert.ok(Math.abs(starts[2] - 1.5) * beatMs < 1);
+  assert.deepStrictEqual(Boss.pose(0, [], veil, bpb), { row: 0, frame: 0, state: 'idle' });
+  assert.deepStrictEqual(Boss.pose(1.5, [], veil, bpb), { row: 0, frame: 2, state: 'idle' });
+  assert.deepStrictEqual(Boss.pose(3, [], veil, bpb), { row: 0, frame: 0, state: 'idle' });
+  assert.deepStrictEqual(Boss.pose(4.5, [], veil, bpb), { row: 0, frame: 2, state: 'idle' });
+  assert.strictEqual(Boss.pose(1, [], veil, bpb).frame, 1);
+  assert.deepStrictEqual(Boss.scaledIdleFrameMs(veil, 84), [536, 536, 536, 535]);
+  const half = Boss.scaledIdleFrameMs(veil, 168);
+  assert.deepStrictEqual(half, [268, 268, 268, 267.5]);
+  const sheet = pngSize(path.join(root, 'assets', 'bosses', 'veil-boat', 'spritesheet.png'));
+  const portrait = pngSize(path.join(root, 'assets', 'bosses', 'veil-boat', 'portrait.png'));
+  assert.deepStrictEqual(sheet, { w: 1152, h: 384 });
+  assert.deepStrictEqual(portrait, { w: 396, h: 384 });
+});
+
+test('B7: el pico del cast de Veil Boat cae en el golpe', () => {
+  const veil = Boss.compile(JSON.parse(fs.readFileSync(path.join(root, 'assets', 'bosses', 'veil-boat', 'timings.json'), 'utf8')));
+  const chart = Chart.parse(JSON.parse(fs.readFileSync(path.join(root, 'charts', 'veil-boat.json'), 'utf8')));
+  const bpb = Chart.beatsPerBar(chart);
+  const defend = Chart.barAt(chart, 2);
+  const hits = Boss.attackHits([defend]);
+  const hit = hits[0];
+  assert.strictEqual(defend.kind, 'defend');
+  assert.strictEqual(hit, defend.startBeat + Chart.BEAT_CENTER);
+  assert.strictEqual(hit, 6.5);
+  assert.deepStrictEqual(Boss.scaledFrameMs(veil, 84), [119, 107, 143, 131, 107, 107]);
+  assert.strictEqual(Boss.peakOffsetMs(veil, 84), 226);
+  assert.strictEqual(Boss.peakOffsetMs(veil, 168), 113);
+  assert.ok(Math.abs(Boss.peakLeadBeats(veil) - 226 * 84 / 60000) < 1e-12);
+  const peak = Boss.pose(hit, hits, veil, bpb);
+  assert.strictEqual(peak.state, 'cast');
+  assert.strictEqual(peak.frame, 2);
+  assert.strictEqual(Boss.castFrameAt(hit, hit, veil), veil.cast.peakFrame);
+  const after = hit - Boss.peakLeadBeats(veil) + Boss.castSpanBeats(veil) + 0.02;
+  const idle = Boss.pose(after, [hit], veil, bpb);
+  assert.strictEqual(idle.state, 'idle');
+  assert.strictEqual(idle.frame, Boss.pose(after, [], veil, bpb).frame);
+});
+
 test('B5: el ancla es la misma en todos los cuadros', () => {
   const a = Boss.place(400, 300, spec);
   const b = Boss.place(400, 300, spec);

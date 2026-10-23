@@ -39,18 +39,18 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.23, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.23');
+test('U3: versión 0.1.24, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.24');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.23');
+  assert.strictEqual(pkg.version, '0.1.24');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.23/);
-  assert.match(app, /VERSION = '0\.1\.23'/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.24/);
+  assert.match(app, /VERSION = '0\.1\.24'/);
   assert.equal(html.includes('boss-cloud.png'), false);
+  assert.equal(html.includes('0.1.23'), false);
   assert.equal(html.includes('0.1.22'), false);
   assert.equal(html.includes('0.1.21'), false);
-  assert.equal(html.includes('0.1.20'), false);
   assert.equal(/0\.1\.(?:2|3|4|5|6)(?!\d)/.test(html), false);
   assert.match(html, /id="bossPortrait"/);
   const portraits = html.match(/id="bossPortrait"/g) || [];

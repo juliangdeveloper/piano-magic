@@ -26,7 +26,9 @@
       id: 'veil-boat',
       label: 'The Veil Boat',
       chart: 'charts/veil-boat.json',
-      hue: 'hue-rotate(185deg) saturate(1.15)'
+      sprite: 'assets/bosses/veil-boat/spritesheet.png',
+      timings: 'assets/bosses/veil-boat/timings.json',
+      portrait: 'assets/bosses/veil-boat/portrait.png'
     },
     {
       id: 'tower-chime',

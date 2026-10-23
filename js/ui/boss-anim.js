@@ -1,6 +1,6 @@
 // js/ui/boss-anim.js — spritesheet sobre el reloj del combate.
-// Idle: un cuadro por tiempo; el cuadro 0 cae en el tiempo 1 del compás.
-// Cast: el cuadro pico empieza en el golpe. Al terminar vuelve el idle.
+// Idle: el cuadro 0 abre el compás. Cast: el cuadro pico empieza en el golpe.
+// Al terminar el cast vuelve el idle.
 // UMD: module.exports + window.BossAnim.
 'use strict';
 
@@ -22,6 +22,9 @@
     var cast;
     var i;
     var lead;
+    var refBpm;
+    var idleMs;
+    var idleBeats;
     if (!raw || typeof raw !== 'object') throw new Error('timings');
     cell = raw.cell;
     anchor = raw.anchor;
@@ -29,11 +32,12 @@
     cast = raw.cast;
     if (!cell || cell.length < 2 || !(cell[0] > 0) || !(cell[1] > 0)) throw new Error('cell');
     if (!anchor || typeof anchor.x !== 'number' || typeof anchor.y !== 'number') throw new Error('anchor');
-    if (!idle || !(idle.frames > 0)) throw new Error('idle');
+    if (!idle) throw new Error('idle');
     if (!cast || !cast.frameMs || !cast.frameMs.length) throw new Error('cast');
     if (typeof cast.peakFrame !== 'number' || cast.peakFrame < 0 || cast.peakFrame >= cast.frameMs.length) {
       throw new Error('peak');
     }
+    refBpm = raw.refBpm > 0 ? raw.refBpm : 72;
     lead = 0;
     for (i = 0; i < cast.frameMs.length; i++) {
       if (!(cast.frameMs[i] > 0)) throw new Error('frameMs');
@@ -42,14 +46,28 @@
     if (typeof cast.peakOffsetMs === 'number' && Math.abs(lead - cast.peakOffsetMs) > 1) {
       throw new Error('peakOffset');
     }
+    idleMs = idle.frameMs && idle.frameMs.length ? idle.frameMs : null;
+    idleBeats = null;
+    if (idleMs) {
+      if (idle.frames && idle.frames !== idleMs.length) throw new Error('idle');
+      idleBeats = [];
+      for (i = 0; i < idleMs.length; i++) {
+        if (!(idleMs[i] > 0)) throw new Error('idleMs');
+        idleBeats.push(msToBeats(idleMs[i], refBpm));
+      }
+    } else if (!(idle.frames > 0)) {
+      throw new Error('idle');
+    }
     return {
       cell: [cell[0], cell[1]],
       anchor: { x: anchor.x, y: anchor.y },
-      refBpm: raw.refBpm > 0 ? raw.refBpm : 72,
+      refBpm: refBpm,
       idle: {
         row: idle.row || 0,
-        frames: idle.frames,
-        frameBeats: idle.frameBeats > 0 ? idle.frameBeats : 1
+        frames: idleMs ? idleMs.length : idle.frames,
+        frameBeats: idle.frameBeats > 0 ? idle.frameBeats : 1,
+        frameMs: idleMs ? idleMs.slice() : null,
+        frameBeatsList: idleBeats
       },
       cast: {
         row: cast.row || 0,
@@ -69,12 +87,27 @@
     return beats * 60000 / bpm;
   }
 
-  function scaledFrameMs(spec, bpm) {
-    var src = spec.cast.frameMs;
+  function scaleMs(src, spec, bpm) {
     var k = spec.refBpm / bpm;
     var out = [];
     var i;
     for (i = 0; i < src.length; i++) out.push(src[i] * k);
+    return out;
+  }
+
+  function scaledFrameMs(spec, bpm) {
+    return scaleMs(spec.cast.frameMs, spec, bpm);
+  }
+
+  function scaledIdleFrameMs(spec, bpm) {
+    var src = spec.idle.frameMs;
+    var out;
+    var i;
+    var ms;
+    if (src) return scaleMs(src, spec, bpm);
+    ms = idleFrameMs(bpm, spec.idle.frameBeats);
+    out = [];
+    for (i = 0; i < spec.idle.frames; i++) out.push(ms);
     return out;
   }
 
@@ -92,6 +125,52 @@
     var frames = spec.cast.frameMs;
     for (i = 0; i < frames.length; i++) ms += frames[i];
     return msToBeats(ms, spec.refBpm);
+  }
+
+  // Inicios de cuadro dentro del compás. Las duraciones en ms llenan el compás.
+  function idleStarts(spec, beatsPerBar) {
+    var list = spec.idle.frameBeatsList;
+    var sum;
+    var bpb;
+    var acc;
+    var i;
+    var out;
+    if (!list) return null;
+    sum = 0;
+    for (i = 0; i < list.length; i++) sum += list[i];
+    bpb = (typeof beatsPerBar === 'number' && beatsPerBar > 0) ? beatsPerBar : sum;
+    out = [];
+    acc = 0;
+    for (i = 0; i < list.length; i++) {
+      out.push(acc);
+      acc += list[i] * (bpb / sum);
+    }
+    return out;
+  }
+
+  function idleIndex(beat, spec, beatsPerBar) {
+    var starts;
+    var bpb;
+    var inBar;
+    var eps;
+    var i;
+    if (!spec.idle.frameBeatsList) {
+      return idleFrame(beat, spec.idle.frames, beatsPerBar, spec.idle.frameBeats);
+    }
+    if (typeof beat !== 'number' || !isFinite(beat)) return 0;
+    starts = idleStarts(spec, beatsPerBar);
+    bpb = (typeof beatsPerBar === 'number' && beatsPerBar > 0) ? beatsPerBar : 0;
+    if (!(bpb > 0) && starts.length) {
+      bpb = starts[starts.length - 1] + spec.idle.frameBeatsList[starts.length - 1];
+    }
+    inBar = beat % bpb;
+    if (inBar < 0) inBar += bpb;
+    // Un milisegundo: los enteros del compás caen en el pulso.
+    eps = msToBeats(1, spec.refBpm);
+    for (i = 0; i < starts.length - 1; i++) {
+      if (inBar < starts[i + 1] - eps) return i;
+    }
+    return starts.length - 1;
   }
 
   function idleFrame(beat, frames, beatsPerBar, frameBeats) {
@@ -176,7 +255,7 @@
     if (best >= 0) return { row: spec.cast.row, frame: best, state: 'cast' };
     return {
       row: spec.idle.row,
-      frame: idleFrame(beat, spec.idle.frames, beatsPerBar, spec.idle.frameBeats),
+      frame: idleIndex(beat, spec, beatsPerBar),
       state: 'idle'
     };
   }
@@ -351,6 +430,8 @@
     compile: compile,
     idleFrameMs: idleFrameMs,
     scaledFrameMs: scaledFrameMs,
+    scaledIdleFrameMs: scaledIdleFrameMs,
+    idleStarts: idleStarts,
     peakOffsetMs: peakOffsetMs,
     peakLeadBeats: peakLeadBeats,
     castSpanBeats: castSpanBeats,
