@@ -265,9 +265,7 @@ test('una pelea suma stats y dos cierres seguidos se escriben una vez', async ()
   Progress.recordFight(chart, win, '0.1.31', clock);
   Progress.recordFight(chart, again, '0.1.31', clock);
   assert.strictEqual(record(storage).stats.fights_played, 0);
-  assert.strictEqual(Progress.flush(storage, clock), null);
-  assert.strictEqual(posts.length, 1);
-  nowMs = 6_000;
+  nowMs = 5_400;
   const rec = Progress.flush(storage, clock);
   assert.strictEqual(rec.stats.fights_played, 2);
   assert.strictEqual(rec.stats.fights_won, 2);
@@ -297,10 +295,8 @@ test('una pelea suma stats y dos cierres seguidos se escriben una vez', async ()
   });
   const loss = ended('lose', [], { barIndex: 1, damage: { total: 0 } });
   Progress.recordFight(veil, loss, '0.1.31', clock);
-  nowMs = 6_500;
-  assert.strictEqual(Progress.flush(storage, clock), null);
+  nowMs = 5_500;
   assert.strictEqual(record(storage).stats.fights_lost, 0);
-  nowMs = 7_000;
   const flushed = Progress.flush(storage, clock);
   assert.strictEqual(flushed.stats.fights_lost, 1);
   assert.strictEqual(flushed.stats.fights_played, 3);
@@ -343,9 +339,10 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /Progress\.recordFight\(fightChart, state, VERSION\)/);
   assert.match(app, /Progress\.flush\(\)/);
   assert.match(app, /pagehide/);
-  assert.match(app, /unload/);
-  assert.match(html, /js\/meta\.js\?v=0\.1\.31/);
-  assert.match(html, /js\/progress\.js\?v=0\.1\.31/);
+  assert.match(app, /visibilitychange/);
+  assert.match(app, /visibilityState === 'hidden'/);
+  assert.match(html, /js\/meta\.js\?v=0\.1\.32/);
+  assert.match(html, /js\/progress\.js\?v=0\.1\.32/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');
@@ -459,6 +456,35 @@ test('las claves viejas quedan igual tras cargar y jugar', () => {
   assert.equal(storage.getItem(KEY).includes('base64'), false);
 });
 
+test('ocultar la página vuelca un cambio pendiente antes de un segundo y no escribe si no hay', () => {
+  let nowMs = 10_000;
+  const posts = [];
+  const storage = mem();
+  const clock = {
+    storage,
+    now: NOW,
+    nowMs: () => nowMs,
+    window: { parent: { postMessage(data) { posts.push(data); } } },
+    location: { origin: 'https://example.test' }
+  };
+  Progress.backfill('0.1.32', clock);
+  assert.strictEqual(posts.length, 1);
+  Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.32', clock);
+  nowMs = 10_200;
+  assert.strictEqual(record(storage).stats.fights_played, 0);
+  assert.strictEqual(Progress.flush(storage, Object.assign({}, clock, { demo: true })), null);
+  assert.strictEqual(record(storage).stats.fights_played, 0);
+  assert.strictEqual(posts.length, 1);
+  const hidden = Progress.flush(storage, clock);
+  assert.strictEqual(hidden.stats.fights_played, 1);
+  assert.strictEqual(hidden.stats.fights_won, 1);
+  assert.strictEqual(posts.length, 2);
+  assert.strictEqual(posts[1].type, 'meta');
+  assert.strictEqual(Progress.flush(storage, clock), null);
+  assert.strictEqual(posts.length, 2);
+  assert.strictEqual(record(storage).stats.fights_played, 1);
+});
+
 test('el temporizador real no escribe más de una vez por segundo', async () => {
   const writes = [];
   const data = {};
@@ -470,7 +496,6 @@ test('el temporizador real no escribe más de una vez por segundo', async () => 
   assert.deepStrictEqual(writes, [KEY]);
   Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.31', { storage, now: NOW });
   Progress.recordFight(tinyChart(), ended('lose', [{ sync: 'fail' }]), '0.1.31', { storage, now: NOW });
-  assert.strictEqual(Progress.flush(storage), null);
   assert.deepStrictEqual(writes, [KEY]);
   await new Promise((resolve) => setTimeout(resolve, 1100));
   assert.deepStrictEqual(writes, [KEY, KEY]);

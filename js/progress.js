@@ -379,8 +379,9 @@
     return clockMs(sess.opts) - sess.lastWrite >= DEBOUNCE_MS;
   }
 
-  function commitPending(sess) {
-    if (!sess.pending || !due(sess)) return null;
+  function commitPending(sess, force) {
+    if (!sess.pending) return null;
+    if (!force && !due(sess)) return null;
     var job = sess.pending;
     sess.pending = null;
     if (sess.timer) {
@@ -439,8 +440,7 @@
         sess.opts = merged;
         if (sess.pending) sess.pending.opts = merged;
       }
-      if (!due(sess)) return null;
-      return commitPending(sess);
+      return commitPending(sess, true);
     } catch (e) {
       return null;
     }
