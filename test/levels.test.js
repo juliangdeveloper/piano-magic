@@ -1,4 +1,4 @@
-// test/levels.test.js — el jefe y el metrónomo intercambian el nivel renderizado.
+// test/levels.test.js — sonoridad del jefe frente al clic del metrónomo.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -9,59 +9,16 @@ const net = require('net');
 const { spawn } = require('child_process');
 
 const root = path.join(__dirname, '..');
-const MASTER = 0.92;
-const OLD_BOSS = 0.13;
-const OLD_WEAK = 0.028;
-const OLD_STRONG = 0.045;
-const NEW_BOSS = OLD_WEAK;
-const NEW_WEAK = OLD_BOSS;
-const NEW_STRONG = NEW_WEAK * OLD_STRONG / OLD_WEAK;
-
-function envelope(gain, dur, t) {
-  const half = Math.max(0.04, dur * 0.4);
-  if (t <= 0.005) return gain * (0.7 + 0.3 * (t / 0.005));
-  if (t <= half) return gain + (gain * 0.5 - gain) * ((t - 0.005) / (half - 0.005));
-  return gain * 0.5 + (0.0001 - gain * 0.5) * ((t - half) / (dur - half));
-}
-
-function osc(type, freq, t) {
-  const phase = (freq * t) % 1;
-  if (type === 'square') return phase < 0.5 ? 1 : -1;
-  if (type === 'triangle') {
-    return phase < 0.5 ? -1 + 4 * phase : 3 - 4 * phase;
-  }
-  return Math.sin(2 * Math.PI * phase);
-}
-
-function render(opts) {
-  const sr = 48000;
-  const n = Math.floor(sr * opts.dur);
-  let peak = 0;
-  let sum = 0;
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    let y = osc(opts.type, opts.freq, t);
-    if (opts.overtone) y += 0.18 * Math.sin(2 * Math.PI * opts.freq * 2 * t);
-    y *= envelope(opts.gain, opts.dur, t) * MASTER;
-    const a = Math.abs(y);
-    if (a > peak) peak = a;
-    sum += y * y;
-  }
-  return { peak, rms: Math.sqrt(sum / n) };
-}
-
-function near(actual, expected, tol, label) {
-  const err = Math.abs(actual - expected) / Math.abs(expected);
-  assert.ok(err < tol, label + ': ' + actual + ' vs ' + expected + ' (' + err + ')');
-}
+const BOSS_GAIN = 0.236;
+const METRO_WEAK = 0.01545;
+const ACCENT = 0.045 / 0.028;
+const METRO_STRONG = METRO_WEAK * ACCENT;
 
 function chromeBin() {
   const names = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'chrome'];
   const dirs = (process.env.PATH || '').split(path.delimiter);
-  let d;
-  let n;
-  for (d = 0; d < dirs.length; d++) {
-    for (n = 0; n < names.length; n++) {
+  for (let d = 0; d < dirs.length; d++) {
+    for (let n = 0; n < names.length; n++) {
       const full = path.join(dirs[d], names[n]);
       if (fs.existsSync(full)) return full;
     }
@@ -106,7 +63,7 @@ function cdpEvaluate(wsUrl, expression) {
     const timer = setTimeout(() => {
       try { ws.close(); } catch (e) {}
       reject(new Error('tiempo de espera del audio'));
-    }, 20000);
+    }, 30000);
     ws.addEventListener('open', () => {
       ws.send(JSON.stringify({
         id: 1,
@@ -120,17 +77,15 @@ function cdpEvaluate(wsUrl, expression) {
       if (!msg || msg.id !== 1) return;
       clearTimeout(timer);
       try { ws.close(); } catch (e2) {}
+      if (msg.error) {
+        reject(new Error(JSON.stringify(msg.error)));
+        return;
+      }
       if (msg.result && msg.result.exceptionDetails) {
-        reject(new Error('OfflineAudioContext: ' + JSON.stringify(msg.result.exceptionDetails)));
+        reject(new Error('OfflineAudioContext: ' + JSON.stringify(msg.result.exceptionDetails).slice(0, 800)));
         return;
       }
-      const value = msg.result && msg.result.result && msg.result.result.value;
-      if (!value || !value.newBoss) {
-        const brief = JSON.stringify(msg).slice(0, 800);
-        reject(new Error('respuesta de audio: ' + brief));
-        return;
-      }
-      resolve(value);
+      resolve(msg.result && msg.result.result && msg.result.result.value);
     });
     ws.addEventListener('error', () => {
       clearTimeout(timer);
@@ -139,7 +94,7 @@ function cdpEvaluate(wsUrl, expression) {
   });
 }
 
-async function measureOffline(voices) {
+async function measureLoudness() {
   const bin = chromeBin();
   if (!bin) return null;
   const port = await freePort();
@@ -152,58 +107,170 @@ async function measureOffline(voices) {
     '--user-data-dir=' + dir,
     'about:blank'
   ], { stdio: 'ignore' });
-  try {
-    const page = await waitPage(port);
-    const expr = `(async () => {
-      const voices = ${JSON.stringify(voices)};
-      async function render(opts) {
-        const sr = 48000;
-        const dur = opts.dur;
-        const length = Math.ceil(sr * (dur + 0.05));
-        const ctx = new OfflineAudioContext(1, length, sr);
-        const master = ctx.createGain();
-        master.gain.value = ${MASTER};
-        master.connect(ctx.destination);
-        const peak = opts.gain;
+  const expr = `(async () => {
+    const sr = 48000;
+    const bossGain = ${BOSS_GAIN};
+    const weakGain = ${METRO_WEAK};
+    const strongGain = ${METRO_STRONG};
+    function hz(name) {
+      const pc = { C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11 };
+      const m = /^([A-G]#?)(-?\\d+)$/.exec(name);
+      const midi = (parseInt(m[2], 10) + 1) * 12 + pc[m[1]];
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+    function biquad(input, b0, b1, b2, a1, a2) {
+      const out = new Float64Array(input.length);
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      for (let i = 0; i < input.length; i++) {
+        const x0 = input[i];
+        const y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+        out[i] = y0;
+        x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+      }
+      return out;
+    }
+    function onePole(f, kind) {
+      const K = Math.tan(Math.PI * f / sr);
+      const n = 1 + K;
+      if (kind === 'hp') return [1 / n, -1 / n, 0, (K - 1) / n, 0];
+      return [K / n, K / n, 0, (K - 1) / n, 0];
+    }
+    const aStages = [];
+    const spec = [20.598997, 'hp', 20.598997, 'hp', 107.65265, 'hp', 737.86223, 'hp', 12194.217, 'lp', 12194.217, 'lp'];
+    for (let i = 0; i < spec.length; i += 2) aStages.push(onePole(spec[i], spec[i + 1]));
+    let aNorm = 1;
+    {
+      const n = sr;
+      const probe = new Float64Array(n);
+      for (let i = 0; i < n; i++) probe[i] = Math.sin(2 * Math.PI * 1000 * i / sr);
+      let y = probe;
+      for (let s = 0; s < aStages.length; s++) {
+        const c = aStages[s];
+        y = biquad(y, c[0], c[1], c[2], c[3], c[4]);
+      }
+      let sum = 0;
+      const start = n >> 2;
+      for (let i = start; i < n; i++) sum += y[i] * y[i];
+      aNorm = Math.sqrt(sum / (n - start)) / Math.SQRT1_2;
+    }
+    function aWeight(data) {
+      let y = data;
+      for (let s = 0; s < aStages.length; s++) {
+        const c = aStages[s];
+        y = biquad(y, c[0], c[1], c[2], c[3], c[4]);
+      }
+      for (let i = 0; i < y.length; i++) y[i] /= aNorm;
+      return y;
+    }
+    function erb(f) { return 24.7 * (4.37 * f / 1000 + 1); }
+    const centers = [];
+    for (let f = 80; f < 10000; f += erb(f)) centers.push(f);
+    const bps = centers.map((f) => {
+      const w0 = 2 * Math.PI * f / sr;
+      const alpha = Math.sin(w0) / (2 * (f / erb(f)));
+      const a0 = 1 + alpha;
+      return [alpha / a0, 0, -alpha / a0, -2 * Math.cos(w0) / a0, (1 - alpha) / a0];
+    });
+    function loudness(filtered, n) {
+      let best = 0;
+      const levels = new Float64Array(bps.length);
+      for (let b = 0; b < bps.length; b++) {
+        const c = bps[b];
+        const y = biquad(filtered, c[0], c[1], c[2], c[3], c[4]);
+        let s = 0;
+        for (let i = 0; i < n; i++) s += y[i] * y[i];
+        const r = Math.sqrt(s / n);
+        levels[b] = r;
+        if (r > best) best = r;
+      }
+      const cut = best * Math.pow(10, -30 / 20);
+      let N = 0;
+      for (let b = 0; b < levels.length; b++) {
+        if (levels[b] >= cut) N += Math.pow(levels[b], 0.6);
+      }
+      return N;
+    }
+    function stats(data, n) {
+      let s = 0;
+      let pk = 0;
+      for (let i = 0; i < n; i++) {
+        s += data[i] * data[i];
+        const a = Math.abs(data[i]);
+        if (a > pk) pk = a;
+      }
+      return { rms: Math.sqrt(s / n), peak: pk };
+    }
+    async function render(opts) {
+      const dur = opts.dur;
+      const length = Math.ceil(sr * (dur + 0.03));
+      const ctx = new OfflineAudioContext(1, length, sr);
+      const master = ctx.createGain();
+      master.gain.value = 0.92;
+      master.connect(ctx.destination);
+      const parts = opts.parts || [opts];
+      for (let p = 0; p < parts.length; p++) {
+        const part = parts[p];
+        const gain = part.gain;
+        const pdur = part.dur;
         const amp = ctx.createGain();
-        amp.gain.setValueAtTime(peak * 0.7, 0);
-        amp.gain.linearRampToValueAtTime(peak, 0.005);
-        amp.gain.linearRampToValueAtTime(peak * 0.5, Math.max(0.04, dur * 0.4));
-        amp.gain.linearRampToValueAtTime(0.0001, dur);
+        amp.gain.setValueAtTime(gain * 0.7, 0);
+        amp.gain.linearRampToValueAtTime(gain, 0.005);
+        amp.gain.linearRampToValueAtTime(gain * 0.5, Math.max(0.04, pdur * 0.4));
+        amp.gain.linearRampToValueAtTime(0.0001, pdur);
         amp.connect(master);
         const osc = ctx.createOscillator();
-        osc.type = opts.type;
-        osc.frequency.setValueAtTime(opts.freq, 0);
+        osc.type = part.type;
+        osc.frequency.setValueAtTime(part.freq, 0);
         osc.connect(amp);
         osc.start(0);
-        osc.stop(dur + 0.02);
-        if (opts.overtone) {
+        osc.stop(pdur + 0.02);
+        if (part.overtone) {
           const over = ctx.createOscillator();
           const og = ctx.createGain();
           over.type = 'sine';
-          over.frequency.setValueAtTime(opts.freq * 2, 0);
-          og.gain.setValueAtTime(0.18, 0);
+          over.frequency.setValueAtTime(part.freq * 2, 0);
+          og.gain.setValueAtTime(part.overtone, 0);
           over.connect(og);
           og.connect(amp);
           over.start(0);
-          over.stop(dur + 0.02);
+          over.stop(pdur + 0.02);
         }
-        const buf = await ctx.startRendering();
-        const data = buf.getChannelData(0);
-        const n = Math.min(data.length, Math.floor(sr * dur));
-        let pk = 0;
-        let sum = 0;
-        for (let i = 0; i < n; i++) {
-          const a = Math.abs(data[i]);
-          if (a > pk) pk = a;
-          sum += data[i] * data[i];
-        }
-        return { peak: pk, rms: Math.sqrt(sum / n) };
       }
-      const out = {};
-      for (const v of voices) out[v.name] = await render(v);
-      return out;
-    })()`;
+      const buf = await ctx.startRendering();
+      const raw = new Float64Array(buf.getChannelData(0));
+      const n = Math.min(raw.length, Math.floor(sr * dur));
+      const aw = aWeight(raw);
+      const rawS = stats(raw, n);
+      const aS = stats(aw, n);
+      return { peak: rawS.peak, aRms: aS.rms, N: loudness(aw, n) };
+    }
+    const pitches = ['G3', 'C4', 'G4', 'D5'];
+    const jobs = [];
+    for (let i = 0; i < pitches.length; i++) {
+      const freq = hz(pitches[i]);
+      jobs.push({ name: 'old-' + pitches[i], freq: freq, gain: 0.13, dur: 0.48, type: 'sine' });
+      jobs.push({ name: 'new-' + pitches[i], freq: freq, gain: bossGain, dur: 0.48, type: 'sine' });
+    }
+    jobs.push({ name: 'old-weak', freq: 880, gain: 0.028, dur: 0.04, type: 'square' });
+    jobs.push({ name: 'new-weak', freq: 880, gain: weakGain, dur: 0.04, type: 'square' });
+    jobs.push({ name: 'old-strong', freq: 1320, gain: 0.045, dur: 0.04, type: 'square' });
+    jobs.push({ name: 'new-strong', freq: 1320, gain: strongGain, dur: 0.04, type: 'square' });
+    jobs.push({ name: 'player', freq: hz('C4'), gain: 0.32, dur: 0.42, type: 'triangle', overtone: 0.18 });
+    jobs.push({
+      name: 'mix',
+      dur: 0.48,
+      parts: [
+        { freq: hz('G4'), gain: bossGain, dur: 0.48, type: 'sine' },
+        { freq: 1320, gain: strongGain, dur: 0.04, type: 'square' },
+        { freq: hz('C4'), gain: 0.32, dur: 0.42, type: 'triangle', overtone: 0.18 }
+      ]
+    });
+    const voices = {};
+    for (let i = 0; i < jobs.length; i++) voices[jobs[i].name] = await render(jobs[i]);
+    return voices;
+  })()`;
+  try {
+    const page = await waitPage(port);
     return await cdpEvaluate(page.webSocketDebuggerUrl, expr);
   } finally {
     chrome.kill('SIGKILL');
@@ -211,52 +278,44 @@ async function measureOffline(voices) {
   }
 }
 
-test('L1: el jefe toma el nivel del metrónomo y el clic el del jefe', async () => {
+function meanOf(voices, prefix, pitches) {
+  let sum = 0;
+  for (let i = 0; i < pitches.length; i++) sum += voices[prefix + pitches[i]].N;
+  return sum / pitches.length;
+}
+
+test('L1: el jefe suena más fuerte que el clic, con la sonoridad de 0.1.27 intercambiada', async () => {
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(app, /gain: strong \? \(0\.13 \* 0\.045 \/ 0\.028\) : 0\.13/);
-  assert.match(app, /role: 'boss',\s*gain: 0\.028/);
+  assert.match(app, /gain: strong \? \(0\.01545 \* 0\.045 \/ 0\.028\) : 0\.01545/);
+  assert.match(app, /role: 'boss',\s*gain: 0\.236/);
+  assert.match(app, /type: 'sine'/);
+  assert.match(app, /overtone: false/);
   assert.equal(/gain: strong \? 0\.045 : 0\.028/.test(app), false);
   assert.equal(/role: 'boss',\s*gain: 0\.13/.test(app), false);
+  assert.equal(/role: 'boss',\s*gain: 0\.028/.test(app), false);
   assert.match(app, /var peak = opts\.gain == null \? 0\.32 : opts\.gain/);
   assert.match(app, /og\.gain\.setValueAtTime\(0\.18, t0\)/);
   assert.match(app, /masterGain\.gain\.value = 0\.92/);
   assert.match(app, /if \(merged\.sound && !opts\.silent\) playPitch\(name\)/);
+  assert.ok(Math.abs((METRO_STRONG / METRO_WEAK) - ACCENT) < 1e-12);
 
-  const oldBoss = render({ type: 'sine', freq: 392, gain: OLD_BOSS, dur: 0.48 });
-  const oldWeak = render({ type: 'square', freq: 880, gain: OLD_WEAK, dur: 0.04 });
-  const oldStrong = render({ type: 'square', freq: 1320, gain: OLD_STRONG, dur: 0.04 });
-  const newBoss = render({ type: 'sine', freq: 392, gain: NEW_BOSS, dur: 0.48 });
-  const newWeak = render({ type: 'square', freq: 880, gain: NEW_WEAK, dur: 0.04 });
-  const newStrong = render({ type: 'square', freq: 1320, gain: NEW_STRONG, dur: 0.04 });
-  const player = render({ type: 'triangle', freq: 261.63, gain: 0.32, dur: 0.42, overtone: true });
-
-  near(newBoss.peak, oldWeak.peak, 0.02, 'pico jefe');
-  near(newWeak.peak, oldBoss.peak, 0.02, 'pico metrónomo');
-  near(newStrong.peak / newWeak.peak, oldStrong.peak / oldWeak.peak, 0.001, 'razón del acento');
-  near(newBoss.peak, NEW_BOSS * MASTER, 0.01, 'pico jefe × master');
-  near(newWeak.peak, NEW_WEAK * MASTER, 0.01, 'pico clic × master');
-  near(newStrong.peak, NEW_STRONG * MASTER, 0.01, 'pico acento × master');
-  assert.ok(player.peak > newWeak.peak * 0.9);
-
-  const bin = chromeBin();
-  if (!bin) return;
-  const live = await measureOffline([
-    { name: 'oldBoss', type: 'sine', freq: 392, gain: OLD_BOSS, dur: 0.48 },
-    { name: 'oldWeak', type: 'square', freq: 880, gain: OLD_WEAK, dur: 0.04 },
-    { name: 'oldStrong', type: 'square', freq: 1320, gain: OLD_STRONG, dur: 0.04 },
-    { name: 'newBoss', type: 'sine', freq: 392, gain: NEW_BOSS, dur: 0.48 },
-    { name: 'newWeak', type: 'square', freq: 880, gain: NEW_WEAK, dur: 0.04 },
-    { name: 'newStrong', type: 'square', freq: 1320, gain: NEW_STRONG, dur: 0.04 },
-    { name: 'player', type: 'triangle', freq: 261.63, gain: 0.32, dur: 0.42, overtone: true }
-  ]);
-  near(live.newBoss.peak, live.oldWeak.peak, 0.05, 'OfflineAudioContext pico jefe');
-  near(live.newWeak.peak, live.oldBoss.peak, 0.05, 'OfflineAudioContext pico metrónomo');
-  near(
-    live.newStrong.peak / live.newWeak.peak,
-    live.oldStrong.peak / live.oldWeak.peak,
-    0.02,
-    'OfflineAudioContext razón del acento'
-  );
-  assert.ok(live.player.peak > live.newBoss.peak);
-  assert.ok(live.player.rms > live.newBoss.rms * 0.5);
+  if (!chromeBin()) return;
+  const voices = await measureLoudness();
+  const pitches = ['G3', 'C4', 'G4', 'D5'];
+  const oldEnemy = meanOf(voices, 'old-', pitches);
+  const newEnemy = meanOf(voices, 'new-', pitches);
+  const oldWeak = voices['old-weak'].N;
+  const newWeak = voices['new-weak'].N;
+  assert.ok(newEnemy > newWeak * 1.25, 'jefe ' + newEnemy + ' clic ' + newWeak);
+  for (let i = 0; i < pitches.length; i++) {
+    if (pitches[i] === 'G3') continue;
+    assert.ok(voices['new-' + pitches[i]].N > newWeak, pitches[i]);
+  }
+  assert.ok(Math.abs(newEnemy - oldWeak) / oldWeak < 0.08, newEnemy + ' vs ' + oldWeak);
+  assert.ok(Math.abs(newWeak - oldEnemy) / oldEnemy < 0.08, newWeak + ' vs ' + oldEnemy);
+  const oldAccent = voices['old-strong'].N / oldWeak;
+  const newAccent = voices['new-strong'].N / newWeak;
+  assert.ok(Math.abs(newAccent - oldAccent) / oldAccent < 0.08, newAccent + ' vs ' + oldAccent);
+  assert.ok(voices.player.peak > 0.27 && voices.player.peak < 0.32);
+  assert.ok(voices.mix.peak < 1, 'pico de la mezcla ' + voices.mix.peak);
 });

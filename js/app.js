@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.28';
+  var VERSION = '0.1.29';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -471,7 +471,7 @@
 
   function metronomeClick(strong) {
     playFreq(strong ? 1320 : 880, {
-      gain: strong ? (0.13 * 0.045 / 0.028) : 0.13,
+      gain: strong ? (0.01545 * 0.045 / 0.028) : 0.01545,
       dur: 0.04,
       type: 'square',
       overtone: false,
@@ -517,7 +517,7 @@
         bossHeard[id] = true;
         playPitch(note.pitch, {
           role: 'boss',
-          gain: 0.028,
+          gain: 0.236,
           type: 'sine',
           dur: 0.48,
           overtone: false
