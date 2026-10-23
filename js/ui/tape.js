@@ -52,6 +52,15 @@
     };
   }
 
+  // Número de dedo solo si la nota del chart lo trae (1–5). Derecha arriba, izquierda debajo.
+  function fingerMark(note) {
+    if (!note || typeof note.finger !== 'number' || !isFinite(note.finger)) return null;
+    if (note.finger !== Math.round(note.finger)) return null;
+    if (note.finger < 1 || note.finger > 5) return null;
+    var hand = note.hand === 'L' ? 'L' : 'R';
+    return { finger: note.finger, hand: hand, below: hand === 'L' };
+  }
+
   function staffStep(pitch) {
     var p = pitchParts(pitch);
     return p ? p.step : null;
@@ -226,6 +235,32 @@
       c.moveTo(x, y + h * 0.05);
       c.bezierCurveTo(x + lineGap * 0.55, y - lineGap * 0.05, x + lineGap * 0.55, y + lineGap * 0.55, x, y + h * 0.42);
       c.fill();
+    }
+
+    // Derecha arriba de la nota, izquierda debajo. El número no pisa la plica.
+    function drawFingerNum(c, x, y, step, mark, lineGap, color, canvasH) {
+      if (!mark) return;
+      var num = mark.finger;
+      var below = !!mark.below;
+      var up = below ? false : (step <= -3 ? step < -8 : step < 4);
+      var stemH = lineGap * 3.15;
+      var gap = Math.max(8, lineGap * 0.95);
+      var fy = below ? ((up ? y : y + stemH) + gap) : ((up ? y - stemH : y) - gap);
+      if (fy < 7) fy = 7;
+      if (canvasH && fy > canvasH - 7) fy = canvasH - 7;
+      var size = Math.max(8, Math.round(lineGap * 0.72));
+      c.save();
+      c.font = '700 ' + size + 'px Georgia, serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.lineJoin = 'round';
+      c.miterLimit = 2;
+      c.lineWidth = Math.max(2, lineGap * 0.22);
+      c.strokeStyle = 'rgba(239, 230, 210, 0.95)';
+      c.strokeText(String(num), x, fy);
+      c.fillStyle = color || (below ? HAND_INK.L : HAND_INK.R);
+      c.fillText(String(num), x, fy);
+      c.restore();
     }
 
     function drawNote(c, x, step, bottomLine, lineGap, style) {
@@ -644,6 +679,8 @@
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
             color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass'
           });
+          var mark = fingerMark(note);
+          if (mark) drawFingerNum(ctx, nx, ny, placed.step, mark, lineGap, ink, h);
         }
       }
 
@@ -751,6 +788,7 @@
     fuseVisual: fuseVisual,
     attackBeatMarks: attackBeatMarks,
     chartNoteBeat: chartNoteBeat,
+    fingerMark: fingerMark,
     BEAT_CENTER: BEAT_CENTER,
     KIND_LABEL: KIND_LABEL
   };

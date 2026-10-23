@@ -38,13 +38,15 @@
           "pitch": "C4",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 1
         },
         {
           "pitch": "C3",
           "beat": 0,
           "dur": 2,
-          "hand": "L"
+          "hand": "L",
+          "finger": 5
         },
         {
           "pitch": "C4",
@@ -199,13 +201,15 @@
           "pitch": "C4",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 1
         },
         {
           "pitch": "C3",
           "beat": 0,
           "dur": 2,
-          "hand": "L"
+          "hand": "L",
+          "finger": 5
         },
         {
           "pitch": "C4",

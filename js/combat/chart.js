@@ -58,6 +58,12 @@
     }
     var hand = (n.hand === 'L' || n.hand === 'l') ? 'L' : 'R';
     var note = { pitch: n.pitch, beat: n.beat, dur: dur, hand: hand };
+    if (n.finger != null) {
+      if (typeof n.finger !== 'number' || !isFinite(n.finger) || n.finger !== Math.round(n.finger) || n.finger < 1 || n.finger > 5) {
+        fail('nota[' + i + '] dedo inválido');
+      }
+      note.finger = n.finger;
+    }
     if (n.accent === true) note.accent = true;
     if (n.dynamic === 'f' || n.dynamic === 'p' || n.dynamic === 'mf' || n.dynamic === 'mp' || n.dynamic === 'ff') {
       note.dynamic = n.dynamic;
