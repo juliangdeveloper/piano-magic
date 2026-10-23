@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.29';
+  var VERSION = '0.1.32';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -21,6 +21,8 @@
   var DETECT_FADE_MS = 280;
 
   var director = null;
+  var fightChart = null;
+  var progressCommitted = false;
   var tape = null;
   var hud = null;
   var bossSprite = null;
@@ -626,6 +628,12 @@
     paused = false;
     audioHeldForPause = false;
     setPauseUi(false, false);
+    if (state && !state.free && !progressCommitted) {
+      progressCommitted = true;
+      try {
+        if (window.Progress) Progress.recordFight(fightChart, state, VERSION);
+      } catch (eProg) {}
+    }
     if (!overlay || !msg) return;
     overlay.className = 'visible';
     var os = $('overlayStats');
@@ -661,6 +669,7 @@
 
   function startFight() {
     if (!director || tutorialOpen()) return;
+    progressCommitted = false;
     paused = false;
     audioHeldForPause = false;
     unmuteMaster();
@@ -1299,6 +1308,7 @@
   }
 
   function makeDirector(chart, opt) {
+    fightChart = chart;
     director = CombatDirector.create({
       chart: chart,
       free: !!(opt && opt.free),
@@ -1573,6 +1583,19 @@
   }
 
   function init() {
+    try { if (window.Progress) Progress.backfill(VERSION); } catch (eBf) {}
+    try {
+      var flushProgress = function () {
+        try { if (window.Progress) Progress.flush(); } catch (eFl) {}
+      };
+      window.addEventListener('pagehide', flushProgress);
+      window.addEventListener('unload', flushProgress);
+      document.addEventListener('visibilitychange', function () {
+        try {
+          if (document.visibilityState === 'hidden') flushProgress();
+        } catch (eVis) {}
+      });
+    } catch (ePh) {}
     buildPiano();
     bindOnscreenKeys();
     applyKeyboard(KEYBOARD_ALWAYS || readKeyboardPref(), false);
