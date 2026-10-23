@@ -34,7 +34,9 @@
       id: 'tower-chime',
       label: 'Tower Chime',
       chart: 'charts/tower-chime.json',
-      hue: 'hue-rotate(262deg) saturate(1.3)'
+      sprite: 'assets/bosses/tower-chime/spritesheet.png',
+      timings: 'assets/bosses/tower-chime/timings.json',
+      portrait: 'assets/bosses/tower-chime/portrait.png'
     },
     {
       id: 'new-world-largo',

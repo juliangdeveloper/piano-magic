@@ -17,7 +17,9 @@ test('options: Parade Feather es el primero, Modo libre el último, y los ejerci
   assert.strictEqual(o.find((r) => r.id === 'veil-boat').sprite, 'assets/bosses/veil-boat/spritesheet.png');
   assert.strictEqual(o.find((r) => r.id === 'veil-boat').timings, 'assets/bosses/veil-boat/timings.json');
   assert.strictEqual(o.find((r) => r.id === 'veil-boat').portrait, 'assets/bosses/veil-boat/portrait.png');
-  assert.strictEqual(o.find((r) => r.id === 'tower-chime').sprite, null);
+  assert.strictEqual(o.find((r) => r.id === 'tower-chime').sprite, 'assets/bosses/tower-chime/spritesheet.png');
+  assert.strictEqual(o.find((r) => r.id === 'tower-chime').timings, 'assets/bosses/tower-chime/timings.json');
+  assert.strictEqual(o.find((r) => r.id === 'tower-chime').portrait, 'assets/bosses/tower-chime/portrait.png');
   assert.strictEqual(o[o.length - 1].id, 'libre');
   assert.ok(o[o.length - 1].free);
   assert.strictEqual(o[o.length - 1].chart, o[0].chart);

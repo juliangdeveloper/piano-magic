@@ -150,6 +150,58 @@ test('B7: el pico del cast de Veil Boat cae en el golpe', () => {
   assert.strictEqual(idle.frame, Boss.pose(after, [], veil, bpb).frame);
 });
 
+test('B8: Tower Chime en 3/4, el cuadro 0 abre el compás y a 60 bpm dura 750 ms', () => {
+  const raw = JSON.parse(fs.readFileSync(path.join(root, 'assets', 'bosses', 'tower-chime', 'timings.json'), 'utf8'));
+  const tower = Boss.compile(raw);
+  const chart = Chart.parse(JSON.parse(fs.readFileSync(path.join(root, 'charts', 'tower-chime.json'), 'utf8')));
+  const bpb = Chart.beatsPerBar(chart);
+  const starts = Boss.idleStarts(tower, bpb);
+  assert.strictEqual(chart.bpm, 60);
+  assert.deepStrictEqual(chart.timeSig, [3, 4]);
+  assert.strictEqual(bpb, 3);
+  assert.strictEqual(raw.refBpm, 72);
+  assert.deepStrictEqual(raw.idle.frameMs, [625, 625, 625, 625]);
+  assert.equal(/workspace|pipeline|gif/i.test(JSON.stringify(raw)), false);
+  assert.deepStrictEqual(starts, [0, 0.75, 1.5, 2.25]);
+  assert.deepStrictEqual(Boss.pose(0, [], tower, bpb), { row: 0, frame: 0, state: 'idle' });
+  assert.strictEqual(Boss.pose(0.5, [], tower, bpb).frame, 0);
+  assert.deepStrictEqual(Boss.pose(3, [], tower, bpb), { row: 0, frame: 0, state: 'idle' });
+  assert.strictEqual(Boss.pose(3.2, [], tower, bpb).frame, 0);
+  assert.deepStrictEqual(Boss.scaledIdleFrameMs(tower, 72), [625, 625, 625, 625]);
+  assert.deepStrictEqual(Boss.scaledIdleFrameMs(tower, 60), [750, 750, 750, 750]);
+  const sheet = pngSize(path.join(root, 'assets', 'bosses', 'tower-chime', 'spritesheet.png'));
+  const portrait = pngSize(path.join(root, 'assets', 'bosses', 'tower-chime', 'portrait.png'));
+  assert.deepStrictEqual(sheet, { w: 1152, h: 384 });
+  assert.deepStrictEqual(portrait, { w: 262, h: 384 });
+});
+
+test('B9: el pico del cast de Tower Chime cae en el golpe y a 60 bpm son 300 ms', () => {
+  const tower = Boss.compile(JSON.parse(fs.readFileSync(path.join(root, 'assets', 'bosses', 'tower-chime', 'timings.json'), 'utf8')));
+  const chart = Chart.parse(JSON.parse(fs.readFileSync(path.join(root, 'charts', 'tower-chime.json'), 'utf8')));
+  const bpb = Chart.beatsPerBar(chart);
+  const defend = Chart.barAt(chart, 1);
+  const hits = Boss.attackHits([defend]);
+  const hit = hits[0];
+  const at72 = [133, 117, 167, 150, 133, 133];
+  const at60 = Boss.scaledFrameMs(tower, 60);
+  assert.strictEqual(defend.kind, 'defend');
+  assert.strictEqual(hit, defend.startBeat + Chart.BEAT_CENTER);
+  assert.strictEqual(hit, 3.5);
+  assert.deepStrictEqual(Boss.scaledFrameMs(tower, 72), at72);
+  for (let i = 0; i < at72.length; i++) assert.ok(Math.abs(at60[i] - at72[i] * 1.2) < 1e-9);
+  assert.strictEqual(Boss.peakOffsetMs(tower, 72), 250);
+  assert.strictEqual(Boss.peakOffsetMs(tower, 60), 300);
+  assert.ok(Math.abs(Boss.peakLeadBeats(tower) - 0.3) < 1e-12);
+  const peak = Boss.pose(hit, hits, tower, bpb);
+  assert.strictEqual(peak.state, 'cast');
+  assert.strictEqual(peak.frame, 2);
+  assert.strictEqual(Boss.castFrameAt(hit, hit, tower), tower.cast.peakFrame);
+  const after = hit - Boss.peakLeadBeats(tower) + Boss.castSpanBeats(tower) + 0.02;
+  const idle = Boss.pose(after, [hit], tower, bpb);
+  assert.strictEqual(idle.state, 'idle');
+  assert.strictEqual(idle.frame, Boss.pose(after, [], tower, bpb).frame);
+});
+
 test('B5: el ancla es la misma en todos los cuadros', () => {
   const a = Boss.place(400, 300, spec);
   const b = Boss.place(400, 300, spec);
