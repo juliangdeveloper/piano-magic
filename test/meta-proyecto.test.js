@@ -1,4 +1,3 @@
-// test/meta-proyecto.test.js — bloque proyecto de meta.v1.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -93,7 +92,6 @@ test('un registro guardado con otro proyecto recibe el bloque actual en la sigui
   assert.strictEqual(rec.hitos.first_fight, '2026-01-01T00:00:00.000Z');
   assert.strictEqual(storage.getItem(KEY + '.corrupt'), null);
 
-  // Con un bloque actual inválido, el viejo se descarta y no se conserva.
   Meta.metaSetProyecto({ fase: 9 });
   const second = mem({ [KEY]: JSON.stringify(old) });
   Meta.metaUpdate('piano-magic', '9.9.9', { stats: {}, logros: [] }, { storage: second, now: NOW, declare: DECLARE });

@@ -1,4 +1,3 @@
-// test/fingering.test.js — dedo 1–5 en el chart, y el pentagrama solo numera esas notas.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -61,8 +60,6 @@ test('F2: el pentagrama numera solo la nota que trae dedo, arriba en la derecha 
   assert.equal(chart.includes('suggestFingering'), false);
 });
 
-// Posición de cinco dedos al empezar cada frase. La mano izquierda, si abre
-// con un acorde, lleva un dedo en cada nota; en estas partituras abre con una.
 const PHRASES = {
   'parade-feather': [
     ['R', 'C4', 1], ['L', 'C3', 5],

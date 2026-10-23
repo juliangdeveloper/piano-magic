@@ -1,6 +1,3 @@
-// js/combat/director.js — setup → loop 1 hole + 4 Defend hasta KO.
-// Defend = copia (Perfect/Partial/Fail). Hole = SpellEngine (ataque/buff/cura).
-// Pura (reloj inyectable). UMD: module.exports + window.CombatDirector.
 'use strict';
 
 (function (root, factory) {
@@ -50,7 +47,6 @@
     var paused = false;
     var pausedAt = null;
     var claimedTargets = {};
-    // v0.1.9 Modo libre: solo Ataque, sin KO; cuenta el daño hecho.
     var free = !!opts.free;
     var dmg = freshDmg();
 
@@ -74,7 +70,6 @@
       var beat = translator.beatsAt(t);
       var bpb = Chart.beatsPerBar(chart);
       var barIndex = Math.floor(beat / bpb + 1e-10);
-      // Compases estrictamente anteriores al actual se cierran y se resuelven.
       while (resolvedBar < barIndex - 1) {
         resolveBar(resolvedBar + 1);
         if (ended) break;
@@ -137,7 +132,6 @@
     }
 
     function decayBuffs(kind) {
-      // ATQ+ cuenta ventanas hole (donde hay DPS), no copias Defend.
       if (kind !== 'hole') return;
       var next = [];
       for (var i = 0; i < buffs.length; i++) {
@@ -228,7 +222,6 @@
       else phase = meta.kind;
 
       var upcoming = Chart.upcoming(chart, barIndex, 4).map(copyBar);
-      // Cinta: un par de compases ya pasados siguen a la izquierda del playhead.
       var lookBehind = 2;
       var fromBar = barIndex - lookBehind;
       if (fromBar < 0) fromBar = 0;
@@ -440,7 +433,6 @@
     function registerPitch(pitch, t) {
       var ev = translator.noteOn(pitch, t);
       if (!(running && !ended && ev.pitch)) return ev;
-      // v0.1.11: parpadeo del mic — mismo tono re-detectado <60 ms tras soltar = misma nota.
       for (var r = collected.length - 1; r >= 0 && r >= collected.length - 6; r--) {
         var pr = collected[r];
         if (pr.pitch === ev.pitch && pr.offMs != null && t - pr.offMs < MERGE_MS) {
@@ -467,8 +459,6 @@
       return ev;
     }
 
-    // voices: acordes del motor (máx. 2). Una nota ya abierta no se vuelve a contar.
-    // Sin voices se conserva el NoteOn suelto (repite aunque la anterior siga abierta).
     function noteOn(pitch, timeMs, voices) {
       var t = (typeof timeMs === 'number') ? timeMs : nowFn();
       if (paused) return { type: 'on', pitch: null, ignored: true, timeMs: t };
@@ -488,7 +478,6 @@
     function noteOff(pitch, timeMs) {
       var t = (typeof timeMs === 'number') ? timeMs : nowFn();
       var off = translator.noteOff(pitch, t);
-      // v0.1.11: duración = noteOff − noteOn (teclado/MIDI: soltar; mic: se pierde o cambia el tono).
       for (var k = collected.length - 1; k >= 0; k--) {
         if (collected[k].pitch === off.pitch && collected[k].durBeats == null) {
           collected[k].durBeats = Math.max(0, off.beat - collected[k].beat);

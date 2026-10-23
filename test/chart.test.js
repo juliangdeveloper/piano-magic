@@ -1,4 +1,3 @@
-// test/chart.test.js — carga y timeline de Parade Feather, y las melodías publicadas.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');

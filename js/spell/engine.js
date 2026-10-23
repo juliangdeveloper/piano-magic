@@ -1,6 +1,3 @@
-// js/spell/engine.js — 12 claves (círculo de quintas) → elemento; ×sala por pasos;
-// modo (mayor/menor/pent) desde ventana corta de pitch classes. Pura, sin DOM.
-// UMD: module.exports + window.SpellEngine.
 'use strict';
 
 (function (root, factory) {
@@ -15,8 +12,6 @@
 
   var MODE_ACTION = { major: 'attack', minor: 'buff', pentatonic: 'heal' };
 
-  // Tonalidad → elemento (12 claves del círculo de quintas; NO grados I–VII).
-  // Enarmónicos: Gb=F#, C#=Db, D#=Eb, G#=Ab, A#=Bb.
   var KEY_ELEMENTS = [
     { pc: 0, key: 'C', id: 'agua', icon: '💧', label: 'Agua' },
     { pc: 7, key: 'G', id: 'planta', icon: '🌿', label: 'Planta' },
@@ -37,7 +32,6 @@
     ELEMENTS_BY_PC[KEY_ELEMENTS[ei].pc] = KEY_ELEMENTS[ei];
   }
 
-  // Círculo de quintas por pitch class: C G D A E B F# Db Ab Eb Bb F
   var FIFTHS_PC = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
   var PC_KEY_NAME = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -49,9 +43,7 @@
   var FULL_ACCURACY = 0.75;
   var MIN_GESTURE_PCS = 2;
 
-  // Ventana de improvisación en el hole (ataque en la UI): todos los NoteOn del compás (1 barra).
   var HOLE_WINDOW_BARS = 1;
-  // Subconjunto visual del hit de combate. No cambia Perfect/Partial/Fail del compás.
   var PERFECT_WINDOW_BEATS = 0.15;
 
   var MAJOR = [0, 2, 4, 5, 7, 9, 11];
@@ -124,13 +116,6 @@
     return rel.indexOf(n) >= 0;
   }
 
-  /**
-   * Clasifica modo relativo a una tónica ya elegida.
-   * 1) 3ª menor sin 3ª mayor → minor
-   * 2) pentatónica: subconjunto {0,2,4,7,9} con 2ª o 6ª (color pent) y 5ª/6ª, sin 4ª/7ª
-   *    (un acorde mayor 0-4-7 solo NO es pent: es major)
-   * 3) fragmento mayor (p.ej. 0-2-4 / 0-4-7) o 4ª/7ª mayor → major
-   */
   function classifyMode(rel) {
     if (!rel.length) return null;
     if (has(rel, 3) && !has(rel, 4)) return 'minor';
@@ -161,10 +146,6 @@
     return unique(names.map(Translator.pitchClass).filter(function (x) { return x != null; }));
   }
 
-  /**
-   * Infiera tónica + modo del conjunto de pitch classes de la ventana.
-   * Prueba las 12 tónicas; puntúa presencia de tónica, 3ª del modo, 1ª nota y roomKey.
-   */
   function inferGesture(names, roomKey) {
     var pcs = pcsFromNames(names);
     if (pcs.length < MIN_GESTURE_PCS) {
@@ -260,9 +241,6 @@
     return ma === mb;
   }
 
-  /**
-   * Empareja notas tocadas vs esperadas (mismo pitch, onset ± hitWindow).
-   */
   function matchNotes(played, expected, hitWindow) {
     hitWindow = (typeof hitWindow === 'number') ? hitWindow : HIT_WINDOW_BEATS;
     var exp = (expected || []).map(function (n, i) {
@@ -319,7 +297,6 @@
     var expectedCount = matched.expectedCount;
     var hitCount = matched.hitCount;
     var extras = matched.extras.length;
-    // Compás vacío: silencio escrito. Tocar ahí es fallo; no tocar es perfecto.
     if (expectedCount <= 0) {
       if (extras === 0) return { grade: 'perfect', accuracy: 1 };
       return { grade: 'fail', accuracy: 0 };
@@ -344,10 +321,6 @@
     return Math.max(1, dmg);
   }
 
-  /**
-   * Defend = copiar la cinta. Perfect / Partial / Fail.
-   * No resuelve ataque/buff/cura. Cero daño al jefe.
-   */
   function resolveDefend(played, expected, roomKey, opts) {
     opts = opts || {};
     var matched = matchNotes(played, expected, opts.hitWindowBeats);
@@ -385,12 +358,6 @@
     };
   }
 
-  /**
-   * Onset de una nota de Defend contra su blanco.
-   * perfect: |error| ≤ ventana cerrada (por defecto 0.15 beats).
-   * partial: dentro del hit de combate (por defecto ±0.45) pero no perfect.
-   * fail: fuera del hit. Solo presentación; resolveDefend no la usa.
-   */
   function judgeNoteSync(errorBeats, hitWindow, perfectWindow) {
     var err = Math.abs(Number(errorBeats));
     if (!isFinite(err)) return 'fail';
@@ -402,9 +369,6 @@
     return 'fail';
   }
 
-  // v0.1.11: ritmo del Ataque. Rejilla de semicorcheas alineada con los pulsos
-  // del juego (centro del pulso = beatInBar k+0.5). Ventanas por nivel:
-  // negra (k+0.5) ±0.20 · corchea (k) ±0.12 · semicorchea (k±0.25) ±0.06 beat.
   var GRID_TOL = { 1: 0.2, 0.5: 0.12, 0.25: 0.06 };
   var DURS = [
     { beats: 4, name: 'redonda' }, { beats: 3, name: 'blanca con puntillo', dot: true, base: 2 },
@@ -415,9 +379,6 @@
   var FIG_BY_BEATS = {};
   DURS.forEach(function (d) { FIG_BY_BEATS[d.beats] = d; });
 
-  // Parte una nota sostenida en figuras ligadas (posición musical: 0 = pulso 1).
-  // Corta en la barra de compás y en la mitad del compás (4/4: pulso 3) si la
-  // nota no empieza ahí; una nota a contratiempo primero llega al siguiente pulso.
   function splitTied(pos, beats, bpb) {
     bpb = bpb || 4;
     var total = Math.max(0.25, Math.round(beats / 0.25) * 0.25);
@@ -434,7 +395,6 @@
       var fig = null;
       for (var i = 0; i < DURS.length; i++) {
         if (DURS[i].beats <= limit + 1e-9) {
-          // dentro del pulso no se usan puntillos que crucen pulsos raros
           if (DURS[i].dot && DURS[i].beats > 1 && inBar % 1 !== 0) continue;
           fig = DURS[i]; break;
         }
@@ -450,7 +410,6 @@
 
   function snapOnset(beatInBar) {
     if (typeof beatInBar !== 'number' || !isFinite(beatInBar)) return { ok: true, grid: null, level: null, error: 0 };
-    // Primero el pulso (negra), luego la corchea, luego la semicorchea.
     var levels = [[1, 0.5], [0.5, 0], [0.25, 0.25]];
     var nearest = null;
     for (var i = 0; i < levels.length; i++) {
@@ -463,7 +422,6 @@
     return nearest;
   }
 
-  // Duración medida (beats) → figura más cercana en escala logarítmica.
   function quantizeDuration(beats) {
     if (typeof beats !== 'number' || !(beats > 0)) return null;
     var best = DURS[0], bd = Infinity;
@@ -474,8 +432,6 @@
     return { beats: best.beats, name: best.name, dot: !!best.dot, base: best.base || best.beats };
   }
 
-  // v0.1.11: Ataque por escala de sala explícita (chart.roomScale). Tónica = 1ª nota.
-  // Precedencia: tríada menor de la tónica > pentatónica > tríada mayor > ataque base.
   var TRIAD_MULT = 2;
   var MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
   var PENTA = [0, 2, 4, 7, 9];
@@ -512,12 +468,6 @@
     };
   }
 
-  /**
-   * Hole (Ataque). room = roomScale (array) o roomKey (→ escala mayor).
-   * base: ≥1 nota de la escala → 2×mejora. Tríada mayor de la tónica → 2×2×mejora.
-   * Tríada menor de la tónica → mejora ATQ+ (sin daño). Pentatónica (≥4 pcs de la penta,
-   * con 2ª o 6ª) → cura 3. Notas fuera de escala no cuentan. Tocar no daña al jugador.
-   */
   function resolveHole(played, room, opts) {
     opts = opts || {};
     var n = (played || []).length;

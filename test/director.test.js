@@ -1,4 +1,3 @@
-// test/director.test.js — CombatDirector v0.1.1: Defend copia, Hole DPS, KO.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -12,7 +11,6 @@ function n(pitch, beat) {
   return { pitch, beat, dur: 1 };
 }
 
-// Sala de prueba a 60 BPM. El combate se mide en esta rejilla, no en un chart publicado.
 const raw = {
   id: 'sala-c',
   title: 'Sala C',
@@ -43,7 +41,6 @@ function make() {
 }
 
 function playBar(ctx, startMs, pitches, onCenter) {
-  // Defiende se juzga en el centro del tiempo (beat + 0.5 @ 60 bpm = +500 ms).
   const shift = onCenter ? 500 : 0;
   for (let i = 0; i < pitches.length; i++) {
     ctx.set(startMs + i * 1000 + shift + 20);
@@ -96,8 +93,8 @@ test('D2: tocar en setup no cambia HP', () => {
 test('D3: defend perfecto no hace daño al jefe ni al jugador', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000); // setup → hole
-  ctx.dir.tick(8000); // hole idle → first defend
+  ctx.dir.tick(4000);
+  ctx.dir.tick(8000);
   playBar(ctx, 8000, ['C4', 'C4', 'C4', 'C4'], true);
   const s = ctx.dir.tick(12000);
   assert.strictEqual(s.bossHp, 20);
@@ -113,8 +110,8 @@ test('D3: defend perfecto no hace daño al jefe ni al jugador', () => {
 test('D4: defend fallido hace 3 al jugador, 0 al jefe', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000); // setup → hole
-  ctx.dir.tick(8000); // hole idle → first defend
+  ctx.dir.tick(4000);
+  ctx.dir.tick(8000);
   const s = ctx.dir.tick(12000);
   assert.strictEqual(s.playerHp, FULL_HP - 3);
   assert.strictEqual(s.bossHp, 20);
@@ -125,7 +122,7 @@ test('D4: defend fallido hace 3 al jugador, 0 al jefe', () => {
 test('D5: agujero en silencio no daña; improvisar mayor pega al jefe, no al jugador', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000); // setup → hole
+  ctx.dir.tick(4000);
   let s = ctx.dir.tick(4000);
   assert.strictEqual(s.phase, 'hole');
   assert.strictEqual(s.playerHp, FULL_HP);
@@ -151,7 +148,7 @@ test('D5: agujero en silencio no daña; improvisar mayor pega al jefe, no al jug
 test('D6: el loop se repite: tras un ciclo vuelve el agujero', () => {
   const ctx = make();
   ctx.dir.start(0);
-  const s = ctx.dir.tick(24000); // after hole+4 defend, bar 6 = hole cycle 1
+  const s = ctx.dir.tick(24000);
   assert.strictEqual(s.phase, 'hole');
   assert.strictEqual(s.currentBar.loopIndex, 0);
   assert.strictEqual(s.barIndex, 6);
@@ -215,8 +212,8 @@ test('D10: el override pisa el HP del jugador; el jefe y el id quedan', () => {
 test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000); // setup → hole
-  ctx.dir.tick(8000); // hole idle → first defend
+  ctx.dir.tick(4000);
+  ctx.dir.tick(8000);
   playBar(ctx, 8000, ['C4', 'C4'], true);
   const s = ctx.dir.tick(12000);
   assert.strictEqual(s.lastResolve.grade, 'partial');
@@ -228,7 +225,7 @@ test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
 test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
   const ctx = make();
   ctx.dir.start(0);
-  ctx.dir.tick(4000); // setup → hole
+  ctx.dir.tick(4000);
   playBar(ctx, 4000, ['C4', 'Eb4', 'G4']);
   let s = ctx.dir.tick(8000);
   assert.strictEqual(s.lastResolve.spell.action, 'buff');

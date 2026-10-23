@@ -1,4 +1,3 @@
-// test/attack.test.js — v0.1.11: Ataque por escala de sala, ritmo, figuras, ligaduras, charts nuevos.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');

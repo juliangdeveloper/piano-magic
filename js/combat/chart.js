@@ -1,5 +1,3 @@
-// js/combat/chart.js — carga y consulta de charts de combate.
-// Pura, sin DOM. UMD: module.exports + window.Chart.
 'use strict';
 
 (function (root, factory) {
@@ -23,7 +21,6 @@
     return typeof p === 'string' && /^[A-Ga-g][#b♭♯]?-?\d+$/.test(p.trim());
   }
 
-  // Nombres de figura. Un texto como "2.5" no es una duración: se rechaza.
   var DURATION_BEATS = {
     sixteenth: 0.25,
     eighth: 0.5,
@@ -77,7 +74,6 @@
     if (!KINDS[kind]) fail('loop[' + idx + '] kind inválido: ' + kind);
     var notes = Array.isArray(bar.notes) ? bar.notes.map(normalizeNote) : [];
     if (kind === 'hole' && notes.length) {
-      // permitido pero M0 trata hole.notes como ignoradas al resolver
     }
     return {
       i: (typeof bar.i === 'number') ? bar.i : idx,
@@ -86,8 +82,6 @@
     };
   }
 
-  // Un número pisa el HP del jugador en todas las canciones.
-  // null vuelve a usar el valor del archivo. El HP del jefe no cambia.
   var PLAYER_HP = 1000;
 
   function parse(raw) {
@@ -138,9 +132,6 @@
     return chart.loop.length;
   }
 
-  /**
-   * Compás global 0..∞: primero setup, luego loop que se repite.
-   */
   function barAt(chart, globalBar) {
     var g = globalBar | 0;
     if (g < 0) g = 0;
@@ -173,9 +164,6 @@
     };
   }
 
-  // Notas del chart que están sonando en este beat: del centro del tiempo
-  // hasta el centro más la duración escrita. Vale para la melodía y para
-  // un ataque que traiga notas. El agujero vacío no enciende nada.
   function activePitches(bars, beat) {
     var seen = {};
     var out = [];
@@ -215,11 +203,6 @@
     return out;
   }
 
-  // El JSON nombra el tiempo (0, 1, 2, 3). El golpe — cabeza, melodía,
-  // metrónomo y ventana — cae en el centro de ese tiempo, el mismo punto
-  // que las marcas 1–2–3–4 del Ataque. Así el compás no cambia de fase
-  // al entrar en Defiende. Las ventanas siguen siendo ±0.15 / ±0.45
-  // alrededor de ese centro.
   var BEAT_CENTER = 0.5;
 
   function hitOnset(beat) {
@@ -227,7 +210,6 @@
     return b + BEAT_CENTER;
   }
 
-  // Índice del último centro ya alcanzado. −1 antes del primero.
   function centerReached(beat) {
     if (typeof beat !== 'number' || !isFinite(beat)) return -1;
     return Math.floor(beat - BEAT_CENTER + 1e-6);

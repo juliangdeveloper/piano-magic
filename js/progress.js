@@ -1,5 +1,3 @@
-// js/progress.js — estadísticas y logros de piano-magic.
-// UMD: module.exports + window.Progress.
 'use strict';
 
 (function (root, factory) {
@@ -15,8 +13,6 @@
   var SAVE_KEY = 'pmSave';
   var DEBOUNCE_MS = 1000;
 
-  // Claves declaradas, en este orden, como máximo 20.
-  // monotonic: totales, conteos y mejores no bajan.
   var STATS = [
     { key: 'fights_played', monotonic: true },
     { key: 'fights_won', monotonic: true },
@@ -44,31 +40,18 @@
     'eine-kleine'
   ];
 
-  // Ids estables, de la primera pelea al dominio. No se renombran.
   var ACHIEVEMENTS = [
-    // Primera pelea terminada, ganada o perdida.
     { id: 'first_fight', test: function (s) { return (s.fights_played || 0) >= 1; } },
-    // Primera victoria.
     { id: 'first_win', test: function (s) { return (s.fights_won || 0) >= 1; } },
-    // Parade Feather derrotado al menos una vez.
     { id: 'boss_parade_feather', test: function (s) { return (s.parade_feather_wins || 0) >= 1; } },
-    // Veil Boat derrotado al menos una vez.
     { id: 'boss_veil_boat', test: function (s) { return (s.veil_boat_wins || 0) >= 1; } },
-    // Tower Chime derrotado al menos una vez.
     { id: 'boss_tower_chime', test: function (s) { return (s.tower_chime_wins || 0) >= 1; } },
-    // New World Largo derrotado al menos una vez.
     { id: 'boss_new_world_largo', test: function (s) { return (s.new_world_largo_wins || 0) >= 1; } },
-    // Camptown Races derrotado al menos una vez.
     { id: 'boss_camptown_races', test: function (s) { return (s.camptown_races_wins || 0) >= 1; } },
-    // Eine Kleine derrotado al menos una vez.
     { id: 'boss_eine_kleine', test: function (s) { return (s.eine_kleine_wins || 0) >= 1; } },
-    // Victoria con cada nota de defensa perfecta, sin parciales ni fallos.
     { id: 'perfect_fight', test: function (s) { return (s.perfect_fights || 0) >= 1; } },
-    // Cincuenta notas de defensa perfectas.
     { id: 'perfect_notes_50', test: function (s) { return (s.perfect_notes_total || 0) >= 50; } },
-    // Los seis jefes derrotados.
     { id: 'all_bosses', test: function (s) { return (s.bosses_defeated || 0) >= 6; } },
-    // Diez peleas terminadas.
     { id: 'fights_10', test: function (s) { return (s.fights_played || 0) >= 10; } }
   ];
 

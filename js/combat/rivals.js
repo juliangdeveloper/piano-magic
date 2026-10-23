@@ -1,5 +1,3 @@
-// js/combat/rivals.js — rivales elegibles y Modo libre (v0.1.9).
-// Pura, sin DOM. UMD: module.exports + window.Rivals.
 'use strict';
 
 (function (root, factory) {
@@ -11,8 +9,6 @@
   var FREE_ID = 'libre';
   var FREE_HP = 999999;
 
-  // Cada rival: chart en charts/. sprite + timings lo animan;
-  // sin sprite se usa el retrato estático y, si hay hue, ese tinte.
   var LIST = [
     {
       id: 'parade-feather',
@@ -79,8 +75,6 @@
     return all[0];
   }
 
-  // Modo libre: usa el chart del rival 1 (sala C, escala de Do mayor). Misma sala/BPM del chart base, pero el loop es solo Ataque
-  // (sin Defiende ni golpes del jefe) y el jefe no cae.
   function freeChart(base) {
     var c = JSON.parse(JSON.stringify(base));
     c.id = FREE_ID;

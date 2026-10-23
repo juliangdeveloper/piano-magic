@@ -1,5 +1,3 @@
-// js/ui/tutorial.js — tutorial de primera visita (spotlight, Siguiente / Saltar).
-// localStorage seenTutorial. Sin CDN.
 'use strict';
 
 (function (root, factory) {
@@ -51,8 +49,6 @@
     try {
       var v = localStorage.getItem(STORAGE_KEY);
       if (v === '1' || v === 'true') return true;
-      // No hay saves de partida en M0. Si más adelante existe un save viejo
-      // sin esta clave, no forzar el tutorial a quien ya jugó.
       if (v == null && localStorage.getItem('pmSave')) return true;
     } catch (e) {
       return false;

@@ -1,4 +1,3 @@
-// test/levels.test.js — sonoridad del jefe frente al clic del metrónomo.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');

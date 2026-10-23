@@ -1,7 +1,3 @@
-// js/ui/boss-anim.js — spritesheet sobre el reloj del combate.
-// Idle: el cuadro 0 abre el compás. Cast: el cuadro pico empieza en el golpe.
-// Al terminar el cast vuelve el idle.
-// UMD: module.exports + window.BossAnim.
 'use strict';
 
 (function (root, factory) {
@@ -127,7 +123,6 @@
     return msToBeats(ms, spec.refBpm);
   }
 
-  // Inicios de cuadro dentro del compás. Las duraciones en ms llenan el compás.
   function idleStarts(spec, beatsPerBar) {
     var list = spec.idle.frameBeatsList;
     var sum;
@@ -165,7 +160,6 @@
     }
     inBar = beat % bpb;
     if (inBar < 0) inBar += bpb;
-    // Un milisegundo: los enteros del compás caen en el pulso.
     eps = msToBeats(1, spec.refBpm);
     for (i = 0; i < starts.length - 1; i++) {
       if (inBar < starts[i + 1] - eps) return i;
@@ -189,8 +183,6 @@
     return f;
   }
 
-  // Cuadro del cast si `beat` cae en la ventana de ese golpe; −1 si no.
-  // El cuadro pico empieza en `hit`.
   function castFrameAt(beat, hit, spec) {
     var beats;
     var start;
@@ -214,8 +206,6 @@
     return -1;
   }
 
-  // Golpes del jefe: notas de setup y defend, en el centro del tiempo.
-  // El ataque (hole) no suena y no dispara el cast.
   function attackHits(ribbon) {
     var hits = [];
     var bars = ribbon || [];
@@ -260,7 +250,6 @@
     };
   }
 
-  // El ancla de la celda cae siempre en el mismo punto del canvas.
   function place(destW, destH, spec) {
     var cellW = spec.cell[0];
     var cellH = spec.cell[1];

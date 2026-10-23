@@ -1,4 +1,3 @@
-// test/meta.test.js — registro meta.v1.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');

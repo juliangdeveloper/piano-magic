@@ -1,4 +1,3 @@
-// test/boss-anim.test.js — el idle sigue el compás y el pico del cast cae en el golpe.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');

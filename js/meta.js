@@ -1,5 +1,3 @@
-// js/meta.js — registro compartido meta.v1.
-// UMD: module.exports + window.Meta.
 'use strict';
 
 (function (root, factory) {
@@ -10,9 +8,6 @@
 
   var MAX_STATS = 20;
 
-  // Project status, set by hand and bumped with the version. Never computed from play.
-  // fase 1-6: Idea, Definición, Diseño, Construcción, Validación, Lanzamiento y mantenimiento.
-  // fase_estado 0-4: pendiente, en curso, bloqueada, en revisión, completada.
   var PROYECTO = {
     objetivo: 'Juego de combate musical: vencer a cada jefe tocando su partitura en un piano real, con jefes animados y varias canciones.',
     fase: 4,
@@ -26,7 +21,6 @@
     return typeof n === 'number' && Number.isInteger(n) && n >= lo && n <= hi;
   }
 
-  // Clean copy of a proyecto block, or null when any field is missing or out of range.
   function metaProyecto(p) {
     try {
       if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
@@ -39,12 +33,10 @@
     }
   }
 
-  // Tests only: swap the block the writer uses (null restores PROYECTO).
   function metaSetProyecto(p) {
     proyectoSource = p === null ? PROYECTO : p;
   }
 
-  // Adds the current proyecto block to a record being written, when it is valid.
   function withProyecto(record) {
     var p = metaProyecto(proyectoSource);
     if (p) record.proyecto = p;
