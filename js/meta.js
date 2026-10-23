@@ -18,17 +18,36 @@
     return typeof v === 'number' && isFinite(v);
   }
 
-  function readRecord(storage, key) {
-    var raw;
-    try { raw = storage.getItem(key); } catch (e) { return null; }
-    if (typeof raw !== 'string' || !raw) return null;
-    try {
-      var parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-      return parsed;
-    } catch (e2) {
-      return null;
+  function plainVersion(version) {
+    var s = version == null ? '' : String(version);
+    if (s.charAt(0) === 'v' || s.charAt(0) === 'V') s = s.slice(1);
+    return s;
+  }
+
+  function demoOn(opts) {
+    if (opts && opts.demo === true) return true;
+    var search = '';
+    if (opts && typeof opts.search === 'string') search = opts.search;
+    else {
+      try {
+        if (typeof location !== 'undefined' && location && typeof location.search === 'string') search = location.search;
+      } catch (e) {}
     }
+    return /(^|[?&])(demo|preview)=1(&|$)/.test(search);
+  }
+
+  function declaredList(declare) {
+    var list = [];
+    var seen = {};
+    if (!Array.isArray(declare)) return list;
+    for (var i = 0; i < declare.length && list.length < MAX_STATS; i++) {
+      var item = declare[i];
+      var key = typeof item === 'string' ? item : (item && item.key);
+      if (typeof key !== 'string' || !key || seen[key]) continue;
+      seen[key] = true;
+      list.push({ key: key, monotonic: !!(item && item.monotonic) });
+    }
+    return list;
   }
 
   function nowIso(now) {
@@ -37,11 +56,26 @@
     return new Date().toISOString();
   }
 
+  function parseRaw(raw) {
+    try {
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function usableRecord(parsed, slug) {
+    return !!(parsed && parsed.v === 1 && parsed.slug === slug);
+  }
+
   function metaUpdate(slug, version, patch, opts) {
     var record = null;
     try {
       opts = opts || {};
       patch = patch || {};
+      if (demoOn(opts)) return null;
       var storage = opts.storage;
       if (!storage) {
         try { storage = (typeof localStorage !== 'undefined') ? localStorage : null; } catch (eStore) { storage = null; }
@@ -49,35 +83,37 @@
       if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function') return null;
 
       var key = metaKey(slug);
-      var existing = readRecord(storage, key) || {};
-      var stamp = nowIso(opts.now);
-      var stats = {};
-      var src = (existing.stats && typeof existing.stats === 'object' && !Array.isArray(existing.stats)) ? existing.stats : {};
-      var incoming = (patch.stats && typeof patch.stats === 'object' && !Array.isArray(patch.stats)) ? patch.stats : {};
-      var k;
-      var count = 0;
-      for (k in src) {
-        if (!Object.prototype.hasOwnProperty.call(src, k)) continue;
-        if (!finiteNumber(src[k])) continue;
-        stats[k] = src[k];
-        count += 1;
-      }
-      for (k in incoming) {
-        if (!Object.prototype.hasOwnProperty.call(incoming, k)) continue;
-        if (!finiteNumber(incoming[k])) continue;
-        if (Object.prototype.hasOwnProperty.call(stats, k)) {
-          stats[k] = incoming[k];
-        } else if (count < MAX_STATS) {
-          stats[k] = incoming[k];
-          count += 1;
+      var raw = null;
+      try { raw = storage.getItem(key); } catch (eRead) { raw = null; }
+      var existing = null;
+      if (raw != null) {
+        var parsed = parseRaw(raw);
+        if (!usableRecord(parsed, slug)) {
+          try { storage.setItem(key + '.corrupt', String(raw)); } catch (eCopy) {}
+        } else {
+          existing = parsed;
         }
+      }
+
+      var stamp = nowIso(opts.now);
+      var decl = declaredList(opts.declare);
+      var src = (existing && existing.stats && typeof existing.stats === 'object' && !Array.isArray(existing.stats)) ? existing.stats : {};
+      var incoming = (patch.stats && typeof patch.stats === 'object' && !Array.isArray(patch.stats)) ? patch.stats : {};
+      var stats = {};
+      var i;
+      for (i = 0; i < decl.length; i++) {
+        var item = decl[i];
+        var hasNew = Object.prototype.hasOwnProperty.call(incoming, item.key) && finiteNumber(incoming[item.key]);
+        var hasOld = finiteNumber(src[item.key]);
+        if (hasNew && hasOld && item.monotonic) stats[item.key] = Math.max(src[item.key], incoming[item.key]);
+        else if (hasNew) stats[item.key] = incoming[item.key];
+        else if (hasOld) stats[item.key] = src[item.key];
       }
 
       var seen = {};
       var hitosIn = {};
-      var oldHitos = (existing.hitos && typeof existing.hitos === 'object' && !Array.isArray(existing.hitos)) ? existing.hitos : {};
-      var oldLogros = Array.isArray(existing.logros) ? existing.logros : [];
-      var i;
+      var oldHitos = (existing && existing.hitos && typeof existing.hitos === 'object' && !Array.isArray(existing.hitos)) ? existing.hitos : {};
+      var oldLogros = (existing && Array.isArray(existing.logros)) ? existing.logros : [];
       var id;
       for (i = 0; i < oldLogros.length; i++) {
         id = oldLogros[i];
@@ -101,14 +137,12 @@
       }
       var ids = Object.keys(seen).sort();
       var hitos = {};
-      for (i = 0; i < ids.length; i++) {
-        hitos[ids[i]] = hitosIn[ids[i]] || stamp;
-      }
+      for (i = 0; i < ids.length; i++) hitos[ids[i]] = hitosIn[ids[i]] || stamp;
 
       record = {
         v: 1,
         slug: slug,
-        version: version == null ? '' : String(version),
+        version: plainVersion(version),
         updatedAt: stamp,
         stats: stats,
         logros: ids,
@@ -117,10 +151,16 @@
       storage.setItem(key, JSON.stringify(record));
 
       try {
-        if (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        var view = null;
+        if (opts && Object.prototype.hasOwnProperty.call(opts, 'window')) view = opts.window;
+        else if (typeof window !== 'undefined') view = window;
+        if (view && view.parent && view.parent !== view && typeof view.parent.postMessage === 'function') {
           var origin = '';
-          try { origin = (typeof location !== 'undefined' && location && location.origin) ? location.origin : ''; } catch (eOrigin) {}
-          window.parent.postMessage({ type: 'meta', key: key, data: record }, origin);
+          try {
+            if (opts && opts.location && opts.location.origin) origin = opts.location.origin;
+            else if (typeof location !== 'undefined' && location && location.origin) origin = location.origin;
+          } catch (eOrigin) {}
+          view.parent.postMessage({ type: 'meta', key: key, data: record }, origin);
         }
       } catch (ePost) {}
     } catch (e) {

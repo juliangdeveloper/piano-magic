@@ -15,23 +15,25 @@
   var SAVE_KEY = 'pmSave';
   var DEBOUNCE_MS = 1000;
 
-  // Claves numéricas estables. No se renombran ni se borran.
-  var STAT_KEYS = [
-    'fights_played',
-    'fights_won',
-    'fights_lost',
-    'perfect_notes_total',
-    'bosses_defeated',
-    'best_accuracy_pct',
-    'perfect_fights',
-    'damage_total',
-    'parade_feather_wins',
-    'veil_boat_wins',
-    'tower_chime_wins',
-    'new_world_largo_wins',
-    'camptown_races_wins',
-    'eine_kleine_wins'
+  // Claves declaradas, en este orden, como máximo 20.
+  // monotonic: totales, conteos y mejores no bajan.
+  var STATS = [
+    { key: 'fights_played', monotonic: true },
+    { key: 'fights_won', monotonic: true },
+    { key: 'fights_lost', monotonic: true },
+    { key: 'perfect_notes_total', monotonic: true },
+    { key: 'bosses_defeated', monotonic: true },
+    { key: 'best_accuracy_pct', monotonic: true },
+    { key: 'perfect_fights', monotonic: true },
+    { key: 'damage_total', monotonic: true },
+    { key: 'parade_feather_wins', monotonic: true },
+    { key: 'veil_boat_wins', monotonic: true },
+    { key: 'tower_chime_wins', monotonic: true },
+    { key: 'new_world_largo_wins', monotonic: true },
+    { key: 'camptown_races_wins', monotonic: true },
+    { key: 'eine_kleine_wins', monotonic: true }
   ];
+  var STAT_KEYS = STATS.map(function (item) { return item.key; });
 
   var BOSSES = [
     'parade-feather',
@@ -131,6 +133,41 @@
     return null;
   }
 
+  function demoOn(opts) {
+    if (opts && opts.demo === true) return true;
+    var search = '';
+    if (opts && typeof opts.search === 'string') search = opts.search;
+    else {
+      try {
+        if (typeof location !== 'undefined' && location && typeof location.search === 'string') search = location.search;
+      } catch (e) {}
+    }
+    return /(^|[?&])(demo|preview)=1(&|$)/.test(search);
+  }
+
+  function clockMs(opts) {
+    if (opts && typeof opts.nowMs === 'function') return opts.nowMs();
+    if (opts && typeof opts.nowMs === 'number') return opts.nowMs;
+    return Date.now();
+  }
+
+  function hasFakeClock(opts) {
+    return !!(opts && (typeof opts.nowMs === 'function' || typeof opts.nowMs === 'number'));
+  }
+
+  function callOpts(opts) {
+    var o = { declare: STATS };
+    if (!opts) return o;
+    if (opts.storage) o.storage = opts.storage;
+    if (opts.now != null) o.now = opts.now;
+    if (opts.nowMs != null) o.nowMs = opts.nowMs;
+    if (opts.demo != null) o.demo = opts.demo;
+    if (opts.search != null) o.search = opts.search;
+    if (Object.prototype.hasOwnProperty.call(opts, 'window')) o.window = opts.window;
+    if (opts.location) o.location = opts.location;
+    return o;
+  }
+
   function copyStats(stats) {
     var next = zeroStats();
     if (!stats) return next;
@@ -220,23 +257,38 @@
     }
   }
 
+  function legacyStats(storage) {
+    var stats = zeroStats();
+    var saveRaw = null;
+    try { saveRaw = storage.getItem(SAVE_KEY); } catch (e1) { saveRaw = null; }
+    if (typeof saveRaw === 'string' && saveRaw) {
+      try {
+        var save = JSON.parse(saveRaw);
+        if (save && typeof save === 'object') applyLegacy(stats, save);
+      } catch (eSave) {}
+    }
+    return stats;
+  }
+
+  function recordValid(raw) {
+    if (typeof raw !== 'string' || !raw) return false;
+    try {
+      var parsed = JSON.parse(raw);
+      return !!(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.v === 1 && parsed.slug === SLUG);
+    } catch (e) {
+      return false;
+    }
+  }
+
   function backfill(version, opts) {
     try {
+      if (demoOn(opts)) return null;
       var storage = storageOf(opts);
       if (!storage || !Meta) return null;
       var raw;
       try { raw = storage.getItem(Meta.metaKey(SLUG)); } catch (e0) { return null; }
-      if (raw != null) return null;
-      var stats = zeroStats();
-      var saveRaw = null;
-      try { saveRaw = storage.getItem(SAVE_KEY); } catch (e1) { saveRaw = null; }
-      if (typeof saveRaw === 'string' && saveRaw) {
-        try {
-          var save = JSON.parse(saveRaw);
-          if (save && typeof save === 'object') applyLegacy(stats, save);
-        } catch (eSave) {}
-      }
-      return Meta.metaUpdate(SLUG, version, { stats: stats, logros: unlocked(stats) }, opts);
+      if (recordValid(raw)) return null;
+      return enqueue(version, legacyStats(storage), opts);
     } catch (e) {
       return null;
     }
@@ -318,61 +370,92 @@
 
   function commit(version, stats, opts) {
     if (!Meta) return null;
+    if (demoOn(opts)) return null;
     return Meta.metaUpdate(SLUG, version, { stats: stats, logros: unlocked(stats) }, opts);
+  }
+
+  function due(sess) {
+    if (!sess.lastWrite) return true;
+    return clockMs(sess.opts) - sess.lastWrite >= DEBOUNCE_MS;
+  }
+
+  function commitPending(sess) {
+    if (!sess.pending || !due(sess)) return null;
+    var job = sess.pending;
+    sess.pending = null;
+    if (sess.timer) {
+      clearTimeout(sess.timer);
+      sess.timer = null;
+    }
+    var rec = null;
+    try { rec = commit(job.version, job.stats, job.opts); } catch (e) { rec = null; }
+    if (rec) sess.lastWrite = clockMs(job.opts);
+    else sess.pending = job;
+    return rec;
+  }
+
+  function arm(sess) {
+    if (!sess.pending || sess.timer) return;
+    if (!due(sess)) {
+      if (hasFakeClock(sess.opts)) return;
+      var wait = Math.max(0, DEBOUNCE_MS - (clockMs(sess.opts) - sess.lastWrite));
+      sess.timer = setTimeout(function () {
+        sess.timer = null;
+        try {
+          if (!commitPending(sess) && sess.pending) arm(sess);
+        } catch (e) {}
+      }, wait);
+      return;
+    }
+    commitPending(sess);
+  }
+
+  function enqueue(version, stats, opts) {
+    if (demoOn(opts)) return null;
+    var storage = storageOf(opts);
+    if (!storage) return null;
+    var use = callOpts(opts);
+    if (!use.storage) use.storage = storage;
+    var sess = sessionFor(storage);
+    sess.opts = use;
+    sess.pending = { version: version, stats: stats, opts: use };
+    if (due(sess)) return commitPending(sess);
+    arm(sess);
+    return null;
   }
 
   function flush(storage, opts) {
     try {
+      if (demoOn(opts)) return null;
       var st = storage || storageOf(opts);
       if (!st) return null;
       var sess = sessionFor(st);
-      if (sess.timer) {
-        clearTimeout(sess.timer);
-        sess.timer = null;
-      }
       if (!sess.pending) return null;
-      var job = sess.pending;
-      sess.pending = null;
-      sess.lastWrite = Date.now();
-      var use = job.opts || {};
-      if (!use.storage) use = { storage: st, now: use.now };
-      if (opts && opts.now != null && use.now == null) use.now = opts.now;
-      return commit(job.version, job.stats, use);
+      if (opts) {
+        var merged = callOpts(opts);
+        if (!merged.storage) merged.storage = st;
+        if (sess.opts && sess.opts.now != null && merged.now == null) merged.now = sess.opts.now;
+        if (sess.opts && sess.opts.nowMs != null && merged.nowMs == null) merged.nowMs = sess.opts.nowMs;
+        sess.opts = merged;
+        if (sess.pending) sess.pending.opts = merged;
+      }
+      if (!due(sess)) return null;
+      return commitPending(sess);
     } catch (e) {
       return null;
     }
   }
 
-  function queue(version, stats, opts) {
-    try {
-      var storage = storageOf(opts);
-      if (!storage) return;
-      var sess = sessionFor(storage);
-      sess.pending = { version: version, stats: stats, opts: opts || { storage: storage } };
-      if (sess.timer) return;
-      var wait = sess.lastWrite === 0 ? 0 : Math.max(0, DEBOUNCE_MS - (Date.now() - sess.lastWrite));
-      sess.timer = setTimeout(function () {
-        sess.timer = null;
-        var job = sess.pending;
-        sess.pending = null;
-        if (!job) return;
-        sess.lastWrite = Date.now();
-        try { commit(job.version, job.stats, job.opts); } catch (e) {}
-      }, wait);
-    } catch (e) {}
-  }
-
   function recordFight(chart, state, version, opts) {
     try {
+      if (demoOn(opts)) return null;
       var summary = summarizeFight(chart, state);
       if (!summary) return null;
       var storage = storageOf(opts);
       if (!storage || !Meta) return null;
-      var use = { storage: storage };
-      if (opts && opts.now != null) use.now = opts.now;
       var sess = sessionFor(storage);
       var base = sess.pending ? sess.pending.stats : readStats(storage);
-      queue(version, applyFight(base, summary), use);
+      enqueue(version, applyFight(base, summary), opts);
       return summary;
     } catch (e) {
       return null;
@@ -381,6 +464,7 @@
 
   return {
     SLUG: SLUG,
+    STATS: STATS,
     STAT_KEYS: STAT_KEYS,
     ACHIEVEMENTS: ACHIEVEMENTS,
     BOSSES: BOSSES,

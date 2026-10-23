@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const Chart = require('../js/combat/chart.js');
+const Meta = require('../js/meta.js');
 const Progress = require('../js/progress.js');
 
 const NOW = '2026-10-23T18:00:00.000Z';
@@ -82,6 +83,9 @@ test('las claves y los ids quedan fijos', () => {
   ]);
   assert.ok(Progress.ACHIEVEMENTS.length >= 5 && Progress.ACHIEVEMENTS.length <= 12);
   assert.strictEqual(Progress.SLUG, 'piano-magic');
+  assert.ok(Progress.STATS.length <= 20);
+  assert.deepStrictEqual(Progress.STATS.map((item) => item.key), Progress.STAT_KEYS);
+  assert.ok(Progress.STATS.every((item) => item.monotonic === true));
 });
 
 test('las condiciones de cada logro', () => {
@@ -186,7 +190,7 @@ test('el nombre canónico pisa el alias y la precisión se acota', () => {
   }).stats.fights_won, 0);
 });
 
-test('sin guardado escribe ceros y un meta existente o roto no se pisa', () => {
+test('sin guardado escribe ceros y un registro válido no se pisa', () => {
   const empty = mem({ seenTutorial: '1' });
   const rec = Progress.backfill('0.1.30', { storage: empty, now: NOW });
   assert.strictEqual(rec.slug, 'piano-magic');
@@ -215,21 +219,11 @@ test('sin guardado escribe ceros y un meta existente o roto no se pisa', () => {
   assert.strictEqual(record(kept).updatedAt, '2026-10-01T00:00:00.000Z');
   assert.strictEqual(kept.getItem('pmSave'), JSON.stringify({ wins: 1, played: 1 }));
 
-  const broken = mem({ [KEY]: '{', pmSave: JSON.stringify({ wins: 5, played: 5 }) });
-  let threw = false;
-  try {
-    assert.strictEqual(Progress.backfill('0.1.30', { storage: broken, now: NOW }), null);
-  } catch (e) {
-    threw = true;
-  }
-  assert.strictEqual(threw, false);
-  assert.strictEqual(broken.getItem(KEY), '{');
-
   const badSave = mem({ pmSave: '{' });
   let threwSave = false;
   let zeros = null;
   try {
-    zeros = Progress.backfill('0.1.30', { storage: badSave, now: NOW });
+    zeros = Progress.backfill('0.1.31', { storage: badSave, now: NOW });
   } catch (e2) {
     threwSave = true;
   }
@@ -237,10 +231,7 @@ test('sin guardado escribe ceros y un meta existente o roto no se pisa', () => {
   assert.strictEqual(zeros.stats.fights_won, 0);
   assert.deepStrictEqual(zeros.logros, []);
   assert.strictEqual(badSave.getItem('pmSave'), '{');
-
-  const blank = mem({ [KEY]: '' });
-  assert.strictEqual(Progress.backfill('0.1.30', { storage: blank, now: NOW }), null);
-  assert.strictEqual(blank.getItem(KEY), '');
+  assert.deepStrictEqual(Object.keys(zeros.stats), Progress.STAT_KEYS);
 });
 
 test('una pelea suma stats y dos cierres seguidos se escriben una vez', async () => {
@@ -257,14 +248,27 @@ test('una pelea suma stats y dos cierres seguidos se escriben una vez', async ()
   assert.strictEqual(Progress.summarizeFight(Object.assign({}, chart, { id: 'libre' }), win), null);
   assert.strictEqual(Progress.summarizeFight(chart, { ended: false, outcome: 'win', barIndex: 3 }), null);
 
+  let nowMs = 5_000;
   const storage = mem();
-  Progress.backfill('0.1.30', { storage, now: NOW });
-  const again = ended('win', [{ sync: 'perfect' }, { sync: 'fail' }], { damage: { total: 4 } });
-  Progress.recordFight(chart, win, '0.1.30', { storage, now: '2026-10-23T18:01:00.000Z' });
-  Progress.recordFight(chart, again, '0.1.30', { storage, now: '2026-10-23T18:01:00.000Z' });
+  const posts = [];
+  const clock = {
+    storage,
+    now: NOW,
+    nowMs: () => nowMs,
+    window: { parent: { postMessage(data) { posts.push(data); } } },
+    location: { origin: 'https://example.test' }
+  };
+  Progress.backfill('0.1.31', clock);
   assert.strictEqual(record(storage).stats.fights_played, 0);
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  const rec = record(storage);
+  assert.strictEqual(posts.length, 1);
+  const again = ended('win', [{ sync: 'perfect' }, { sync: 'fail' }], { damage: { total: 4 } });
+  Progress.recordFight(chart, win, '0.1.31', clock);
+  Progress.recordFight(chart, again, '0.1.31', clock);
+  assert.strictEqual(record(storage).stats.fights_played, 0);
+  assert.strictEqual(Progress.flush(storage, clock), null);
+  assert.strictEqual(posts.length, 1);
+  nowMs = 6_000;
+  const rec = Progress.flush(storage, clock);
   assert.strictEqual(rec.stats.fights_played, 2);
   assert.strictEqual(rec.stats.fights_won, 2);
   assert.strictEqual(rec.stats.fights_lost, 0);
@@ -277,8 +281,11 @@ test('una pelea suma stats y dos cierres seguidos se escriben una vez', async ()
   assert.ok(rec.logros.includes('first_win'));
   assert.ok(rec.logros.includes('boss_parade_feather'));
   assert.ok(rec.logros.includes('perfect_fight'));
+  assert.strictEqual(posts.length, 2);
+  assert.strictEqual(Progress.flush(storage, clock), null);
+  assert.strictEqual(posts.length, 2);
 
-  const veil = Chart.parse(Object.assign({}, {
+  const veil = Chart.parse({
     id: 'veil-boat',
     title: 't',
     bpm: 60,
@@ -287,17 +294,20 @@ test('una pelea suma stats y dos cierres seguidos se escriben una vez', async ()
     setup: { bars: 1 },
     loop: [{ kind: 'hole', notes: [] }],
     hp: { player: 15, boss: 20 }
-  }));
+  });
   const loss = ended('lose', [], { barIndex: 1, damage: { total: 0 } });
-  Progress.recordFight(veil, loss, '0.1.30', { storage });
-  await new Promise((resolve) => setTimeout(resolve, 40));
+  Progress.recordFight(veil, loss, '0.1.31', clock);
+  nowMs = 6_500;
+  assert.strictEqual(Progress.flush(storage, clock), null);
   assert.strictEqual(record(storage).stats.fights_lost, 0);
-  const flushed = Progress.flush(storage, { now: '2026-10-23T18:02:00.000Z' });
+  nowMs = 7_000;
+  const flushed = Progress.flush(storage, clock);
   assert.strictEqual(flushed.stats.fights_lost, 1);
   assert.strictEqual(flushed.stats.fights_played, 3);
   assert.strictEqual(flushed.stats.veil_boat_wins, 0);
   assert.strictEqual(flushed.stats.bosses_defeated, 1);
   assert.strictEqual(flushed.stats.best_accuracy_pct, 100);
+  assert.strictEqual(posts.length, 3);
 });
 
 test('la primera victoria de cada jefe sube el contador una sola vez', () => {
@@ -332,10 +342,141 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /Progress\.backfill\(VERSION\)/);
   assert.match(app, /Progress\.recordFight\(fightChart, state, VERSION\)/);
   assert.match(app, /Progress\.flush\(\)/);
-  assert.match(html, /js\/meta\.js\?v=0\.1\.30/);
-  assert.match(html, /js\/progress\.js\?v=0\.1\.30/);
+  assert.match(app, /pagehide/);
+  assert.match(app, /unload/);
+  assert.match(html, /js\/meta\.js\?v=0\.1\.31/);
+  assert.match(html, /js\/progress\.js\?v=0\.1\.31/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');
   assert.ok(metaAt > 0 && metaAt < progressAt && progressAt < appAt);
+});
+
+test('un registro roto se copia y el relleno lo rehace desde pmSave', () => {
+  const pm = JSON.stringify({ wins: 2, played: 3, lost: 1 });
+  const storage = mem({
+    [KEY]: '{',
+    pmSave: pm,
+    seenTutorial: '1',
+    pmRival: 'tower-chime',
+    onscreenKeyboard: '0'
+  });
+  let threw = false;
+  let rec = null;
+  try {
+    rec = Progress.backfill('0.1.31', { storage, now: NOW });
+  } catch (e) {
+    threw = true;
+  }
+  assert.strictEqual(threw, false);
+  assert.strictEqual(storage.getItem(KEY + '.corrupt'), '{');
+  assert.strictEqual(rec.stats.fights_won, 2);
+  assert.strictEqual(rec.stats.fights_played, 3);
+  assert.strictEqual(rec.stats.fights_lost, 1);
+  assert.strictEqual(rec.hitos.first_win, NOW);
+  assert.strictEqual(rec.version, '0.1.31');
+  assert.strictEqual(storage.getItem('pmSave'), pm);
+  assert.strictEqual(storage.getItem('seenTutorial'), '1');
+  assert.strictEqual(storage.getItem('pmRival'), 'tower-chime');
+  assert.strictEqual(storage.getItem('onscreenKeyboard'), '0');
+
+  const mismatch = JSON.stringify({ v: 1, slug: 'otro', stats: { fights_won: 9 }, logros: ['first_win'] });
+  const other = mem({ [KEY]: mismatch, pmSave: JSON.stringify({ wins: 1, played: 1 }) });
+  const rec2 = Progress.backfill('0.1.31', { storage: other, now: NOW });
+  assert.strictEqual(other.getItem(KEY + '.corrupt'), mismatch);
+  assert.strictEqual(rec2.stats.fights_won, 1);
+  assert.deepStrictEqual(rec2.logros.includes('first_win'), true);
+
+  const oldV = JSON.stringify({ v: 0, slug: 'piano-magic', stats: { fights_won: 9 } });
+  const legacy = mem({ [KEY]: oldV });
+  const rec3 = Progress.backfill('0.1.31', { storage: legacy, now: NOW });
+  assert.strictEqual(legacy.getItem(KEY + '.corrupt'), oldV);
+  assert.strictEqual(rec3.stats.fights_won, 0);
+
+  const blank = mem({ [KEY]: '' });
+  const rec4 = Progress.backfill('0.1.31', { storage: blank, now: NOW });
+  assert.strictEqual(blank.getItem(KEY + '.corrupt'), '');
+  assert.strictEqual(rec4.stats.fights_played, 0);
+});
+
+test('demo y preview no escriben ni avisan', () => {
+  const pm = JSON.stringify({ wins: 4, played: 4 });
+  const posts = [];
+  const storage = mem({ pmSave: pm, seenTutorial: '1' });
+  const opts = {
+    storage,
+    now: NOW,
+    demo: true,
+    window: { parent: { postMessage(data) { posts.push(data); } } },
+    location: { origin: 'https://example.test' }
+  };
+  assert.strictEqual(Progress.backfill('0.1.31', opts), null);
+  assert.strictEqual(Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.31', opts), null);
+  assert.strictEqual(Progress.flush(storage, opts), null);
+  assert.strictEqual(storage.getItem(KEY), null);
+  assert.strictEqual(posts.length, 0);
+  assert.strictEqual(storage.getItem('pmSave'), pm);
+  assert.strictEqual(storage.getItem('seenTutorial'), '1');
+
+  const preview = mem({ pmSave: pm });
+  assert.strictEqual(Progress.backfill('0.1.31', { storage: preview, search: '?demo=1', now: NOW }), null);
+  assert.strictEqual(Progress.backfill('0.1.31', { storage: preview, search: '?x=1&preview=1', now: NOW }), null);
+  assert.strictEqual(preview.getItem(KEY), null);
+  assert.strictEqual(preview.getItem('pmSave'), pm);
+});
+
+test('las claves viejas quedan igual tras cargar y jugar', () => {
+  const pm = JSON.stringify({ wins: 1, played: 2, bosses: ['parade-feather'], note: 'no tocar' });
+  const storage = mem({
+    pmSave: pm,
+    seenTutorial: '1',
+    pmRival: 'parade-feather',
+    onscreenKeyboard: '1',
+    'piano-transcribe.engine': 'keep'
+  });
+  let nowMs = 1000;
+  const opts = { storage, now: NOW, nowMs: () => nowMs };
+  const filled = Progress.backfill('0.1.31', opts);
+  assert.strictEqual(filled.stats.fights_won, 1);
+  Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.31', opts);
+  nowMs = 2000;
+  const played = Progress.flush(storage, opts);
+  assert.strictEqual(played.stats.fights_won, 2);
+  assert.strictEqual(played.stats.best_accuracy_pct, 100);
+  Meta.metaUpdate(Progress.SLUG, 'v0.1.31', {
+    stats: { fights_won: 0, best_accuracy_pct: 1, extra_blob: 5 }
+  }, { storage, now: '2026-10-23T19:00:00.000Z', declare: Progress.STATS });
+  assert.strictEqual(record(storage).stats.fights_won, 2);
+  assert.strictEqual(record(storage).stats.best_accuracy_pct, 100);
+  assert.strictEqual(record(storage).stats.extra_blob, undefined);
+  assert.strictEqual(record(storage).version, '0.1.31');
+  assert.strictEqual(storage.getItem('pmSave'), pm);
+  assert.strictEqual(storage.getItem('seenTutorial'), '1');
+  assert.strictEqual(storage.getItem('pmRival'), 'parade-feather');
+  assert.strictEqual(storage.getItem('onscreenKeyboard'), '1');
+  assert.strictEqual(storage.getItem('piano-transcribe.engine'), 'keep');
+  assert.equal(storage.getItem(KEY).includes('no tocar'), false);
+  assert.equal(storage.getItem(KEY).includes('base64'), false);
+});
+
+test('el temporizador real no escribe más de una vez por segundo', async () => {
+  const writes = [];
+  const data = {};
+  const storage = {
+    getItem(k) { return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+    setItem(k, v) { writes.push(k); data[k] = String(v); }
+  };
+  Progress.backfill('0.1.31', { storage, now: NOW });
+  assert.deepStrictEqual(writes, [KEY]);
+  Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.31', { storage, now: NOW });
+  Progress.recordFight(tinyChart(), ended('lose', [{ sync: 'fail' }]), '0.1.31', { storage, now: NOW });
+  assert.strictEqual(Progress.flush(storage), null);
+  assert.deepStrictEqual(writes, [KEY]);
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  assert.deepStrictEqual(writes, [KEY, KEY]);
+  assert.strictEqual(JSON.parse(data[KEY]).stats.fights_played, 2);
+  assert.strictEqual(JSON.parse(data[KEY]).stats.fights_won, 1);
+  assert.strictEqual(JSON.parse(data[KEY]).stats.fights_lost, 1);
+  assert.strictEqual(Progress.flush(storage), null);
+  assert.strictEqual(writes.length, 2);
 });

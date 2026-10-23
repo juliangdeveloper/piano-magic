@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.30';
+  var VERSION = '0.1.31';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -1585,9 +1585,11 @@
   function init() {
     try { if (window.Progress) Progress.backfill(VERSION); } catch (eBf) {}
     try {
-      window.addEventListener('pagehide', function () {
+      var flushProgress = function () {
         try { if (window.Progress) Progress.flush(); } catch (eFl) {}
-      });
+      };
+      window.addEventListener('pagehide', flushProgress);
+      window.addEventListener('unload', flushProgress);
     } catch (ePh) {}
     buildPiano();
     bindOnscreenKeys();
