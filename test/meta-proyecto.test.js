@@ -79,3 +79,23 @@ test('un registro viejo sin proyecto sigue siendo válido y gana el bloque', () 
   assert.strictEqual(rec.stats.fights_played, 3);
   assert.deepStrictEqual(rec.proyecto, Object.assign({}, Meta.PROYECTO));
 });
+
+test('un registro guardado con otro proyecto recibe el bloque actual en la siguiente escritura', () => {
+  const old = {
+    v: 1, slug: 'piano-magic', version: '0.1.32', updatedAt: '2026-01-01T00:00:00.000Z',
+    stats: { fights_played: 3 }, logros: ['first_fight'], hitos: { first_fight: '2026-01-01T00:00:00.000Z' },
+    proyecto: { extra: 1, objetivo: 'Objetivo anterior.', fase: 2, fase_estado: 3, fases_completadas: 1 }
+  };
+  const storage = mem({ [KEY]: JSON.stringify(old) });
+  Meta.metaUpdate('piano-magic', '9.9.9', { stats: {}, logros: [] }, { storage, now: NOW, declare: DECLARE });
+  const rec = JSON.parse(storage.getItem(KEY));
+  assert.deepStrictEqual(rec.proyecto, Object.assign({}, Meta.PROYECTO));
+  assert.strictEqual(rec.hitos.first_fight, '2026-01-01T00:00:00.000Z');
+  assert.strictEqual(storage.getItem(KEY + '.corrupt'), null);
+
+  // Con un bloque actual inválido, el viejo se descarta y no se conserva.
+  Meta.metaSetProyecto({ fase: 9 });
+  const second = mem({ [KEY]: JSON.stringify(old) });
+  Meta.metaUpdate('piano-magic', '9.9.9', { stats: {}, logros: [] }, { storage: second, now: NOW, declare: DECLARE });
+  assert.strictEqual('proyecto' in JSON.parse(second.getItem(KEY)), false);
+});
