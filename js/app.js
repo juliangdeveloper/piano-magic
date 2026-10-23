@@ -8,7 +8,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.25';
+  var VERSION = '0.1.26';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -16,6 +16,9 @@
   var rivalId = null;
   var lastPopSeq = 0;
   var KB_KEY = 'onscreenKeyboard';
+  // El teclado en pantalla no se esconde. false vuelve a dejar que el botón lo oculte.
+  var KEYBOARD_ALWAYS = true;
+  var DETECT_FADE_MS = 280;
 
   var director = null;
   var tape = null;
@@ -61,6 +64,7 @@
   var session = null;
   var engineState = 'loading';
   var localHeld = {};
+  var playerFadeTimers = {};
 
   function $(id) { return document.getElementById(id); }
 
@@ -585,6 +589,7 @@
     }
     if (state.free) showDamagePop(state.damage);
     playChartMelody(state);
+    paintKeyLights(state);
 
     if (state.running && !state.paused) {
       // El clic cae en el centro del tiempo, junto a la marca y a la nota.
@@ -804,7 +809,7 @@
     }
     var name = merged.pitch || pitch;
     if (merged.sound && !opts.silent) playPitch(name);
-    markKey(name, true);
+    markKey(name, true, source);
     if (!merged.fresh) return;
     // El tutorial puede sonar (desbloquea el audio) pero no entra al combate.
     if (tutorialOpen()) return;
@@ -823,15 +828,53 @@
     }
     if (!merged.released) return;
     var name = merged.pitch || pitch;
-    markKey(name, false);
+    markKey(name, false, source);
     if (director) director.noteOff(name, performance.now());
   }
 
-  function markKey(pitch, down) {
-    var btn = document.querySelector('#piano .key[data-pitch="' + pitch + '"]');
+  function keyButton(pitch) {
+    return document.querySelector('#piano .key[data-pitch="' + pitch + '"]');
+  }
+
+  function markKey(pitch, down, source) {
+    var btn = keyButton(pitch);
     if (!btn) return;
-    if (down) btn.classList.add('down');
-    else btn.classList.remove('down');
+    if (playerFadeTimers[pitch]) {
+      clearTimeout(playerFadeTimers[pitch]);
+      delete playerFadeTimers[pitch];
+    }
+    if (down) {
+      btn.classList.add('lit-player');
+      btn.classList.remove('lit-fade');
+      return;
+    }
+    if (source === 'mic') {
+      btn.classList.add('lit-fade');
+      playerFadeTimers[pitch] = setTimeout(function () {
+        btn.classList.remove('lit-player', 'lit-fade');
+        delete playerFadeTimers[pitch];
+      }, DETECT_FADE_MS);
+      return;
+    }
+    btn.classList.remove('lit-player', 'lit-fade');
+  }
+
+  function paintKeyLights(state) {
+    var on = {};
+    var list = (window.Chart && state) ? Chart.activePitches(state.ribbon, state.beat) : [];
+    var i;
+    var name;
+    var keys;
+    var pitch;
+    for (i = 0; i < list.length; i++) {
+      name = canonicalPitch(list[i]);
+      if (name) on[name] = true;
+    }
+    keys = document.querySelectorAll('#piano .key');
+    for (i = 0; i < keys.length; i++) {
+      pitch = keys[i].getAttribute('data-pitch');
+      keys[i].classList.toggle('lit-enemy', !!on[pitch]);
+    }
   }
 
   function onKeyDown(ev) {
@@ -853,10 +896,6 @@
     if (!pitch) return;
     ev.preventDefault();
     noteOff(pitch, 'key');
-  }
-
-  function shortPitch(pitch) {
-    return String(pitch);
   }
 
   function buildPiano() {
@@ -887,15 +926,15 @@
       btn.setAttribute('data-key', item.key.toLowerCase());
       var pitch = pitchForKey(item.key);
       if (pitch) btn.setAttribute('data-pitch', pitch);
-      btn.setAttribute('aria-label', item.key + ' ' + item.pitch);
-      var k = document.createElement('span');
-      k.className = 'k';
-      k.textContent = item.key;
-      var p = document.createElement('span');
-      p.className = 'p';
-      p.textContent = shortPitch(item.pitch);
-      btn.appendChild(k);
-      btn.appendChild(p);
+      btn.setAttribute('aria-label', pitch || item.pitch);
+      var enemy = document.createElement('span');
+      enemy.className = 'glow enemy';
+      enemy.setAttribute('aria-hidden', 'true');
+      var playerGlow = document.createElement('span');
+      playerGlow.className = 'glow player';
+      playerGlow.setAttribute('aria-hidden', 'true');
+      btn.appendChild(enemy);
+      btn.appendChild(playerGlow);
       piano.appendChild(btn);
     }
   }
@@ -947,6 +986,7 @@
   }
 
   function applyKeyboard(on, persist) {
+    if (KEYBOARD_ALWAYS) on = true;
     var dock = $('keys');
     if (dock) dock.hidden = !on;
     document.body.classList.toggle('kb-on', !!on);
@@ -955,7 +995,7 @@
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.classList.toggle('on', !!on);
     }
-    if (persist) {
+    if (persist && !KEYBOARD_ALWAYS) {
       try { localStorage.setItem(KB_KEY, on ? 'on' : 'off'); } catch (e) {}
     }
     requestAnimationFrame(refreshTape);
@@ -1535,7 +1575,7 @@
   function init() {
     buildPiano();
     bindOnscreenKeys();
-    applyKeyboard(readKeyboardPref(), false);
+    applyKeyboard(KEYBOARD_ALWAYS || readKeyboardPref(), false);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
     document.addEventListener('pointerdown', onGestureUnlock, true);

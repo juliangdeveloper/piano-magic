@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Chart = require(path.join(__dirname, '..', 'js', 'combat', 'chart.js'));
 const Director = require(path.join(__dirname, '..', 'js', 'combat', 'director.js'));
+const FULL_HP = Chart.PLAYER_HP;
 
 function n(pitch, beat) {
   return { pitch, beat, dur: 1 };
@@ -62,11 +63,11 @@ test('D0: VERSION 0.1.1', () => {
   assert.strictEqual(Director.VERSION, '0.1.1');
 });
 
-test('D1: al empezar, setup listen-only, HP 15/20, BPM 60, sala C = Agua', () => {
+test('D1: al empezar, setup listen-only, HP del override y jefe 20, BPM 60, sala C = Agua', () => {
   const ctx = make();
   const s = ctx.dir.start(0);
   assert.strictEqual(s.phase, 'setup');
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.bpm, 60);
   assert.strictEqual(s.roomKey, 'C');
@@ -85,7 +86,7 @@ test('D2: tocar en setup no cambia HP', () => {
   ctx.dir.noteOn('G4', 500);
   ctx.set(4000);
   const s = ctx.dir.tick(4000);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.bossHp, 20);
   assert.ok(s.lastResolve);
   assert.strictEqual(s.lastResolve.kind, 'setup');
@@ -100,7 +101,7 @@ test('D3: defend perfecto no hace daño al jefe ni al jugador', () => {
   playBar(ctx, 8000, ['C4', 'C4', 'C4', 'C4'], true);
   const s = ctx.dir.tick(12000);
   assert.strictEqual(s.bossHp, 20);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.lastResolve.kind, 'defend-perfect');
   assert.strictEqual(s.lastResolve.grade, 'perfect');
   assert.strictEqual(s.lastResolve.bossDamage, 0);
@@ -115,7 +116,7 @@ test('D4: defend fallido hace 3 al jugador, 0 al jefe', () => {
   ctx.dir.tick(4000); // setup → hole
   ctx.dir.tick(8000); // hole idle → first defend
   const s = ctx.dir.tick(12000);
-  assert.strictEqual(s.playerHp, 12);
+  assert.strictEqual(s.playerHp, FULL_HP - 3);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.lastResolve.kind, 'defend-fail');
   assert.strictEqual(s.lastResolve.grade, 'fail');
@@ -127,10 +128,10 @@ test('D5: agujero en silencio no daña; improvisar mayor pega al jefe, no al jug
   ctx.dir.tick(4000); // setup → hole
   let s = ctx.dir.tick(4000);
   assert.strictEqual(s.phase, 'hole');
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   s = ctx.dir.tick(8000);
   assert.strictEqual(s.lastResolve.kind, 'hole-idle');
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.phase, 'defend');
 
@@ -142,7 +143,7 @@ test('D5: agujero en silencio no daña; improvisar mayor pega al jefe, no al jug
   assert.strictEqual(s.lastResolve.kind, 'hole-spell');
   assert.strictEqual(s.lastResolve.spell.action, 'attack');
   assert.strictEqual(s.lastResolve.playerDamage, 0);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.bossHp, 18);
   assert.strictEqual(s.outcome, null);
 });
@@ -180,10 +181,10 @@ test('D8: reset / start otra vez restaura HP y fase', () => {
   const ctx = make();
   ctx.dir.start(0);
   ctx.dir.tick(12000);
-  assert.ok(ctx.dir.snapshot().playerHp < 15);
+  assert.ok(ctx.dir.snapshot().playerHp < FULL_HP);
   ctx.dir.reset();
   const s = ctx.dir.start(0);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.bossHp, 20);
   assert.strictEqual(s.phase, 'setup');
   assert.strictEqual(s.ended, false);
@@ -202,9 +203,11 @@ test('D9: translator convierte 1000ms @60bpm en 1 beat y bar boundaries', () => 
   assert.ok(Math.abs(m.beatInBar - 0.5) < 1e-9);
 });
 
-test('D10: chart parseado conserva HP y el id de la sala', () => {
+test('D10: el override pisa el HP del jugador; el jefe y el id quedan', () => {
   const parsed = Chart.parse(raw);
-  assert.strictEqual(parsed.hp.player, 15);
+  assert.strictEqual(FULL_HP, 1000);
+  assert.strictEqual(raw.hp.player, 15);
+  assert.strictEqual(parsed.hp.player, FULL_HP);
   assert.strictEqual(parsed.hp.boss, 20);
   assert.strictEqual(Director.create({ chart: raw }).chart.id, 'sala-c');
 });
@@ -219,7 +222,7 @@ test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
   assert.strictEqual(s.lastResolve.grade, 'partial');
   assert.strictEqual(s.lastResolve.kind, 'defend-partial');
   assert.strictEqual(s.bossHp, 20);
-  assert.strictEqual(s.playerHp, 13);
+  assert.strictEqual(s.playerHp, FULL_HP - 2);
 });
 
 test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
@@ -241,7 +244,7 @@ test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
   assert.strictEqual(s.lastResolve.spell.action, 'attack');
   assert.strictEqual(s.lastResolve.bossDamage, 3);
   assert.strictEqual(s.bossHp, 17);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
 });
 
 test('D13: NoteOn en el agujero entra en improvNotes; en setup o defend, no', () => {
@@ -282,7 +285,7 @@ test('D15: la pausa congela el beat; continuar no salta compases ni resuelve de 
   assert.ok(Math.abs(s.beat - 3.9) < 1e-9);
   assert.strictEqual(s.phase, 'setup');
   assert.strictEqual(s.lastResolve, null);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   ctx.dir.noteOn('E4', 15000);
   s = ctx.dir.snapshot(20000);
   assert.strictEqual(s.improvNotes.length, 0);
@@ -295,7 +298,7 @@ test('D15: la pausa congela el beat; continuar no salta compases ni resuelve de 
   assert.strictEqual(s.phase, 'hole');
   assert.strictEqual(s.lastResolve.kind, 'setup');
   assert.ok(Math.abs(s.beat - 4.1) < 1e-9);
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
   assert.strictEqual(s.bossHp, 20);
 });
 
@@ -364,7 +367,7 @@ test('D14: la cinta mira dos compases atrás cuando ya hay historia', () => {
   const s = ctx.dir.tick(20000);
   assert.strictEqual(s.barIndex, 5);
   assert.strictEqual(s.ribbon[0].globalBar, 3);
-  assert.strictEqual(s.playerHp, 6);
+  assert.strictEqual(s.playerHp, FULL_HP - 9);
   assert.strictEqual(s.bossHp, 20);
 });
 
@@ -388,7 +391,7 @@ test('D19: un par en voices es perfecto; una sola voz es parcial; el segundo eve
   t = 12000;
   s = both.tick(12000);
   assert.strictEqual(s.lastResolve.grade, 'perfect');
-  assert.strictEqual(s.playerHp, 15);
+  assert.strictEqual(s.playerHp, FULL_HP);
 
   t = 0;
   const one = Director.create({ chart: chord, now: () => t });
@@ -398,7 +401,7 @@ test('D19: un par en voices es perfecto; una sola voz es parcial; el segundo eve
   t = 12000;
   s = one.tick(12000);
   assert.strictEqual(s.lastResolve.grade, 'partial');
-  assert.strictEqual(s.playerHp, 13);
+  assert.strictEqual(s.playerHp, FULL_HP - 2);
 });
 
 test('D20: Tower Chime se recorre entero: ataques tras 7 y 14, silencio sin daño, campana E3', () => {
@@ -424,7 +427,7 @@ test('D20: Tower Chime se recorre entero: ataques tras 7 y 14, silencio sin dañ
   t = total * bpb * ms + 20;
   const end = dir.tick(t);
   assert.deepStrictEqual(holes, [8, 16]);
-  assert.strictEqual(end.playerHp, 15);
+  assert.strictEqual(end.playerHp, FULL_HP);
   assert.strictEqual(end.bossHp, 20);
   assert.strictEqual(end.lastResolve.grade, 'perfect');
   const bell = chart.loop[chart.loop.length - 1];

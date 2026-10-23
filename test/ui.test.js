@@ -39,15 +39,16 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.25, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.25');
+test('U3: versión 0.1.26, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.26');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.25');
+  assert.strictEqual(pkg.version, '0.1.26');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.25/);
-  assert.match(app, /VERSION = '0\.1\.25'/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.26/);
+  assert.match(app, /VERSION = '0\.1\.26'/);
   assert.equal(html.includes('boss-cloud.png'), false);
+  assert.equal(html.includes('0.1.25'), false);
   assert.equal(html.includes('0.1.24'), false);
   assert.equal(html.includes('0.1.23'), false);
   assert.equal(html.includes('0.1.22'), false);
@@ -152,4 +153,28 @@ test('U7: la mano izquierda cae en clave de fa y la derecha en sol', () => {
   assert.strictEqual(Tape.placeNote('C4', 'L').step, 10);
   assert.strictEqual(Tape.HAND_INK.R, '#1e4d8c');
   assert.strictEqual(Tape.HAND_INK.L, '#c2410c');
+});
+
+test('U8: el teclado no muestra letras, sigue visible y enciende jefe y jugador', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'css', 'ui.css'), 'utf8');
+  assert.equal(/id="keys"[^>]*\bhidden\b/.test(html), false);
+  assert.match(app, /KEYBOARD_ALWAYS = true/);
+  assert.equal(/className = 'k'/.test(app), false);
+  assert.equal(/className = 'p'/.test(app), false);
+  assert.equal(/textContent = item\.key/.test(app), false);
+  assert.match(app, /pitchForKey/);
+  assert.match(app, /paintKeyLights/);
+  assert.match(app, /activePitches/);
+  assert.match(app, /lit-enemy/);
+  assert.match(app, /lit-player/);
+  assert.match(app, /source === 'mic'/);
+  assert.match(app, /DETECT_FADE_MS = 280/);
+  assert.match(css, /\.glow\.enemy \{ background: #7c3aed; \}/);
+  assert.match(css, /\.glow\.player \{ background: #16a34a; \}/);
+  assert.match(css, /\.lit-enemy\.lit-player \.glow\.enemy \{ right: 50%; \}/);
+  assert.match(css, /\.lit-enemy\.lit-player \.glow\.player \{ left: 50%; \}/);
+  assert.equal(css.includes('#1e4d8c'), false);
+  assert.equal(css.includes('#c2410c'), false);
 });

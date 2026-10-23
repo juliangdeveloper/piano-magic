@@ -589,12 +589,14 @@ footer {
   appearance: none;
   border: none;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   gap: 1px;
-  padding-bottom: 6px;
+  padding: 0;
   touch-action: none;
 }
 
@@ -622,21 +624,25 @@ footer {
   border-radius: 0 0 7px 7px;
   border: 1px solid #0a0d14;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
-  padding-bottom: 4px;
 }
 
-
-.key .k { font-size: 14px; font-weight: 800; line-height: 1; }
-.key .p { font-size: 12px; font-weight: 800; opacity: 0.9; line-height: 1.15; letter-spacing: -0.02em; }
-.key.black .k { font-size: 12px; }
-.key.black .p { font-size: 11px; }
-
-.key.white.down, .key.white:active {
-  background: linear-gradient(#fff4cc, #e7c56a);
+.key .glow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: inherit;
 }
-.key.black.down, .key.black:active {
-  background: linear-gradient(#6a5430, #2a2114);
-}
+.key .glow.enemy { background: #7c3aed; }
+.key .glow.player { background: #16a34a; }
+.key.lit-enemy .glow.enemy { opacity: 1; }
+.key.lit-player .glow.player { opacity: 1; }
+.key.lit-player.lit-fade .glow.player { opacity: 0; transition: opacity 280ms linear; }
+.key.lit-enemy.lit-player .glow.enemy { right: 50%; }
+.key.lit-enemy.lit-player .glow.player { left: 50%; }
 
 #overlay {
   display: none;
@@ -887,8 +893,6 @@ html, body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hid
 footer { flex: 0 0 auto; }
 #keys { flex: 0 0 auto; }
 .piano { height: clamp(84px, 14dvh, 150px); max-width: 980px; }
-.key .k { font-size: clamp(12px, 1.8dvh, 16px); }
-.key .p { font-size: clamp(11px, 1.5dvh, 14px); }
 body.picking #bossPortrait,
 body.picking #bossSprite { max-height: clamp(150px, 30dvh, 320px); }
 body.kb-on #bossPortrait,

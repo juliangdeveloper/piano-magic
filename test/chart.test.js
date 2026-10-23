@@ -17,14 +17,18 @@ function raw(id) {
   return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', id + '.json'), 'utf8'));
 }
 
-test('C1: parade-feather.json parsea con HP 15/20, BPM 72, sala C', () => {
+test('C1: parade-feather.json parsea con el HP del jugador en el override, jefe 20, BPM 72, sala C', () => {
+  const file = raw('parade-feather');
+  assert.strictEqual(file.hp.player, 15);
+  assert.strictEqual(file.hp.boss, 20);
   const c = load();
   assert.strictEqual(c.id, 'parade-feather');
   assert.strictEqual(c.title, 'Parade Feather');
   assert.strictEqual(c.bpm, 72);
   assert.deepStrictEqual(c.timeSig, [4, 4]);
   assert.strictEqual(c.roomKey, 'C');
-  assert.strictEqual(c.hp.player, 15);
+  assert.strictEqual(Chart.PLAYER_HP, 1000);
+  assert.strictEqual(c.hp.player, Chart.PLAYER_HP);
   assert.strictEqual(c.hp.boss, 20);
   assert.strictEqual(c.setup.listenOnly, true);
   assert.strictEqual(c.setup.bars, 1);
@@ -230,4 +234,22 @@ test('C14: la mano izquierda corregida, y "2.5" no es una duración', () => {
   delete named.loop[1].notes[0].dur;
   named.loop[1].notes[0].duration = '2.5';
   assert.throws(() => Chart.parse(named), /duración inválida/);
+});
+
+test('C15: una nota del jefe suena del centro del tiempo hasta el final de su duración', () => {
+  const bars = [{
+    kind: 'defend',
+    startBeat: 3,
+    notes: [{ pitch: 'G#4', beat: 0, dur: 1 }, { pitch: 'F#4', beat: 1, dur: 1 }]
+  }];
+  assert.deepStrictEqual(Chart.activePitches(bars, 3.49), []);
+  assert.deepStrictEqual(Chart.activePitches(bars, 3.5), ['G#4']);
+  assert.deepStrictEqual(Chart.activePitches(bars, 4.49), ['G#4']);
+  assert.deepStrictEqual(Chart.activePitches(bars, 4.5), ['F#4']);
+  assert.deepStrictEqual(Chart.activePitches(bars, 5.5), []);
+  const both = [{ kind: 'defend', startBeat: 0, notes: [{ pitch: 'C4', beat: 0, dur: 2 }, { pitch: 'C4', beat: 0, dur: 2 }, { pitch: 'E4', beat: 0, dur: 2 }] }];
+  assert.deepStrictEqual(Chart.activePitches(both, 0.5), ['C4', 'E4']);
+  const hole = [{ kind: 'hole', startBeat: 8, notes: [{ pitch: 'A3', beat: 1, dur: 1 }] }];
+  assert.deepStrictEqual(Chart.activePitches(hole, 9.5), ['A3']);
+  assert.deepStrictEqual(Chart.activePitches([{ kind: 'hole', startBeat: 0, notes: [] }], 0.5), []);
 });

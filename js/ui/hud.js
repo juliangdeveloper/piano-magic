@@ -1,4 +1,4 @@
-// js/ui/hud.js — HP 15/20, sala, BPM, feedback, buffs. Cromo del mockup.
+// js/ui/hud.js — HP, sala, BPM, feedback, buffs. Cromo del mockup.
 // UMD: module.exports + window.Hud.
 'use strict';
 

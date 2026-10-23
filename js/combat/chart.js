@@ -80,6 +80,10 @@
     };
   }
 
+  // Un número pisa el HP del jugador en todas las canciones.
+  // null vuelve a usar el valor del archivo. El HP del jefe no cambia.
+  var PLAYER_HP = 1000;
+
   function parse(raw) {
     if (!raw || typeof raw !== 'object') fail('chart vacío');
     if (!raw.id) fail('falta id');
@@ -100,6 +104,7 @@
     var boss = hp.boss;
     if (typeof player !== 'number' || player < 1) fail('hp.player inválido');
     if (typeof boss !== 'number' || boss < 1) fail('hp.boss inválido');
+    if (typeof PLAYER_HP === 'number' && PLAYER_HP >= 1) player = PLAYER_HP;
 
     return {
       id: String(raw.id),
@@ -162,6 +167,39 @@
     };
   }
 
+  // Notas del chart que están sonando en este beat: del centro del tiempo
+  // hasta el centro más la duración escrita. Vale para la melodía y para
+  // un ataque que traiga notas. El agujero vacío no enciende nada.
+  function activePitches(bars, beat) {
+    var seen = {};
+    var out = [];
+    if (!bars || typeof beat !== 'number' || !isFinite(beat)) return out;
+    var i;
+    var j;
+    var bar;
+    var notes;
+    var note;
+    var start;
+    var dur;
+    for (i = 0; i < bars.length; i++) {
+      bar = bars[i];
+      if (!bar) continue;
+      notes = bar.notes || [];
+      for (j = 0; j < notes.length; j++) {
+        note = notes[j];
+        if (!note || !note.pitch) continue;
+        start = hitOnset((bar.startBeat || 0) + (note.beat || 0));
+        dur = (typeof note.dur === 'number' && note.dur > 0) ? note.dur : 0;
+        if (dur <= 0) continue;
+        if (beat + 1e-6 < start || beat >= start + dur - 1e-9) continue;
+        if (seen[note.pitch]) continue;
+        seen[note.pitch] = true;
+        out.push(note.pitch);
+      }
+    }
+    return out;
+  }
+
   function upcoming(chart, fromBar, count) {
     count = count || 4;
     var out = [];
@@ -190,7 +228,9 @@
   }
 
   return {
+    PLAYER_HP: PLAYER_HP,
     parse: parse,
+    activePitches: activePitches,
     beatsForDuration: beatsForDuration,
     DURATION_BEATS: DURATION_BEATS,
     barAt: barAt,
