@@ -6,7 +6,7 @@ const Progress = require('../js/progress.js');
 
 const KEY = 'meta.v1.piano-magic';
 const NOW = '2026-10-23T18:00:00.000Z';
-const DECLARE = [{ key: 'fights_played', monotonic: true }];
+const DECLARE = [{ key: 'fights_played', tipo: 'total_acumulado' }];
 
 function mem(seed) {
   const data = Object.assign({}, seed || {});

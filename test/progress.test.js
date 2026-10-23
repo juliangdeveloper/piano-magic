@@ -82,9 +82,9 @@ test('las claves y los ids quedan fijos', () => {
   ]);
   assert.ok(Progress.ACHIEVEMENTS.length >= 5 && Progress.ACHIEVEMENTS.length <= 12);
   assert.strictEqual(Progress.SLUG, 'piano-magic');
-  assert.ok(Progress.STATS.length <= 20);
-  assert.deepStrictEqual(Progress.STATS.map((item) => item.key), Progress.STAT_KEYS);
-  assert.ok(Progress.STATS.every((item) => item.monotonic === true));
+  assert.ok(Progress.STAT_KEYS.length <= 20);
+  assert.deepStrictEqual(Object.keys(Progress.STATS), Progress.STAT_KEYS);
+  assert.ok(Progress.STAT_KEYS.every((key) => Meta.statConservaMaximo(Progress.STATS[key].tipo)));
 });
 
 test('las condiciones de cada logro', () => {
@@ -340,8 +340,8 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /pagehide/);
   assert.match(app, /visibilitychange/);
   assert.match(app, /visibilityState === 'hidden'/);
-  assert.match(html, /js\/meta\.js\?v=0\.1\.35/);
-  assert.match(html, /js\/progress\.js\?v=0\.1\.35/);
+  assert.match(html, /js\/meta\.js\?v=0\.1\.36/);
+  assert.match(html, /js\/progress\.js\?v=0\.1\.36/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');
@@ -466,9 +466,9 @@ test('ocultar la página vuelca un cambio pendiente antes de un segundo y no esc
     window: { parent: { postMessage(data) { posts.push(data); } } },
     location: { origin: 'https://example.test' }
   };
-  Progress.backfill('0.1.35', clock);
+  Progress.backfill('0.1.36', clock);
   assert.strictEqual(posts.length, 1);
-  Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.35', clock);
+  Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.36', clock);
   nowMs = 10_200;
   assert.strictEqual(record(storage).stats.fights_played, 0);
   assert.strictEqual(Progress.flush(storage, Object.assign({}, clock, { demo: true })), null);

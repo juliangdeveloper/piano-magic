@@ -4,10 +4,10 @@ const assert = require('node:assert');
 const Meta = require('../js/meta.js');
 
 const DECLARE = [
-  { key: 'fights_played', monotonic: true },
-  { key: 'fights_won', monotonic: true },
-  { key: 'best_accuracy_pct', monotonic: true },
-  { key: 'guests_now', monotonic: false }
+  { key: 'fights_played', tipo: 'total_acumulado' },
+  { key: 'fights_won', tipo: 'total_acumulado' },
+  { key: 'best_accuracy_pct', tipo: 'total_acumulado' },
+  { key: 'guests_now', tipo: 'valor_actual' }
 ];
 
 function mem() {
@@ -58,7 +58,7 @@ test('metaUpdate escribe la forma, funde por clave y ordena los logros', () => {
 
 test('el tope son las 20 primeras claves declaradas y las monótonas no bajan', () => {
   const declare = [];
-  for (let i = 0; i < 21; i++) declare.push({ key: 'k' + i, monotonic: i === 0 });
+  for (let i = 0; i < 21; i++) declare.push({ key: 'k' + i, tipo: i === 0 ? 'total_acumulado' : 'valor_actual' });
   const storage = mem();
   const stats = {};
   declare.forEach((item, i) => { stats[item.key] = i + 1; });

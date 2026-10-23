@@ -13,23 +13,25 @@
   var SAVE_KEY = 'pmSave';
   var DEBOUNCE_MS = 1000;
 
-  var STATS = [
-    { key: 'fights_played', monotonic: true },
-    { key: 'fights_won', monotonic: true },
-    { key: 'fights_lost', monotonic: true },
-    { key: 'perfect_notes_total', monotonic: true },
-    { key: 'bosses_defeated', monotonic: true },
-    { key: 'best_accuracy_pct', monotonic: true },
-    { key: 'perfect_fights', monotonic: true },
-    { key: 'damage_total', monotonic: true },
-    { key: 'parade_feather_wins', monotonic: true },
-    { key: 'veil_boat_wins', monotonic: true },
-    { key: 'tower_chime_wins', monotonic: true },
-    { key: 'new_world_largo_wins', monotonic: true },
-    { key: 'camptown_races_wins', monotonic: true },
-    { key: 'eine_kleine_wins', monotonic: true }
-  ];
-  var STAT_KEYS = STATS.map(function (item) { return item.key; });
+  var TIPO_STAT = Meta.TIPO_STAT;
+
+  var STATS = Object.freeze({
+    fights_played: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'peleas jugadas' },
+    fights_won: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'peleas ganadas' },
+    fights_lost: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'peleas perdidas' },
+    perfect_notes_total: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'notas perfectas' },
+    bosses_defeated: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'jefes distintos vencidos' },
+    best_accuracy_pct: { tipo: TIPO_STAT.MEJOR_MARCA, unidad: 'porcentaje de precisión en una pelea' },
+    perfect_fights: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'peleas sin fallar una nota' },
+    damage_total: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'puntos de daño causados' },
+    parade_feather_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Parade Feather' },
+    veil_boat_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Veil Boat' },
+    tower_chime_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Tower Chime' },
+    new_world_largo_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe New World Largo' },
+    camptown_races_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Camptown Races' },
+    eine_kleine_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Eine Kleine' }
+  });
+  var STAT_KEYS = Object.keys(STATS);
 
   var BOSSES = [
     'parade-feather',

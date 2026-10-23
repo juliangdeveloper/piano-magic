@@ -8,10 +8,14 @@
 
   var MAX_STATS = 20;
 
+  var FASE = Object.freeze({ IDEA: 1, DEFINICION: 2, DISENO: 3, CONSTRUCCION: 4, VALIDACION: 5, LANZAMIENTO_Y_MANTENIMIENTO: 6, DESCARTADA: 7 });
+  var ESTADO_FASE = Object.freeze({ PENDIENTE: 0, EN_CURSO: 1, BLOQUEADA: 2, EN_REVISION: 3, COMPLETADA: 4 });
+  var TIPO_STAT = Object.freeze({ TOTAL_ACUMULADO: 'total_acumulado', MEJOR_MARCA: 'mejor_marca', VALOR_ACTUAL: 'valor_actual' });
+
   var PROYECTO = {
     objetivo: 'Juego de combate musical publicado en la App Store: vencer a cada jefe tocando su partitura en un piano real.',
-    fase: 3,
-    fase_estado: 1,
+    fase: FASE.DISENO,
+    fase_estado: ESTADO_FASE.EN_CURSO,
     fases_completadas: 2
   };
 
@@ -21,12 +25,26 @@
     return typeof n === 'number' && Number.isInteger(n) && n >= lo && n <= hi;
   }
 
+  function enumValido(enumeracion, valor) {
+    return Object.values(enumeracion).indexOf(valor) !== -1;
+  }
+
+  function statConservaMaximo(tipo) {
+    return tipo === TIPO_STAT.TOTAL_ACUMULADO || tipo === TIPO_STAT.MEJOR_MARCA;
+  }
+
+  function statsDeclarados(stats) {
+    if (Array.isArray(stats)) return stats;
+    if (!stats || typeof stats !== 'object') return [];
+    return Object.keys(stats).map(function (key) { return { key: key, tipo: stats[key] && stats[key].tipo }; });
+  }
+
   function metaProyecto(p) {
     try {
       if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
       var o = p.objetivo;
       if (typeof o !== 'string' || !o.trim() || Array.from(o).length > 140) return null;
-      if (!proyectoInt(p.fase, 1, 7) || !proyectoInt(p.fase_estado, 0, 4) || !proyectoInt(p.fases_completadas, 0, 6)) return null;
+      if (!enumValido(FASE, p.fase) || !enumValido(ESTADO_FASE, p.fase_estado) || !proyectoInt(p.fases_completadas, 0, FASE.LANZAMIENTO_Y_MANTENIMIENTO)) return null;
       return { objetivo: o, fase: p.fase, fase_estado: p.fase_estado, fases_completadas: p.fases_completadas };
     } catch (e) {
       return null;
@@ -72,13 +90,13 @@
   function declaredList(declare) {
     var list = [];
     var seen = {};
-    if (!Array.isArray(declare)) return list;
+    declare = statsDeclarados(declare);
     for (var i = 0; i < declare.length && list.length < MAX_STATS; i++) {
       var item = declare[i];
       var key = typeof item === 'string' ? item : (item && item.key);
       if (typeof key !== 'string' || !key || seen[key]) continue;
       seen[key] = true;
-      list.push({ key: key, monotonic: !!(item && item.monotonic) });
+      list.push({ key: key, tipo: item && item.tipo });
     }
     return list;
   }
@@ -138,7 +156,7 @@
         var item = decl[i];
         var hasNew = Object.prototype.hasOwnProperty.call(incoming, item.key) && finiteNumber(incoming[item.key]);
         var hasOld = finiteNumber(src[item.key]);
-        if (hasNew && hasOld && item.monotonic) stats[item.key] = Math.max(src[item.key], incoming[item.key]);
+        if (hasNew && hasOld && statConservaMaximo(item.tipo)) stats[item.key] = Math.max(src[item.key], incoming[item.key]);
         else if (hasNew) stats[item.key] = incoming[item.key];
         else if (hasOld) stats[item.key] = src[item.key];
       }
@@ -208,6 +226,12 @@
     metaUpdate: metaUpdate,
     metaProyecto: metaProyecto,
     metaSetProyecto: metaSetProyecto,
-    PROYECTO: PROYECTO
+    PROYECTO: PROYECTO,
+    FASE: FASE,
+    ESTADO_FASE: ESTADO_FASE,
+    TIPO_STAT: TIPO_STAT,
+    enumValido: enumValido,
+    statConservaMaximo: statConservaMaximo,
+    statsDeclarados: statsDeclarados
   };
 });
