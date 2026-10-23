@@ -32,7 +32,7 @@ test('metaUpdate escribe la forma, funde por clave y ordena los logros', () => {
     stats: { fights_won: 1, fights_played: 2, note: 'no', guests_now: 4 },
     logros: ['first_win', 'first_fight']
   }, { storage, now, declare: DECLARE });
-  assert.deepStrictEqual(Object.keys(first), ['v', 'slug', 'version', 'updatedAt', 'stats', 'logros', 'hitos']);
+  assert.deepStrictEqual(Object.keys(first), ['v', 'slug', 'version', 'updatedAt', 'stats', 'logros', 'hitos', 'proyecto']);
   assert.strictEqual(first.v, 1);
   assert.strictEqual(first.slug, 'piano-magic');
   assert.strictEqual(first.version, '0.1.31');
