@@ -1,7 +1,3 @@
-// js/instrument/translator.js — NoteOn/Off + time → beats y límites de compás.
-// Stub M0: nombres de nota, teclado QWERTY y Web MIDI.
-// El micrófono entra por el mismo noteOn. La detección vive en el motor de piano-transcribe.
-// UMD: module.exports + window.InstrumentTranslator.
 'use strict';
 
 (function (root, factory) {
@@ -19,7 +15,6 @@
     'C♭': 'B', 'D♭': 'C#', 'E♭': 'D#', 'F♭': 'E', 'G♭': 'F#', 'A♭': 'G#', 'B♭': 'A#'
   };
 
-  // Home row blancas; fila superior negras. Graves (Do3–Fa3) a la izquierda.
   var KEY_MAP = {
     q: 'C3', '2': 'C#3', m: 'D3', '3': 'D#3', ',': 'E3', '.': 'F3', '4': 'F#3',
     v: 'G3', r: 'G#3', b: 'A3', i: 'A#3', n: 'B3',
@@ -80,7 +75,6 @@
         letter = mapped.replace('#', '');
         acc = mapped.indexOf('#') >= 0 ? '#' : '';
         if (letter === 'B' && m[1].toUpperCase() === 'C') {
-          // C♭ — octave already encoded in name C♭4 → B3, skip for M0
         }
       }
     }
@@ -137,10 +131,6 @@
     return 60000 / b;
   }
 
-  /**
-   * Crea un traductor anclado a un tempo y un t0.
-   * Contract: noteOn/noteOff + timeMs → beats + límites de compás.
-   */
   function create(opts) {
     opts = opts || {};
     var bpm = (typeof opts.bpm === 'number' && opts.bpm > 0) ? opts.bpm : 60;

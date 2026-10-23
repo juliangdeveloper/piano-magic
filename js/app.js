@@ -1,14 +1,7 @@
-// js/app.js — cinta, HUD, tutorial, pausa, teclado y micrófono opcional.
-// El motor de notas se carga en vivo desde piano-transcribe (engine/v1).
-// Este juego solo lee las notas; el combate lo dibuja él. No hay copia local.
-// Cada NoteOn (pantalla, QWERTY, MIDI) pasa por la sesión y suena.
-// El mic usa session.hop. El hop ya fusiona, así que no vuelve a llamar a press.
-// El AudioContext se desbloquea en el gesto: beep audible + audioSession playback,
-// y el oscilador arranca en pointerdown sin esperar a resume().then().
 'use strict';
 
 (function () {
-  var VERSION = '0.1.33';
+  var VERSION = '0.1.34';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -16,7 +9,6 @@
   var rivalId = null;
   var lastPopSeq = 0;
   var KB_KEY = 'onscreenKeyboard';
-  // El teclado en pantalla no se esconde. false vuelve a dejar que el botón lo oculte.
   var KEYBOARD_ALWAYS = true;
   var DETECT_FADE_MS = 280;
 
@@ -77,8 +69,6 @@
     box.className = 'visible';
   }
 
-  // Carga genérica del motor publicado. version.txt sin caché, luego el módulo.
-  // Si esa petición falla, reintenta con la última versión que sí cargó.
   function loadPianoEngine(root) {
     return fetch(root + 'version.txt?t=' + Date.now(), { cache: 'no-store' })
       .then(function (res) {
@@ -111,7 +101,6 @@
     return String(pitch);
   }
 
-  // Solo teclado, teclado en pantalla y MIDI si el motor no llega.
   function localPress(pitch, source) {
     var slot = localHeld[pitch];
     var fresh = !slot;
@@ -232,8 +221,6 @@
     return platform === 'MacIntel' && touches > 1;
   }
 
-  // playback: altavoz, ignora el silencio del iPhone. play-and-record con el mic.
-  // No volvemos a "auto": en Safari eso respeta el mute y a veces deja el speaker mudo.
   function preferSpeaker(micOn) {
     var audioSession = (typeof navigator !== 'undefined') ? navigator.audioSession : null;
     if (!audioSession) return false;
@@ -329,8 +316,6 @@
     return audioCtx;
   }
 
-  // El analizador no entra en el primer NoteOn: un tap mudo extra retrasa el
-  // ataque y en iOS a veces deja la ruta del altavoz en silencio.
   function ensureAnalyser() {
     if (analyser || !audioCtx || !masterGain) return analyser;
     try {
@@ -346,9 +331,6 @@
     return analyser;
   }
 
-  // Beep corto (HTML playsinline + buffer) en el mismo turno del gesto.
-  // Un buffer de 1 muestra en silencio deja el altavoz del iPhone/iPad mudo
-  // y los auriculares sí suenan. No esperamos a resume().then() para el primer sample.
   function audiblePrime(ctx) {
     var rate = ctx.sampleRate || 44100;
     var n = Math.max(8, Math.floor(rate * 0.03));
@@ -417,7 +399,6 @@
     var type = opts.type || 'triangle';
     var t0 = ctx.currentTime;
     var amp = ctx.createGain();
-    // Ataque ya audible en el primer sample: el ramp desde 0 comía ~12 ms.
     amp.gain.setValueAtTime(peak * 0.7, t0);
     amp.gain.linearRampToValueAtTime(peak, t0 + 0.005);
     amp.gain.linearRampToValueAtTime(peak * 0.5, t0 + Math.max(0.04, dur * 0.4));
@@ -455,7 +436,6 @@
     if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
       try { ctx.resume(); } catch (e) {}
     }
-    // El tono se agenda antes del beep de desbloqueo, para no esperar al WAV.
     try { startVoice(ctx, freq, opts); } catch (e2) {}
     if (!audioUnlocked || ctx.state !== 'running') {
       try { audiblePrime(ctx); } catch (e3) {}
@@ -484,7 +464,6 @@
 
   function playChartMelody(state) {
     if (!state || state.paused || !state.running || state.ended) return;
-    // El altavoz del jefe se colaría en el mic y contaría como nota del jugador.
     if (micStream) {
       lastAudioBeat = state.beat;
       return;
@@ -594,7 +573,6 @@
     paintKeyLights(state);
 
     if (state.running && !state.paused) {
-      // El clic cae en el centro del tiempo, junto a la marca y a la nota.
       var slot = Chart.centerReached(state.beat);
       if (slot !== lastClickBeat && slot >= 0) {
         lastClickBeat = slot;
@@ -693,10 +671,6 @@
     lastPopSeq = 0;
     clearPops();
     lastPaintMs = performance.now();
-    // Un solo rAF. El interval no abre otra cadena: solo recupera
-    // un frame si el anterior se atrasó (pestaña oculta). Si cada
-    // tick volviera a pedir un rAF, al llegar a Defiende la cinta
-    // se atasca y el reloj da tirones.
     tickTimer = setInterval(function () {
       if (!runningLoop) return;
       if (performance.now() - lastPaintMs > 80) render();
@@ -704,11 +678,6 @@
     requestAnimationFrame(rafLoop);
   }
 
-  // v0.1.8: reiniciar no debe dejar el micrófono mudo. Si la pista murió
-  // (iOS la corta al cambiar la sesión de audio) se reabre sola; si sigue
-  // viva se reanuda el AudioContext y se rearma el intervalo de lectura.
-  // v0.1.10: solo una pista 'ended' está muerta; 'muted' es transitorio en iOS
-  // (antes se cerraba y se volvía a pedir el mic, y a veces no volvía).
   function micTrackAlive() {
     if (!micStream) return false;
     var tr = micStream.getAudioTracks ? micStream.getAudioTracks() : [];
@@ -719,7 +688,6 @@
     return true;
   }
 
-  // Rehace el MediaStreamSource sobre la misma pista (no pide permiso otra vez).
   function rewireMic() {
     var ctx = audioCtx;
     if (!ctx || !micStream || !micHp) return false;
@@ -766,9 +734,6 @@
     director.pause(performance.now());
     paused = true;
     if (audioCtx && micStream) {
-      // v0.1.10: con micrófono no se suspende el AudioContext. En Safari
-      // (iPad/iPhone) suspender y reanudar deja el MediaStreamSource entregando
-      // silencio: era la causa de que el mic dejara de oír tras Pausa→Reiniciar.
       audioHeldForPause = true;
       if (masterGain) masterGain.gain.value = 0;
     } else if (audioCtx && audioCtx.state === 'running') {
@@ -810,7 +775,6 @@
     if (paused || !pitch) return;
     pitch = canonicalPitch(pitch);
     if (!pitch) return;
-    // El hop del mic ya fusionó. Volver a press contaría la nota dos veces.
     var merged = opts.merged || null;
     if (!merged) {
       if (source === 'mic') return;
@@ -820,7 +784,6 @@
     if (merged.sound && !opts.silent) playPitch(name);
     markKey(name, true, source);
     if (!merged.fresh) return;
-    // El tutorial puede sonar (desbloquea el audio) pero no entra al combate.
     if (tutorialOpen()) return;
     if (merged.combat && director) director.noteOn(name, performance.now(), merged.voices);
   }
@@ -912,7 +875,6 @@
     if (!piano || !window.InstrumentTranslator) return;
     piano.textContent = '';
     var labels = InstrumentTranslator.KEY_LABELS;
-    // C3–A5. Las blancas salen en el orden de KEY_LABELS; las negras se ubican por la blanca de abajo.
     function isBlack(it) { return /[#b]/.test(it.pitch.replace(/^[A-G]/, '').replace(/\d+$/, '')); }
     var whites = labels.filter(function (it) { return !isBlack(it); });
     var W = whites.length || 1;
@@ -957,7 +919,6 @@
         var pitch = pitchForKey(btn.getAttribute('data-key'));
         if (!pitch) return;
         pointers[e.pointerId] = pitch;
-        // Sonido en pointerdown, antes de preventDefault y del combate.
         noteOn(pitch, 'osk');
         e.preventDefault();
         try { btn.setPointerCapture(e.pointerId); } catch (err) {}
@@ -1133,8 +1094,6 @@
       try { audioCtx.resume(); } catch (e0) {}
     }
     try { micAnalyser.getFloatTimeDomainData(micBuf); } catch (e) { return; }
-    // Vigía: un mic real nunca da ceros exactos. ~0.6 s de ceros = la fuente
-    // quedó muda (Safari); se rehace, y si no basta se reabre el micrófono.
     var allZero = true;
     for (var zi = 0; zi < micBuf.length; zi += 16) { if (micBuf[zi] !== 0) { allZero = false; break; } }
     if (allZero && audioCtx.state === 'running') {
@@ -1150,7 +1109,6 @@
     }
     micSilentTicks = 0;
     micRewires = 0;
-    // Mismo hop de 20 ms. El motor mide, vota y fusiona; aquí solo se leen las notas.
     var out = session.hop(micBuf, audioCtx.sampleRate || 48000, performance.now(), {
       blocked: synthBlocks
     });
@@ -1169,8 +1127,6 @@
       preferSpeaker(false);
       return;
     }
-    // Después del permiso: play-and-record reabre la ruta. El beep HTML
-    // empuja el altavoz; si iOS igual usa el auricular, el aviso lo dice.
     preferSpeaker(true);
     if (ctx.state !== 'running') {
       try { ctx.resume(); } catch (e) {}
@@ -1288,7 +1244,6 @@
     else enableMic();
   }
 
-  // v0.1.9: rival elegible + Modo libre.
   function readRival() {
     try { return localStorage.getItem(RIVAL_KEY); } catch (e) { return null; }
   }
@@ -1468,7 +1423,6 @@
     });
   }
 
-  // Desde pausa o desde el fin: vuelve a la pantalla de elegir rival.
   function backToPicker() {
     if (!director || tutorialOpen()) return;
     releaseHeld();
@@ -1574,8 +1528,6 @@
 
   function onGestureUnlock(ev) {
     if (paused || audioHeldForPause) return;
-    // La tecla (OSK o QWERTY) agenda el tono ella misma. Si el desbloqueo
-    // corre antes, en captura, el primer sample espera al beep.
     if (ev && ev.type === 'keydown' && pitchForKey(ev.key)) return;
     var t = ev && ev.target;
     if (t && t.closest && t.closest('#piano .key')) return;
@@ -1614,7 +1566,6 @@
       if (tutorialOpen()) return;
       applyKeyboard($('keys').hidden, true);
     });
-    // v0.1.10: la cinta se ajusta al girar o al cambiar las barras de Safari.
     window.addEventListener('resize', function () {
       requestAnimationFrame(function () {
         refreshTape();

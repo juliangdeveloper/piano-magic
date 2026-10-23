@@ -1,8 +1,3 @@
-// js/ui/tape.js — gran pentagrama continuo sobre el pergamino.
-// Clave de sol (mano derecha) y clave de fa (mano izquierda). Playhead fijo.
-// El ataque (kind hole) es un marco en el mismo pentagrama. Sin VexFlow ni CDN:
-// la cinta es un ribbon que se desplaza, no una partitura de compases estáticos.
-// UMD: module.exports + window.Tape.
 'use strict';
 
 (function (root, factory) {
@@ -14,14 +9,12 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // Mismo centro que Chart.BEAT_CENTER: el tiempo del JSON, más medio beat.
   var BEAT_CENTER = 0.5;
   var KIND_INK = { setup: '#1d4e89', defend: '#1b6b42', hole: '#6d3d96' };
   var KIND_LABEL = { setup: 'ESCUCHA', defend: 'DEFIENDE', hole: 'ATAQUE' };
   var PARCHMENT = '#efe6d2';
   var INK = '#1c140c';
   var HAND_INK = { R: '#1e4d8c', L: '#c2410c' };
-  // Fracción desde el tope del glifo (treble-clef.png) hasta la línea de Sol.
   var CLEF_G = 0.486;
   var LETTER = { C: -2, D: -1, E: 0, F: 1, G: 2, A: 3, B: 4 };
 
@@ -52,7 +45,6 @@
     };
   }
 
-  // Número de dedo solo si la nota del chart lo trae (1–5). Derecha arriba, izquierda debajo.
   function fingerMark(note) {
     if (!note || typeof note.finger !== 'number' || !isFinite(note.finger)) return null;
     if (note.finger !== Math.round(note.finger)) return null;
@@ -66,7 +58,6 @@
     return p ? p.step : null;
   }
 
-  // Mano L en clave de fa (Sol2 = línea inferior, paso local 0). Sin mano, de Si3 hacia abajo va al fa.
   function placeNote(pitch, hand) {
     var parts = pitchParts(pitch);
     if (!parts) return null;
@@ -77,15 +68,6 @@
     return { parts: parts, step: parts.step, staff: 'treble', low: -2, high: 10, hand: hand === 'R' ? 'R' : 'R' };
   }
 
-  /**
-   * Marcas de pulso dentro de un compás de Ataque (kind hole).
-   * La barra de compás es el divisor (beat onset 0). El número 1 no va
-   * encima de esa línea: cada marca se centra en su cuarto
-   * (onset + BEAT_CENTER), así 1 queda dentro del primer tiempo y 2–4
-   * siguen a un beat de distancia, antes de la barra siguiente.
-   * Las cabezas del chart usan el mismo centro (`chartNoteBeat`).
-   * current sigue el cuarto que contiene playBeat, no la x del glifo.
-   */
   function attackBeatMarks(barStart, beatsPerBar, playBeat) {
     var n = (typeof beatsPerBar === 'number' && beatsPerBar > 0) ? Math.round(beatsPerBar) : 4;
     var start = (typeof barStart === 'number' && isFinite(barStart)) ? barStart : 0;
@@ -103,12 +85,6 @@
     return marks;
   }
 
-  /**
-   * Presentación de un NoteOn de Defend.
-   * perfect brilla más y funde más rápido que partial.
-   * fail no se funde: la nota queda en su beat.
-   * ageBeats es el tiempo de cinta desde el onset (la pausa lo congela).
-   */
   function chartNoteBeat(barStart, noteBeat) {
     var start = (typeof barStart === 'number' && isFinite(barStart)) ? barStart : 0;
     var nb = (typeof noteBeat === 'number' && isFinite(noteBeat)) ? noteBeat : 0;
@@ -179,7 +155,6 @@
       return bottomLine - step * (lineGap / 2);
     }
 
-    // Líneas adicionales: bajo la primera línea par (low) y sobre la primera de arriba (high).
     function drawLedgers(c, x, step, bottomLine, lineGap, low, high) {
       var ls;
       if (low == null) low = -2;
@@ -237,7 +212,6 @@
       c.fill();
     }
 
-    // Derecha arriba de la nota, izquierda debajo. El número no pisa la plica.
     function drawFingerNum(c, x, y, step, mark, lineGap, color, canvasH) {
       if (!mark) return;
       var num = mark.finger;
@@ -311,9 +285,6 @@
       c.restore();
     }
 
-    // v0.1.11: notas del Ataque con figura: cabeza hueca (blanca/redonda), plica,
-    // puntillo, ligaduras entre segmentos, barras (1 = corcheas, 2 = semicorcheas)
-    // agrupadas por pulso; corchete si queda sola. Fuera de tiempo = gris con ×.
     function drawRhythm(c, improv, xAt, bottomLine, lineGap, clefRight, w, place) {
       place = place || function (parts) { return { step: parts.step, low: -2, high: 10, color: null }; };
       var heads = [];
@@ -341,7 +312,6 @@
         if (h.acc === '#') drawSharp(c, h.x - lineGap * 0.85, h.y, lineGap, col);
         else if (h.acc === 'b') drawFlat(c, h.x - lineGap * 0.7, h.y, lineGap, col);
         var hollow = h.base >= 2;
-        // drawNote siempre dibuja plica arriba/abajo; para redonda la tapamos con una sin plica
         c.save();
         c.globalAlpha = 1;
         drawLedgers(c, h.x, h.step, bottomLine, lineGap, h.low, h.high);
@@ -362,7 +332,6 @@
           (groups[key] = groups[key] || []).push(h);
         }
       });
-      // ligaduras
       heads.forEach(function (h) {
         if (!h.tied || !h.next || h.skip) return;
         var x2 = Math.min(h.next.x, w + 12);
@@ -370,7 +339,6 @@
         c.beginPath(); c.moveTo(h.x + rx * 0.6, h.y + lineGap * 0.55);
         c.quadraticCurveTo((h.x + x2) / 2, h.y + lineGap * 1.35, x2 - rx * 0.6, h.y + lineGap * 0.55); c.stroke();
       });
-      // barras por pulso
       var bw = Math.max(2.4, lineGap * 0.38), gap = bw * 1.6;
       Object.keys(groups).forEach(function (k) {
         var gr = groups[k].sort(function (a, b) { return a.pos - b.pos; });
@@ -386,7 +354,6 @@
         gr.forEach(function (h) { c.beginPath(); c.moveTo(h.sx, h.sy); c.lineTo(h.sx, top); c.stroke(); h.sy = top; });
         var x0 = gr[0].sx, x1 = gr[gr.length - 1].sx;
         c.fillRect(x0, top, x1 - x0, bw);
-        // segunda barra: tramos de semicorcheas consecutivas; si una sola, medio corchete hacia su vecina
         for (var i2 = 0; i2 < gr.length; i2++) {
           if (gr[i2].base > 0.25) continue;
           var j = i2;
@@ -402,7 +369,6 @@
       });
     }
 
-    // Marca de zona, sin palabras: arcos (escucha), rayo (ataque), escudo (defiende).
     function drawZoneMark(c, x, y, kind, s) {
       c.save();
       c.translate(x, y);
@@ -539,7 +505,6 @@
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
 
-      // Gran pentagrama: sol arriba (derecha), fa abajo (izquierda). Caben en el alto de la cinta.
       var gapRatio = 1.35;
       var lineGap = (h - 8) / (8 + gapRatio);
       lineGap = Math.max(5, Math.min(18, lineGap));
@@ -585,7 +550,6 @@
         return playheadX + (absBeat - beat) * pxPerBeat;
       }
 
-      // Ticks y números 1–2–3–4 por encima del pentagrama: no tapan las cabezas.
       function drawAttackGuide(bar) {
         var marks = attackBeatMarks(bar.startBeat, bpb, beat);
         var mi;

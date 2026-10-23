@@ -1,4 +1,3 @@
-// test/beats.test.js — marcas de pulso del compás de Ataque.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');

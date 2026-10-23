@@ -1,4 +1,3 @@
-// test/spell.test.js — SpellEngine v0.1.1: 12 claves, ×sala, Defend copia, Hole DPS.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -209,7 +208,7 @@ test('S17: G mayor en sala C → ×sala 0.85 (1 paso)', () => {
   assert.strictEqual(s.circleDistance, 1);
   assert.strictEqual(s.multiplier, 0.85);
   const r = Spell.resolveHole(played(['G4', 'B4', 'D4']), 'C');
-  assert.strictEqual(r.bossDamage, 2); // round(2*0.85)=2
+  assert.strictEqual(r.bossDamage, 2);
 });
 
 test('S18: tríada mayor C E G es ataque, no cura pentatónica', () => {

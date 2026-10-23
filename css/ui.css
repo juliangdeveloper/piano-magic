@@ -1,4 +1,3 @@
-/* css/ui.css — piano-magic v0.1.8. Sin fuentes ni CDN. */
 :root {
   --bg0: #10243f;
   --bg1: #1c3d68;
@@ -790,7 +789,6 @@ footer {
   .piano { height: 112px; }
 }
 
-/* v0.1.9: selector de rival, Modo libre y encaje iPad mini sin scroll. */
 .rival-picker {
   display: flex;
   flex: 0 1 auto;
@@ -881,10 +879,6 @@ footer {
   100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
 }
 
-/* v0.1.10: layout que llena la pantalla sin scroll en iPad/iPhone (Safari).
-   El cuerpo nunca hace scroll; #scroll es una columna flex y la cinta crece
-   para ocupar el alto libre. Los tamaños escalan con la ventana (dvh/vw)
-   en vez de encoger todo con media queries fijas. */
 html, body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 #frame { height: 100vh; height: 100dvh; max-width: min(1180px, 100vw); overflow: hidden; padding-bottom: var(--safe-bottom); }
 #scroll { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
@@ -923,7 +917,6 @@ body.picking.kb-on #bossSprite { max-height: clamp(110px, 20dvh, 200px); }
   #tapeFrame { min-height: 112px; }
 }
 
-/* v0.1.11: iOS ignora user-scalable=no; sin doble toque-zoom ni rebote que parezcan scroll. */
 html, body { overscroll-behavior: none; touch-action: manipulation; }
 #frame, #scroll, footer, #keys { overscroll-behavior: none; }
 button { touch-action: manipulation; }
