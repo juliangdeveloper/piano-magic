@@ -44,7 +44,7 @@ test('un bloque inválido se omite y nunca lanza', () => {
     Object.assign({}, P, { objetivo: '' }),
     Object.assign({}, P, { objetivo: 'a'.repeat(141) }),
     Object.assign({}, P, { objetivo: 5 }),
-    Object.assign({}, P, { fase: 0 }), Object.assign({}, P, { fase: 7 }),
+    Object.assign({}, P, { fase: 0 }), Object.assign({}, P, { fase: 8 }),
     Object.assign({}, P, { fase: 2.5 }), Object.assign({}, P, { fase: '4' }),
     Object.assign({}, P, { fase_estado: -1 }), Object.assign({}, P, { fase_estado: 5 }),
     Object.assign({}, P, { fases_completadas: 7 }), Object.assign({}, P, { fases_completadas: NaN }),
@@ -96,4 +96,9 @@ test('un registro guardado con otro proyecto recibe el bloque actual en la sigui
   const second = mem({ [KEY]: JSON.stringify(old) });
   Meta.metaUpdate('piano-magic', '9.9.9', { stats: {}, logros: [] }, { storage: second, now: NOW, declare: DECLARE });
   assert.strictEqual('proyecto' in JSON.parse(second.getItem(KEY)), false);
+});
+
+test('fase 7 (Descartada) is accepted', () => {
+  const D = Object.assign({}, Meta.PROYECTO, { fase: 7, fase_estado: 4 });
+  assert.deepStrictEqual(Meta.metaProyecto(D), D);
 });

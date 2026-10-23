@@ -9,10 +9,10 @@
   var MAX_STATS = 20;
 
   var PROYECTO = {
-    objetivo: 'Juego de combate musical: vencer a cada jefe tocando su partitura en un piano real, con jefes animados y varias canciones.',
-    fase: 4,
+    objetivo: 'Juego de combate musical publicado en la App Store: vencer a cada jefe tocando su partitura en un piano real.',
+    fase: 3,
     fase_estado: 1,
-    fases_completadas: 3
+    fases_completadas: 2
   };
 
   var proyectoSource = PROYECTO;
@@ -26,7 +26,7 @@
       if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
       var o = p.objetivo;
       if (typeof o !== 'string' || !o.trim() || Array.from(o).length > 140) return null;
-      if (!proyectoInt(p.fase, 1, 6) || !proyectoInt(p.fase_estado, 0, 4) || !proyectoInt(p.fases_completadas, 0, 6)) return null;
+      if (!proyectoInt(p.fase, 1, 7) || !proyectoInt(p.fase_estado, 0, 4) || !proyectoInt(p.fases_completadas, 0, 6)) return null;
       return { objetivo: o, fase: p.fase, fase_estado: p.fase_estado, fases_completadas: p.fases_completadas };
     } catch (e) {
       return null;
