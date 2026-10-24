@@ -17,7 +17,8 @@
     objetivo: 'Juego de combate musical publicado en la App Store: vencer a cada jefe tocando su partitura en un piano real.',
     fase: FASE.DISENO,
     fase_estado: ESTADO_FASE.EN_CURSO,
-    fases_completadas: 2
+    fases_completadas: 2,
+    tipo: TIPO_PROYECTO.PROYECTO
   };
 
   var proyectoSource = PROYECTO;
