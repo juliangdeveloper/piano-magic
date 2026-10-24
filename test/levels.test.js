@@ -298,7 +298,7 @@ test('L1: el jefe suena más fuerte que el clic, con la sonoridad de 0.1.27 inte
   assert.match(app, /if \(merged\.sound && !opts\.silent\) playPitch\(name\)/);
   assert.ok(Math.abs((METRO_STRONG / METRO_WEAK) - ACCENT) < 1e-12);
 
-  if (!chromeBin()) return;
+  if (!chromeBin() || typeof WebSocket !== 'function') return;
   const voices = await measureLoudness();
   const pitches = ['G3', 'C4', 'G4', 'D5'];
   const oldEnemy = meanOf(voices, 'old-', pitches);
