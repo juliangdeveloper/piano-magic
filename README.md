@@ -12,6 +12,8 @@
 - En **Ataque** improvisas: escalas mayores atacan, menores te mejoran y pentatónicas te curan.
 - En **Defiende** copias las dos manos. Un par a la vez es perfecto si suenan las dos notas, y parcial si solo entra una.
 - Toca con el teclado QWERTY (baja hasta el Do3: `Q M , .`), el teclado en pantalla, un teclado MIDI o el micrófono. Cada mano tiene su color.
+- El teclado en pantalla siempre está a la vista: la nota del jefe se enciende en morado y la tuya en verde.
+- Al inicio de cada frase un número indica el dedo (1–5): arriba para la mano derecha, abajo para la izquierda.
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 
 ## Stack
