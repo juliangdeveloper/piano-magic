@@ -119,7 +119,7 @@ test('S5: la partitura dibuja el chart completo y el compás cae en su sección'
     style: {},
     getContext: function () { return ctx; }
   };
-  const tape = Tape.create(canvas, { version: '0.1.41' });
+  const tape = Tape.create(canvas, { version: '0.1.42' });
   tape.renderSheet(model);
   assert.ok(calls.includes('fillRect'));
   const early = tape.barIndexAt(70);
@@ -151,6 +151,93 @@ test('S6: pausa abre la partitura y el toque del rival tiene dos salidas', () =>
   assert.match(html, /id="btnPractice"/);
   assert.match(html, /Practicar/);
   assert.match(html, /id="btnSheetLoop"/);
-  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.41/);
+  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.42/);
   assert.match(app, /duringSheet/);
+});
+
+function sheetCanvas(w, h) {
+  const segs = [];
+  const heads = [];
+  const stack = [{ x: 0, y: 0 }];
+  let cx = 0;
+  let cy = 0;
+  function top() { return stack[stack.length - 1]; }
+  const ctx = {
+    beginPath() {},
+    closePath() {},
+    stroke() {},
+    fill() {},
+    save() { stack.push({ x: top().x, y: top().y }); },
+    restore() { if (stack.length > 1) stack.pop(); },
+    translate(x, y) { const t = top(); t.x += x; t.y += y; },
+    rotate() {},
+    moveTo(x, y) { cx = x; cy = y; },
+    lineTo(x, y) { segs.push({ x0: cx, y0: cy, x1: x, y1: y }); cx = x; cy = y; },
+    ellipse() { heads.push({ x: top().x, y: top().y }); },
+    arc() {},
+    fillRect() {},
+    strokeRect() {},
+    fillText() {},
+    strokeText() {},
+    clearRect() {},
+    drawImage() {},
+    setTransform() {},
+    measureText() { return { width: 10 }; },
+    quadraticCurveTo() {},
+    bezierCurveTo() {}
+  };
+  return {
+    clientWidth: w,
+    clientHeight: h,
+    width: w,
+    height: h,
+    style: {},
+    getContext() { return ctx; },
+    segs,
+    heads
+  };
+}
+
+test('S7: cada mano queda en su pentagrama y no hay barras negras cruzadas', () => {
+  for (const id of IDS) {
+    const model = Score.sheetModel(raw(id), null, null);
+    const canvas = sheetCanvas(960, 240);
+    Tape.create(canvas, { version: '0.1.42' }).renderSheet(model);
+    const staff = canvas.segs.filter((s) => Math.abs(s.y1 - s.y0) < 0.6 && Math.abs(s.x1 - s.x0) > canvas.clientWidth * 0.7);
+    const ys = staff.map((s) => s.y0).sort((a, b) => a - b);
+    assert.strictEqual(ys.length, 10, id);
+    const lineGap = ys[1] - ys[0];
+    const trebleBottom = ys[4];
+    const bassTop = ys[5];
+    assert.ok((bassTop - trebleBottom) / lineGap > 3, id);
+    const drawn = [];
+    model.bars.forEach((bar) => {
+      if (bar.kind === 'hole') return;
+      (bar.notes || []).forEach((n) => drawn.push(n));
+    });
+    assert.strictEqual(canvas.heads.length, drawn.length, id);
+    const ry = lineGap * 0.42;
+    drawn.forEach((note, i) => {
+      const head = canvas.heads[i];
+      if (note.hand === 'L') {
+        assert.ok(head.y - ry > trebleBottom, id + ' ' + note.pitch + ' L');
+      } else {
+        assert.ok(head.y + ry < bassTop, id + ' ' + note.pitch + ' R ' + head.y + ' ' + bassTop);
+      }
+    });
+    canvas.segs.forEach((s) => {
+      const y = (s.y0 + s.y1) / 2;
+      const len = Math.abs(s.x1 - s.x0);
+      const horizontal = Math.abs(s.y1 - s.y0) < 0.8;
+      if (horizontal && y > trebleBottom + 1 && y < bassTop - 1 && len > lineGap * 1.6) {
+        assert.fail(id + ' barra ' + len);
+      }
+      const vertical = Math.abs(s.x1 - s.x0) < 1.5;
+      const y0 = Math.min(s.y0, s.y1);
+      const y1 = Math.max(s.y0, s.y1);
+      if (vertical && y0 < bassTop - 1 && y1 > bassTop + 1) {
+        assert.fail(id + ' plica cruzada');
+      }
+    });
+  }
 });
