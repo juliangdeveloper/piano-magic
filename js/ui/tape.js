@@ -129,6 +129,8 @@
     var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;
+    var lastSheet = null;
+    var sheetGeom = null;
 
     function resize() {
       if (!canvas || !ctx) return;
@@ -733,17 +735,172 @@
       ctx.textAlign = 'left';
     }
 
-    if (clefImg) clefImg.onload = function () { if (lastState) render(lastState); };
+    function renderSheet(model) {
+      lastSheet = model || lastSheet;
+      model = lastSheet;
+      if (!ctx || !canvas || !model) return;
+      resize();
+      var w = canvas.clientWidth || 360;
+      var h = canvas.clientHeight || 96;
+      if (w < 2 || h < 2) return;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = PARCHMENT;
+      ctx.fillRect(0, 0, w, h);
+      var gapRatio = 1.35;
+      var stemPad = 2.85;
+      var lineGap = (h - 8) / (8 + gapRatio + stemPad * 2);
+      lineGap = Math.max(4.5, Math.min(16, lineGap));
+      var staffH = lineGap * 4;
+      var staffGap = lineGap * gapRatio;
+      var block = staffH * 2 + staffGap;
+      var pad = lineGap * stemPad;
+      var topLine = Math.max(pad, (h - block) / 2);
+      if (topLine + block + pad > h) topLine = Math.max(2, h - block - pad);
+      var bottomLine = topLine + staffH;
+      var bassTop = bottomLine + staffGap;
+      var bassBottom = bassTop + staffH;
+      var bars = model.bars || [];
+      var bpb = model.bpb || 4;
+      var total = Math.max(1, bars.length * bpb);
+      var padL = Math.max(28, lineGap * 3.1);
+      var padR = 12;
+      var pxPerBeat = (w - padL - padR) / total;
+      if (pxPerBeat < 1) pxPerBeat = 1;
+      sheetGeom = { padL: padL, pxPerBeat: pxPerBeat, bpb: bpb, count: bars.length };
+      function xAt(absBeat) { return padL + absBeat * pxPerBeat; }
+      ctx.strokeStyle = '#2c2116';
+      ctx.lineWidth = Math.max(1.2, lineGap * 0.09);
+      var s;
+      for (s = 0; s < 5; s++) {
+        var sy = topLine + s * lineGap;
+        ctx.beginPath();
+        ctx.moveTo(0, sy);
+        ctx.lineTo(w, sy);
+        ctx.stroke();
+        var by = bassTop + s * lineGap;
+        ctx.beginPath();
+        ctx.moveTo(0, by);
+        ctx.lineTo(w, by);
+        ctx.stroke();
+      }
+      var i;
+      var j;
+      var bar;
+      var x0;
+      var x1;
+      var note;
+      var nx;
+      for (i = 0; i < bars.length; i++) {
+        bar = bars[i];
+        x0 = xAt(bar.startBeat || i * bpb);
+        x1 = xAt((bar.startBeat || i * bpb) + bpb);
+        var zone = bar.kind;
+        var wash = zone === 'hole' ? 'rgba(214, 170, 70, 0.30)'
+          : (zone === 'defend' ? 'rgba(70, 180, 120, 0.26)' : 'rgba(80, 160, 220, 0.30)');
+        ctx.fillStyle = wash;
+        ctx.fillRect(x0, topLine - 1, Math.max(1, x1 - x0), bassBottom - topLine + 2);
+        ctx.strokeStyle = 'rgba(90, 68, 40, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x0, topLine);
+        ctx.lineTo(x0, bottomLine);
+        ctx.moveTo(x0, bassTop);
+        ctx.lineTo(x0, bassBottom);
+        ctx.stroke();
+        var midY = (bottomLine + bassTop) / 2;
+        var markX = x0 + lineGap * 0.35;
+        if (markX < x1 - lineGap * 0.5) drawZoneMark(ctx, markX, midY, zone, Math.max(8, lineGap * 0.62));
+        ctx.fillStyle = KIND_INK[zone] || '#5c4630';
+        ctx.font = '700 ' + Math.round(Math.max(10, lineGap * 0.8)) + 'px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (x1 - x0 > 18) ctx.fillText(String((bar.index != null ? bar.index : i) + 1), (x0 + x1) / 2, midY);
+        ctx.textBaseline = 'alphabetic';
+        if (zone === 'hole') continue;
+        var notes = bar.notes || [];
+        for (j = 0; j < notes.length; j++) {
+          note = notes[j];
+          var placed = placeNote(note.pitch, note.hand);
+          if (!placed) continue;
+          var staffBottom = placed.staff === 'bass' ? bassBottom : bottomLine;
+          var ink = HAND_INK[placed.hand] || INK;
+          nx = xAt(chartNoteBeat(bar.startBeat || i * bpb, note.beat));
+          var ny = yFor(placed.step, staffBottom, lineGap);
+          if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
+          else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
+          drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
+            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass'
+          });
+          var finger = fingerMark(note);
+          if (finger) drawFingerNum(ctx, nx, ny, placed.step, finger, lineGap, ink, h);
+        }
+      }
+      var from = typeof model.from === 'number' ? model.from : 0;
+      var to = typeof model.to === 'number' ? model.to : bars.length;
+      if (to > from) {
+        var sx0 = xAt(from * bpb);
+        var sx1 = xAt(to * bpb);
+        ctx.save();
+        ctx.strokeStyle = '#8a5a12';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(sx0 + 1.5, topLine - 4, Math.max(1, sx1 - sx0 - 3), bassBottom - topLine + 8);
+        ctx.restore();
+      }
+      var gLine = yFor(2, bottomLine, lineGap);
+      var clefH = (lineGap + staffGap - 1) / (1 - CLEF_G);
+      if (clefH > lineGap * 4.6) clefH = lineGap * 4.6;
+      if (clefH < lineGap * 2.8) clefH = lineGap * 2.8;
+      var clefW = clefH * (ready(clefImg) ? (clefImg.naturalWidth / clefImg.naturalHeight) : 0.36);
+      var clefTop = gLine - CLEF_G * clefH;
+      if (ready(clefImg)) ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
+      drawBassClef(ctx, 2, bassBottom, lineGap);
+      if (typeof model.beat === 'number' && isFinite(model.beat)) {
+        var playX = xAt(model.beat);
+        if (playX >= 0 && playX <= w) {
+          ctx.save();
+          ctx.strokeStyle = '#6a3d12';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(playX, topLine - 6);
+          ctx.lineTo(playX, bassBottom + 6);
+          ctx.stroke();
+          ctx.fillStyle = '#6a3d12';
+          ctx.beginPath();
+          ctx.moveTo(playX, topLine - 10);
+          ctx.lineTo(playX + 5, topLine - 3);
+          ctx.lineTo(playX - 5, topLine - 3);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      ctx.textAlign = 'left';
+    }
+
+    function barIndexAt(x) {
+      if (!sheetGeom || !(sheetGeom.pxPerBeat > 0)) return -1;
+      var beat = (x - sheetGeom.padL) / sheetGeom.pxPerBeat;
+      if (!(beat >= 0)) return -1;
+      var idx = Math.floor(beat / sheetGeom.bpb + 1e-9);
+      if (idx < 0 || idx >= sheetGeom.count) return -1;
+      return idx;
+    }
+
+    if (clefImg) clefImg.onload = function () {
+      if (lastState) render(lastState);
+      if (lastSheet) renderSheet(lastSheet);
+    };
 
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', function () {
         resize();
         if (lastState) render(lastState);
+        if (lastSheet) renderSheet(lastSheet);
       });
     }
     resize();
 
-    return { render: render, resize: resize };
+    return { render: render, resize: resize, renderSheet: renderSheet, barIndexAt: barIndexAt };
   }
 
   return {
