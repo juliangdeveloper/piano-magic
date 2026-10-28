@@ -157,20 +157,32 @@
       return bottomLine - step * (lineGap / 2);
     }
 
-    function drawLedgers(c, x, step, bottomLine, lineGap, low, high) {
+    function drawLedgers(c, x, step, bottomLine, lineGap, low, high, yMin, yMax) {
       var ls;
+      var y;
       if (low == null) low = -2;
       if (high == null) high = 10;
+      function allow(at) {
+        if (yMin != null && at <= yMin) return false;
+        if (yMax != null && at >= yMax) return false;
+        return true;
+      }
       if (step <= low) {
-        for (ls = low; ls >= step; ls -= 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
+        for (ls = low; ls >= step; ls -= 2) {
+          y = yFor(ls, bottomLine, lineGap);
+          if (allow(y)) drawLedger(c, x, y, lineGap);
+        }
       }
       if (step >= high) {
-        for (ls = high; ls <= step; ls += 2) drawLedger(c, x, yFor(ls, bottomLine, lineGap), lineGap);
+        for (ls = high; ls <= step; ls += 2) {
+          y = yFor(ls, bottomLine, lineGap);
+          if (allow(y)) drawLedger(c, x, y, lineGap);
+        }
       }
     }
 
     function drawLedger(c, x, y, lineGap) {
-      var hw = lineGap * 0.95;
+      var hw = Math.min(lineGap * 0.48, 6.5);
       c.beginPath();
       c.moveTo(x - hw, y);
       c.lineTo(x + hw, y);
@@ -218,7 +230,7 @@
       if (!mark) return;
       var num = mark.finger;
       var below = !!mark.below;
-      var up = below ? false : (step <= -3 ? step < -8 : step < 4);
+      var up = below ? false : step < 4;
       var stemH = lineGap * 3.15;
       var gap = Math.max(8, lineGap * 0.95);
       var fy = below ? ((up ? y : y + stemH) + gap) : ((up ? y - stemH : y) - gap);
@@ -254,18 +266,23 @@
       c.strokeStyle = INK;
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.lineCap = 'butt';
-      drawLedgers(c, x, step, bottomLine, lineGap, style.low, style.high);
-      var up = stemDown ? false : (step <= -3 ? step < -8 : step < 4);
+      drawLedgers(c, x, step, bottomLine, lineGap, style.low, style.high, style.ledgerMin, style.ledgerMax);
+      var up = stemDown ? false : step < 4;
       var stemH = lineGap * 3.15;
+      var y2 = up ? y - stemH : y + stemH;
+      if (up && style.stemCeil != null && y2 < style.stemCeil) y2 = style.stemCeil;
+      if (!up && style.stemFloor != null && y2 > style.stemFloor) y2 = style.stemFloor;
+      if (up && y2 > y) y2 = y;
+      if (!up && y2 < y) y2 = y;
       c.strokeStyle = color;
       c.lineWidth = Math.max(1, lineGap * 0.1);
       c.beginPath();
       if (up) {
         c.moveTo(x + rx * 0.82, y + ry * 0.1);
-        c.lineTo(x + rx * 0.82, y - stemH);
+        c.lineTo(x + rx * 0.82, y2);
       } else {
         c.moveTo(x - rx * 0.82, y - ry * 0.1);
-        c.lineTo(x - rx * 0.82, y + stemH);
+        c.lineTo(x - rx * 0.82, y2);
       }
       c.stroke();
       c.save();
@@ -646,7 +663,11 @@
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
-            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass'
+            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass',
+            stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
+            stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
+            ledgerMin: placed.staff === 'bass' ? bottomLine + lineGap * 0.45 : null,
+            ledgerMax: placed.staff === 'bass' ? null : bassTop - lineGap * 0.45
           });
           var mark = fingerMark(note);
           if (mark) drawFingerNum(ctx, nx, ny, placed.step, mark, lineGap, ink, h);
@@ -702,7 +723,11 @@
           stemDown: true,
           scale: vis.miss ? 1 : vis.scale,
           low: hit.low,
-          high: hit.high
+          high: hit.high,
+          stemFloor: hit.staff === 'bass' ? null : bassTop - lineGap * 0.35,
+          stemCeil: hit.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
+          ledgerMin: hit.staff === 'bass' ? bottomLine + lineGap * 0.45 : null,
+          ledgerMax: hit.staff === 'bass' ? null : bassTop - lineGap * 0.45
         });
         if (vis.miss) drawMiss(ctx, nx, ty, lineGap);
       }
@@ -746,7 +771,7 @@
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
-      var gapRatio = 1.35;
+      var gapRatio = 3.6;
       var stemPad = 2.85;
       var lineGap = (h - 8) / (8 + gapRatio + stemPad * 2);
       lineGap = Math.max(4.5, Math.min(16, lineGap));
@@ -829,7 +854,11 @@
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
-            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass'
+            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass',
+            stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
+            stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
+            ledgerMin: placed.staff === 'bass' ? bottomLine + lineGap * 0.45 : null,
+            ledgerMax: placed.staff === 'bass' ? null : bassTop - lineGap * 0.45
           });
           var finger = fingerMark(note);
           if (finger) drawFingerNum(ctx, nx, ny, placed.step, finger, lineGap, ink, h);

@@ -220,6 +220,70 @@
     };
   }
 
+  function gateMic(events, sample, prev) {
+    var state = {
+      level: prev && typeof prev.level === 'number' ? prev.level : null,
+      floorDb: prev && typeof prev.floorDb === 'number' ? prev.floorDb : null,
+      lowAt: prev && typeof prev.lowAt === 'number' ? prev.lowAt : 0,
+      lowMidi: prev && typeof prev.lowMidi === 'number' ? prev.lowMidi : null
+    };
+    var db = sample && typeof sample.db === 'number' && isFinite(sample.db) ? sample.db : -120;
+    var now = sample && typeof sample.now === 'number' && isFinite(sample.now) ? sample.now : 0;
+    var musical = false;
+    if (state.level == null) {
+      state.level = db;
+      state.floorDb = db;
+    } else {
+      var prevLevel = state.level;
+      var steady = Math.abs(db - prevLevel) < 5;
+      state.level = prevLevel * 0.8 + db * 0.2;
+      if (steady || db < state.floorDb) state.floorDb = state.floorDb * 0.75 + db * 0.25;
+      musical = !steady && db >= state.floorDb + 12 && db >= -50;
+    }
+    var list = events || [];
+    var bestLow = -1;
+    var bestAt = -1;
+    var i;
+    var ev;
+    var midi;
+    for (i = 0; i < list.length; i++) {
+      ev = list[i];
+      if (!ev || ev.type !== 'on') continue;
+      midi = typeof ev.midi === 'number' ? ev.midi : pitchToMidi(ev.pitch);
+      if (midi != null && midi < 60 && midi > bestLow) {
+        bestLow = midi;
+        bestAt = i;
+      }
+    }
+    var out = [];
+    var keptLow = false;
+    for (i = 0; i < list.length; i++) {
+      ev = list[i];
+      if (!ev) continue;
+      if (ev.type !== 'on') {
+        out.push(ev);
+        continue;
+      }
+      if (!musical) continue;
+      midi = typeof ev.midi === 'number' ? ev.midi : pitchToMidi(ev.pitch);
+      if (midi != null && midi < 60) {
+        if (i !== bestAt || keptLow) continue;
+        if (now - state.lowAt < 360) continue;
+        state.lowAt = now;
+        state.lowMidi = midi;
+        keptLow = true;
+      }
+      out.push(ev);
+    }
+    var readingMidi = sample && typeof sample.midi === 'number' ? sample.midi : null;
+    var live = false;
+    if (musical) {
+      if (readingMidi == null || readingMidi >= 60) live = true;
+      else live = keptLow || (state.lowMidi === readingMidi && now - state.lowAt < 700);
+    }
+    return { events: out, state: state, live: live };
+  }
+
   return {
     create: create,
     KEY_MAP: KEY_MAP,
@@ -230,6 +294,7 @@
     pitchClass: pitchClass,
     hzForPitch: hzForPitch,
     beatsPerBar: beatsPerBar,
-    quarterMs: quarterMs
+    quarterMs: quarterMs,
+    gateMic: gateMic
   };
 });

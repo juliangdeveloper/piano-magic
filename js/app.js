@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.41';
+  var VERSION = '0.1.42';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -66,6 +66,7 @@
   var micTimer = null;
   var micSilentTicks = 0;
   var micRewires = 0;
+  var micGateState = null;
   var engine = null;
   var session = null;
   var engineState = 'loading';
@@ -1116,6 +1117,7 @@
     micAnalyser = null;
     micMute = null;
     micBuf = null;
+    micGateState = null;
     if (micStream) {
       micStream.getTracks().forEach(function (t) { try { t.stop(); } catch (e5) {} });
       micStream = null;
@@ -1148,8 +1150,17 @@
     var out = session.hop(micBuf, audioCtx.sampleRate || 48000, performance.now(), {
       blocked: synthBlocks
     });
-    applyEngineEvents(out);
-    updateMicHeard(out && out.reading, bufLevel(micBuf));
+    var reading = out && out.reading;
+    var db = reading && typeof reading.db === 'number' ? reading.db : -120;
+    var gated = InstrumentTranslator.gateMic(out && out.events, {
+      db: db,
+      now: performance.now(),
+      midi: reading && typeof reading.midi === 'number' ? reading.midi : null
+    }, micGateState);
+    micGateState = gated.state;
+    applyEngineEvents({ events: gated.events });
+    if (reading && !gated.live) reading = { db: db, accepted: false, midi: null, pitch: null };
+    updateMicHeard(reading, bufLevel(micBuf));
   }
 
   function attachMic(stream) {
