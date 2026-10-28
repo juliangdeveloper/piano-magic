@@ -506,12 +506,15 @@
       ctx.fillRect(0, 0, w, h);
 
       var gapRatio = 1.35;
-      var lineGap = (h - 8) / (8 + gapRatio);
-      lineGap = Math.max(5, Math.min(18, lineGap));
+      var stemPad = 2.85;
+      var lineGap = (h - 8) / (8 + gapRatio + stemPad * 2);
+      lineGap = Math.max(4.5, Math.min(16, lineGap));
       var staffH = lineGap * 4;
       var staffGap = lineGap * gapRatio;
       var block = staffH * 2 + staffGap;
-      var topLine = Math.max(2, (h - block) / 2);
+      var pad = lineGap * stemPad;
+      var topLine = Math.max(pad, (h - block) / 2);
+      if (topLine + block + pad > h) topLine = Math.max(2, h - block - pad);
       var bottomLine = topLine + staffH;
       var bassTop = bottomLine + staffGap;
       var bassBottom = bassTop + staffH;
