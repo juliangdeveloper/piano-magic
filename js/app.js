@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.40';
+  var VERSION = '0.1.41';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -14,7 +14,19 @@
 
   var director = null;
   var fightChart = null;
+  var scoreChart = null;
   var progressCommitted = false;
+  var practiceMode = false;
+  var sheetTape = null;
+  var sheetOpen = false;
+  var sheetFromPause = false;
+  var gateOpen = false;
+  var sheetSection = 0;
+  var sheetTempoId = 'real';
+  var sheetPlaying = false;
+  var sheetRaf = 0;
+  var sheetToken = 0;
+  var sheetClock = null;
   var tape = null;
   var hud = null;
   var bossSprite = null;
@@ -429,7 +441,8 @@
 
   function playFreq(freq, opts) {
     opts = opts || {};
-    if (paused || !freq) return;
+    if (!freq) return;
+    if (paused && !opts.duringSheet) return;
     var ctx = getAudio();
     if (!ctx) return;
     preferSpeaker(!!micStream);
@@ -451,13 +464,15 @@
     playFreq(freq, opts);
   }
 
-  function metronomeClick(strong) {
+  function metronomeClick(strong, opts) {
+    opts = opts || {};
     playFreq(strong ? 1320 : 880, {
       gain: strong ? (0.01545 * 0.045 / 0.028) : 0.01545,
       dur: 0.04,
       type: 'square',
       overtone: false,
       role: 'metro',
+      duringSheet: !!opts.duringSheet,
       immediate: true
     });
   }
@@ -526,7 +541,7 @@
       btn.title = on ? 'Continuar' : 'Pausa';
       btn.classList.toggle('on', !!on);
     }
-    if (banner) banner.classList.toggle('visible', !!on);
+    if (banner) banner.classList.toggle('visible', !!on && !sheetOpen);
     var rb = $('btnPauseRestart');
     if (rb) rb.hidden = !(on && visible);
     var rv = $('btnPauseRival');
@@ -606,7 +621,7 @@
     paused = false;
     audioHeldForPause = false;
     setPauseUi(false, false);
-    if (state && !state.free && !progressCommitted) {
+    if (state && !state.free && !progressCommitted && !practiceMode) {
       progressCommitted = true;
       try {
         if (window.Progress) Progress.recordFight(fightChart, state, VERSION);
@@ -640,6 +655,10 @@
   }
 
   function refreshTape() {
+    if (sheetOpen) {
+      paintSheet();
+      return;
+    }
     if (!tape || !director) return;
     tape.resize();
     tape.render(director.snapshot(performance.now()));
@@ -648,7 +667,9 @@
   function startFight() {
     if (!director || tutorialOpen()) return;
     progressCommitted = false;
+    gateOpen = false;
     paused = false;
+    closeSheet();
     audioHeldForPause = false;
     unmuteMaster();
     primeAudio();
@@ -721,6 +742,11 @@
 
   function restartFight() {
     if (!director || tutorialOpen()) return;
+    if (!practiceMode) {
+      startRealFight();
+      ensureMic();
+      return;
+    }
     director.reset();
     startFight();
     ensureMic();
@@ -743,6 +769,7 @@
     setPauseUi(true, true);
     if (tape) tape.render(director.snapshot(performance.now()));
     if (hud) hud.render(director.snapshot(performance.now()));
+    openSheet(true);
   }
 
   function unmuteMaster() {
@@ -751,6 +778,12 @@
 
   function resumeFight() {
     if (!director || !paused) return;
+    stopSheetPlayback();
+    sheetOpen = false;
+    sheetFromPause = false;
+    document.body.classList.remove('sheet-open');
+    var sheet = $('sheet');
+    if (sheet) sheet.hidden = true;
     audioHeldForPause = false;
     unmuteMaster();
     preferSpeaker(!!micStream);
@@ -761,6 +794,9 @@
     director.resume(performance.now());
     paused = false;
     setPauseUi(false, true);
+    syncIdleActions();
+    if (tape) tape.render(director.snapshot(performance.now()));
+    if (hud) hud.render(director.snapshot(performance.now()));
   }
 
   function togglePause() {
@@ -1388,7 +1424,7 @@
         }
         b.appendChild(img);
       }
-      b.addEventListener('click', function () { selectRival(o.id); });
+      b.addEventListener('click', function () { onRivalTap(o.id); });
       pk.appendChild(b);
     });
   }
@@ -1416,6 +1452,8 @@
     markPicker();
     return chartForRival(opt).then(function (chart) {
       if (opt.id !== rivalId) return;
+      scoreChart = chart;
+      practiceMode = false;
       makeDirector(chart, opt);
       renderIdle();
     }).catch(function (err) {
@@ -1433,7 +1471,11 @@
     paused = false;
     audioHeldForPause = false;
     unmuteMaster();
-    director.reset();
+    practiceMode = false;
+    gateOpen = false;
+    closeSheet();
+    if (scoreChart) makeDirector(scoreChart, Rivals.find(rivalId));
+    else director.reset();
     hideOutcome();
     setPauseUi(false, false);
     clearPops();
@@ -1461,6 +1503,460 @@
     setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 1200);
   }
 
+  function syncIdleActions() {
+    var start = $('btnStart');
+    var gate = $('rivalGate');
+    var showGate = gateOpen && !runningLoop && !sheetOpen;
+    var showStart = !runningLoop && !gateOpen && !sheetOpen;
+    document.body.classList.toggle('gate-open', !!showGate);
+    if (gate) gate.hidden = !showGate;
+    if (start) start.className = showStart ? '' : 'hidden';
+  }
+
+  function setLoopButton(on) {
+    var btn = $('btnSheetLoop');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('on', !!on);
+    btn.setAttribute('aria-label', on ? 'Detener' : 'Reproducir sección');
+    btn.title = on ? 'Detener' : 'Reproducir sección';
+  }
+
+  function showBpm(bpm) {
+    var el = $('bpmVal');
+    if (el) el.textContent = String(bpm);
+  }
+
+  function selectedBpm() {
+    var parsed = Chart.parse(scoreChart);
+    return Score.bpmFor(parsed.bpm, Score.tempoById(sheetTempoId).factor);
+  }
+
+  function wakeForSheet() {
+    var ctx = getAudio();
+    if (!ctx) return null;
+    preferSpeaker(!!micStream);
+    if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+      try { ctx.resume(); } catch (e) {}
+    }
+    if (masterGain) masterGain.gain.value = 0.92;
+    if (!audioUnlocked || ctx.state !== 'running') {
+      try { audiblePrime(ctx); } catch (e2) {}
+      playSpeakerEl();
+      audioUnlocked = true;
+    }
+    return ctx;
+  }
+
+  function hushPausedAudio() {
+    if (!paused || !audioHeldForPause) return;
+    if (micStream) {
+      if (masterGain) masterGain.gain.value = 0;
+    } else if (audioCtx && audioCtx.state === 'running') {
+      try { audioCtx.suspend(); } catch (e) {}
+    }
+  }
+
+  function stopSheetPlayback() {
+    var was = sheetPlaying;
+    sheetToken += 1;
+    sheetPlaying = false;
+    sheetClock = null;
+    if (sheetRaf) {
+      cancelAnimationFrame(sheetRaf);
+      sheetRaf = 0;
+    }
+    setLoopButton(false);
+    if (was) hushPausedAudio();
+    if (was && sheetOpen) paintSheet();
+    if (was && director && hud) hud.render(director.snapshot(paused ? performance.now() : 0));
+  }
+
+  function closeSheet() {
+    var holdPause = sheetFromPause && paused;
+    stopSheetPlayback();
+    sheetOpen = false;
+    sheetFromPause = false;
+    document.body.classList.remove('sheet-open');
+    var sheet = $('sheet');
+    if (sheet) sheet.hidden = true;
+    syncIdleActions();
+    if (holdPause) setPauseUi(true, !!runningLoop);
+    else if (director && hud) hud.render(director.snapshot(paused ? performance.now() : 0));
+  }
+
+  function paintSheetControls() {
+    if (!scoreChart || !window.Score || !window.Chart) return;
+    var parsed = Chart.parse(scoreChart);
+    var list = Score.sections(parsed.loop);
+    var box = $('sheetSections');
+    var tempos = $('sheetTempos');
+    var i;
+    var b;
+    var sec;
+    if (sheetSection >= list.length) sheetSection = 0;
+    if (box) {
+      box.textContent = '';
+      for (i = 0; i < list.length; i++) {
+        sec = list[i];
+        b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sheet-sec';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', i === sheetSection ? 'true' : 'false');
+        b.setAttribute('aria-label', 'Sección ' + (i + 1) + ', compases ' + (sec.from + 1) + ' a ' + sec.to);
+        b.textContent = (sec.from + 1) + '–' + sec.to;
+        b.addEventListener('click', sectionClick(i));
+        box.appendChild(b);
+      }
+    }
+    if (!tempos) return;
+    tempos.textContent = '';
+    Score.TEMPOS.forEach(function (t) {
+      var btn = document.createElement('button');
+      var bpm = Score.bpmFor(parsed.bpm, t.factor);
+      btn.type = 'button';
+      btn.className = 'sheet-tempo';
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('data-tempo', t.id);
+      btn.setAttribute('aria-checked', t.id === sheetTempoId ? 'true' : 'false');
+      btn.setAttribute('aria-label', t.label);
+      btn.title = t.label;
+      btn.textContent = String(bpm);
+      btn.addEventListener('click', function () { chooseTempo(t.id); });
+      tempos.appendChild(btn);
+    });
+  }
+
+  function sectionClick(index) {
+    return function () { chooseSection(index); };
+  }
+
+  function paintSheet() {
+    if (!sheetOpen || !scoreChart || !sheetTape || !window.Score || !window.Chart) return;
+    var parsed = Chart.parse(scoreChart);
+    var list = Score.sections(parsed.loop);
+    var section;
+    var beat = null;
+    var model;
+    var canvas;
+    var scroll;
+    var width;
+    var h;
+    if (!list.length) return;
+    if (sheetSection >= list.length) sheetSection = 0;
+    section = list[sheetSection];
+    if (sheetPlaying && sheetClock) beat = section.from * sheetClock.bpb + sheetClock.pos;
+    model = Score.sheetModel(scoreChart, section, beat);
+    canvas = $('sheetStaff');
+    scroll = $('sheetScroll');
+    width = Math.ceil(40 + model.bars.length * model.bpb * 20);
+    h = Math.max(96, (scroll && scroll.clientHeight) || 120);
+    if (canvas) {
+      if (canvas.style.width !== width + 'px') canvas.style.width = width + 'px';
+      if (canvas.style.height !== h + 'px') canvas.style.height = h + 'px';
+    }
+    sheetTape.renderSheet(model);
+  }
+
+  function revealSection() {
+    requestAnimationFrame(function () {
+      var scroll = $('sheetScroll');
+      var canvas = $('sheetStaff');
+      var parsed;
+      var list;
+      var section;
+      var target;
+      if (!scroll || !canvas || !scoreChart || !window.Score || !window.Chart) return;
+      parsed = Chart.parse(scoreChart);
+      list = Score.sections(parsed.loop);
+      section = list[sheetSection];
+      if (!section || !parsed.loop.length) return;
+      target = (section.from / parsed.loop.length) * canvas.clientWidth;
+      scroll.scrollLeft = Math.max(0, target - 28);
+    });
+  }
+
+  function paintSheetPulse(pos, bpb) {
+    var orb = $('bpmOrb');
+    var beats = $('beats');
+    var frac = pos - Math.floor(pos);
+    var pulsing = frac >= Chart.BEAT_CENTER && frac < Chart.BEAT_CENTER + 0.18;
+    var dots;
+    var beatIn;
+    var i;
+    if (orb) orb.classList.toggle('pulse', !!pulsing);
+    if (!beats) return;
+    dots = beats.querySelectorAll('i');
+    beatIn = Math.floor(pos) % (bpb || 4);
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = '';
+      if (i === beatIn) dots[i].className = pulsing ? 'on pulse' : 'on';
+    }
+  }
+
+  function chooseSection(index) {
+    var list;
+    var changed;
+    if (!scoreChart || !window.Score || !window.Chart) return;
+    list = Score.sections(Chart.parse(scoreChart).loop);
+    if (index < 0 || index >= list.length) return;
+    changed = index !== sheetSection;
+    sheetSection = index;
+    paintSheetControls();
+    if (sheetPlaying && changed) startSheetPlayback();
+    else {
+      paintSheet();
+      revealSection();
+    }
+  }
+
+  function chooseTempo(id) {
+    var bpm;
+    var pos;
+    if (!window.Score || !scoreChart) return;
+    sheetTempoId = Score.tempoById(id).id;
+    paintSheetControls();
+    bpm = selectedBpm();
+    showBpm(bpm);
+    if (!sheetPlaying || !sheetClock) return;
+    pos = sheetClock.pos;
+    sheetClock.bpm = bpm;
+    sheetClock.origin = performance.now() - (pos * 60 / bpm) * 1000;
+    sheetClock.abs = pos;
+  }
+
+  function fireSheetSpan(from, to) {
+    var i;
+    var n;
+    var notes;
+    var durBeats;
+    var secs;
+    var b0;
+    var b1;
+    if (!sheetClock) return;
+    if (!micStream) {
+      b0 = Math.floor(from) + 1;
+      b1 = Math.floor(to + 1e-6);
+      for (i = b0; i <= b1; i++) {
+        if (i <= 0) continue;
+        metronomeClick(i % sheetClock.bpb === 0, { duringSheet: true });
+      }
+    }
+    notes = sheetClock.notes || [];
+    for (i = 0; i < notes.length; i++) {
+      n = notes[i];
+      if (n.onset <= from || n.onset > to + 1e-4) continue;
+      durBeats = (typeof n.dur === 'number' && n.dur > 0) ? n.dur : 1;
+      secs = Math.max(0.12, durBeats * 60 / sheetClock.bpm * 0.92);
+      playPitch(n.pitch, {
+        role: 'boss',
+        gain: 0.236,
+        type: 'sine',
+        dur: secs,
+        overtone: false,
+        duringSheet: true
+      });
+    }
+  }
+
+  function sheetFrame(token) {
+    var elapsed;
+    var abs;
+    var len;
+    var prev;
+    var from;
+    var to;
+    if (token !== sheetToken || !sheetPlaying || !sheetClock) return;
+    elapsed = (performance.now() - sheetClock.origin) / 1000;
+    abs = elapsed * (sheetClock.bpm / 60);
+    len = sheetClock.beats;
+    prev = sheetClock.abs;
+    if (!(abs >= prev)) prev = abs;
+    if (abs - prev > len) {
+      sheetClock.abs = abs;
+      sheetClock.pos = abs % len;
+    } else {
+      from = prev % len;
+      to = abs % len;
+      if (to + 1e-6 < from) {
+        fireSheetSpan(from, len);
+        fireSheetSpan(0, to);
+      } else fireSheetSpan(from, to);
+      sheetClock.abs = abs;
+      sheetClock.pos = to;
+    }
+    paintSheetPulse(sheetClock.pos, sheetClock.bpb);
+    paintSheet();
+    sheetRaf = requestAnimationFrame(function () { sheetFrame(token); });
+  }
+
+  function startSheetPlayback() {
+    var parsed;
+    var list;
+    var section;
+    var pack;
+    var tempo;
+    var bpm;
+    var token;
+    if (!scoreChart || !window.Score || !window.Chart) return;
+    parsed = Chart.parse(scoreChart);
+    list = Score.sections(parsed.loop);
+    if (!list.length) return;
+    if (sheetSection < 0 || sheetSection >= list.length) sheetSection = 0;
+    section = list[sheetSection];
+    pack = Score.loopNotes(scoreChart, section);
+    if (!(pack.beats > 0)) return;
+    tempo = Score.tempoById(sheetTempoId);
+    bpm = Score.bpmFor(parsed.bpm, tempo.factor);
+    wakeForSheet();
+    sheetToken += 1;
+    token = sheetToken;
+    sheetClock = {
+      origin: performance.now(),
+      bpm: bpm,
+      beats: pack.beats,
+      bpb: pack.bpb,
+      notes: pack.notes,
+      from: section.from,
+      abs: 0,
+      pos: 0
+    };
+    sheetPlaying = true;
+    setLoopButton(true);
+    showBpm(bpm);
+    if (!micStream) metronomeClick(true, { duringSheet: true });
+    paintSheet();
+    revealSection();
+    sheetRaf = requestAnimationFrame(function () { sheetFrame(token); });
+  }
+
+  function toggleSheetPlayback() {
+    if (sheetPlaying) stopSheetPlayback();
+    else startSheetPlayback();
+  }
+
+  function sectionIndexAt(bar) {
+    var list = Score.sections(Chart.parse(scoreChart).loop);
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (bar >= list[i].from && bar < list[i].to) return i;
+    }
+    return -1;
+  }
+
+  function onSheetStaffClick(e) {
+    var canvas;
+    var rect;
+    var x;
+    var bar;
+    var idx;
+    if (!sheetTape || !scoreChart || !window.Chart || !window.Score) return;
+    canvas = $('sheetStaff');
+    if (!canvas) return;
+    rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
+    x = (e.clientX - rect.left) * (canvas.clientWidth / rect.width);
+    bar = sheetTape.barIndexAt(x);
+    if (bar < 0) return;
+    idx = sectionIndexAt(bar);
+    if (idx < 0 || idx === sheetSection) return;
+    chooseSection(idx);
+  }
+
+  function openSheet(fromPause) {
+    var sheet;
+    var closeBtn;
+    if (!scoreChart || !window.Score || !window.Chart) return;
+    try { Chart.parse(scoreChart); } catch (err) {
+      showError('No se pudo abrir la partitura — ' + err.message);
+      return;
+    }
+    gateOpen = false;
+    sheetOpen = true;
+    sheetFromPause = !!fromPause;
+    document.body.classList.add('sheet-open');
+    sheet = $('sheet');
+    if (sheet) sheet.hidden = false;
+    closeBtn = $('btnSheetClose');
+    if (closeBtn) closeBtn.hidden = !!fromPause;
+    syncIdleActions();
+    if (fromPause) setPauseUi(true, true);
+    paintSheetControls();
+    showBpm(selectedBpm());
+    requestAnimationFrame(function () {
+      if (!sheetOpen) return;
+      paintSheet();
+      revealSection();
+    });
+  }
+
+  function onRivalTap(id) {
+    if (tutorialOpen()) return;
+    if (runningLoop) return;
+    if (gateOpen && id === rivalId && !sheetOpen) {
+      gateOpen = false;
+      syncIdleActions();
+      return;
+    }
+    sheetSection = 0;
+    stopSheetPlayback();
+    closeSheet();
+    selectRival(id).then(function () {
+      if (rivalId !== id) return;
+      if (runningLoop) return;
+      gateOpen = true;
+      syncIdleActions();
+    });
+  }
+
+  function startPractice() {
+    var parsed;
+    var list;
+    var sliced;
+    var opt;
+    if (tutorialOpen() || !scoreChart || !window.Score || !window.Chart) return;
+    parsed = Chart.parse(scoreChart);
+    list = Score.sections(parsed.loop);
+    if (!list.length) return;
+    if (sheetSection < 0 || sheetSection >= list.length) sheetSection = 0;
+    sliced = Score.practiceChart(scoreChart, list[sheetSection], sheetTempoId);
+    opt = Rivals.find(rivalId);
+    stopSheetPlayback();
+    releaseHeld();
+    stopLoop();
+    if (director) director.reset();
+    paused = false;
+    audioHeldForPause = false;
+    unmuteMaster();
+    practiceMode = true;
+    gateOpen = false;
+    sheetFromPause = false;
+    closeSheet();
+    hideOutcome();
+    makeDirector(sliced, opt);
+    startFight();
+    ensureMic();
+  }
+
+  function startRealFight() {
+    if (tutorialOpen() || !scoreChart) return;
+    practiceMode = false;
+    gateOpen = false;
+    stopSheetPlayback();
+    releaseHeld();
+    stopLoop();
+    if (director) director.reset();
+    paused = false;
+    audioHeldForPause = false;
+    unmuteMaster();
+    sheetFromPause = false;
+    closeSheet();
+    hideOutcome();
+    makeDirector(scoreChart, Rivals.find(rivalId));
+    startFight();
+  }
+
   function boot(chart, opt) {
     if (!bossSprite && window.BossAnim) {
       bossSprite = BossAnim.create($('bossSprite'), {
@@ -1475,8 +1971,11 @@
         }
       });
     }
+    scoreChart = chart;
+    practiceMode = false;
     makeDirector(chart, opt);
     tape = Tape.create($('tape'), { version: VERSION });
+    if ($('sheetStaff')) sheetTape = Tape.create($('sheetStaff'), { version: VERSION });
     hud = Hud.create();
     buildPicker();
     setPickerVisible(true);
@@ -1556,7 +2055,16 @@
     document.addEventListener('pointerdown', onGestureUnlock, true);
     document.addEventListener('touchend', onGestureUnlock, true);
     document.addEventListener('keydown', onGestureUnlock, true);
-    $('btnStart').addEventListener('click', startFight);
+    $('btnStart').addEventListener('click', startRealFight);
+    if ($('btnGateScore')) $('btnGateScore').addEventListener('click', function () { openSheet(false); });
+    if ($('btnGateFight')) $('btnGateFight').addEventListener('click', startRealFight);
+    if ($('btnPractice')) $('btnPractice').addEventListener('click', startPractice);
+    if ($('btnSheetLoop')) $('btnSheetLoop').addEventListener('click', toggleSheetPlayback);
+    if ($('btnSheetClose')) $('btnSheetClose').addEventListener('click', function () {
+      closeSheet();
+      if (director) renderIdle();
+    });
+    if ($('sheetStaff')) $('sheetStaff').addEventListener('click', onSheetStaffClick);
     $('btnRestart').addEventListener('click', restartFight);
     if ($('btnPauseRestart')) $('btnPauseRestart').addEventListener('click', restartFight);
     $('btnPause').addEventListener('click', togglePause);

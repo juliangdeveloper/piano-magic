@@ -961,3 +961,115 @@ body.picking.kb-on #bossSprite { max-height: clamp(110px, 20dvh, 200px); }
 html, body { overscroll-behavior: none; touch-action: manipulation; }
 #frame, #scroll, footer, #keys { overscroll-behavior: none; }
 button { touch-action: manipulation; }
+
+#sheet[hidden] { display: none !important; }
+#sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  background: var(--parchment);
+  border-radius: 12px;
+  overflow: hidden;
+}
+#sheetScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+#sheetStaff { display: block; height: 100%; }
+#sheetTools {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 6px;
+  background: #163056;
+  overflow: hidden;
+}
+#sheetPick {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#sheetPick::-webkit-scrollbar { display: none; }
+#sheetSections, #sheetTempos { display: flex; gap: 4px; flex: 0 0 auto; }
+.sheet-sec, .sheet-tempo, #btnPractice, #btnGateScore, #btnGateFight {
+  appearance: none;
+  border: 1px solid #f8e7b8;
+  background: transparent;
+  color: #f8e7b8;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 0 10px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.sheet-sec[aria-checked="true"], .sheet-tempo[aria-checked="true"] {
+  background: linear-gradient(#f6e2ad, #d7a84a);
+  color: var(--ink);
+}
+#btnSheetLoop, #btnSheetClose {
+  appearance: none;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #f8e7b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+#btnSheetLoop {
+  background: linear-gradient(#f6e2ad, #d7a84a);
+  color: var(--ink);
+}
+#btnSheetLoop.on {
+  background: linear-gradient(#f4f8ff, #9ec0ea);
+  border-color: #d5e4f8;
+}
+#btnSheetLoop svg, #btnSheetClose svg { width: 16px; height: 16px; display: block; }
+#btnSheetLoop .ico-stop { display: none; }
+#btnSheetLoop.on .ico-play { display: none; }
+#btnSheetLoop.on .ico-stop { display: block; }
+#btnSheetClose { background: transparent; color: #f8e7b8; }
+#btnSheetClose[hidden] { display: none !important; }
+#btnPractice, #btnGateFight {
+  background: linear-gradient(#f6e2ad, #d7a84a);
+  color: var(--ink);
+}
+#btnGateScore { background: #f6edd9; color: #2a2118; }
+.rival-gate {
+  flex: 1 0 100%;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 2px 0 4px;
+}
+.rival-gate[hidden] { display: none !important; }
+body.gate-open footer { flex-wrap: wrap; }
+body.sheet-open #pauseBanner { display: none !important; }
+body.sheet-open #gestureLegend,
+body.sheet-open #buffs { display: none; }
+body.sheet-open #bossPortrait,
+body.sheet-open #bossSprite { max-height: clamp(72px, 16dvh, 160px); }
+body.sheet-open #tapeFrame { min-height: 168px; }
+@media (max-width: 430px) {
+  #btnPractice, #btnGateScore, #btnGateFight { min-height: 40px; font-size: 14px; padding: 0 12px; }
+  body.sheet-open #tapeFrame { min-height: 156px; }
+}
