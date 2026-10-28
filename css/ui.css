@@ -789,6 +789,47 @@ footer {
   .piano { height: 112px; }
 }
 
+@media (max-width: 430px) {
+  #stageTop {
+    grid-template-areas:
+      "room util bpm"
+      "boss boss boss";
+  }
+  .room-card { flex-direction: column; gap: 2px; align-items: center; }
+  .room-mark, #roomIcon, .room-emoji { width: 44px; height: 44px; }
+  .room-emoji { line-height: 44px; font-size: 26px; }
+  .player-hp { width: 78px; }
+  .bpm-orb { width: 64px; }
+  #bpmVal { font-size: 16px; }
+  .boss-hp { width: min(240px, 78%); }
+  .utility {
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .wordmark { margin-right: 2px; flex: 0 0 auto; }
+  #btnKeyboard, #btnMic, #btnHelp {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    flex: 0 0 auto;
+  }
+  #btnKeyboard svg, #btnMic svg { width: 18px; height: 18px; }
+  #tapeFrame { min-height: 148px; margin: 2px 8px; }
+  body.picking #bossPortrait,
+  body.picking #bossSprite { max-height: clamp(100px, 20dvh, 180px); }
+  body.kb-on #bossPortrait,
+  body.kb-on #bossSprite { max-height: clamp(108px, 20dvh, 190px); }
+  body.picking.kb-on #bossPortrait,
+  body.picking.kb-on #bossSprite { max-height: clamp(96px, 18dvh, 150px); }
+  .piano { height: clamp(78px, 13dvh, 120px); }
+  #btnStart, #btnPause, #btnRestart, #btnPauseRestart, #btnPauseRival, .ghost-btn {
+    width: 46px; min-width: 46px; height: 46px; min-height: 46px;
+  }
+  .rival-opt { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
+}
+
 .rival-picker {
   display: flex;
   flex: 0 1 auto;
