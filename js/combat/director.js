@@ -88,7 +88,7 @@
       } else if (meta.kind === 'hole') {
         result = Spell.resolveHole(notes, chart.roomScale || chart.roomKey, { buffs: buffs });
       } else {
-        var expected = (meta.notes || []).map(function (n) {
+        var expected = Chart.attacks(meta.notes).map(function (n) {
           return { pitch: n.pitch, beat: Chart.hitOnset(n.beat), dur: n.dur };
         });
         result = Spell.resolveDefend(notes, expected, chart.roomKey, { buffs: buffs });
@@ -381,7 +381,7 @@
       var bestDist = Infinity;
       var i;
       for (i = 0; i < notes.length; i++) {
-        if (claimedTargets[ev.barIndex + ':' + i]) continue;
+        if (notes[i].tie || claimedTargets[ev.barIndex + ':' + i]) continue;
         if (!samePitch(ev.pitch, notes[i].pitch)) continue;
         var onset = Chart.hitOnset(notes[i].beat);
         var d = Math.abs(ev.beatInBar - onset);

@@ -97,7 +97,7 @@ test('B4: el cast escala con el bpm y el pico sigue en el mismo tiempo', () => {
   assert.strictEqual(Boss.pose(10, [10], spec, 4).frame, 2);
 });
 
-test('B6: Veil Boat en 6/8, el cuadro 0 y el 2 en los pulsos de negra con puntillo', () => {
+test('B6: Veil Boat en 3/4, el ciclo de cuatro cuadros dura un compás', () => {
   const veilRaw = JSON.parse(fs.readFileSync(path.join(root, 'assets', 'bosses', 'veil-boat', 'timings.json'), 'utf8'));
   const veil = Boss.compile(veilRaw);
   const chart = Chart.parse(JSON.parse(fs.readFileSync(path.join(root, 'charts', 'veil-boat.json'), 'utf8')));
@@ -105,7 +105,7 @@ test('B6: Veil Boat en 6/8, el cuadro 0 y el 2 en los pulsos de negra con puntil
   const starts = Boss.idleStarts(veil, bpb);
   const beatMs = 60000 / 84;
   assert.strictEqual(chart.bpm, 84);
-  assert.deepStrictEqual(chart.timeSig, [6, 8]);
+  assert.deepStrictEqual(chart.timeSig, [3, 4]);
   assert.strictEqual(bpb, 3);
   assert.deepStrictEqual(veilRaw.idle.frameMs, [536, 536, 536, 535]);
   assert.equal(/workspace|pipeline|gif/i.test(JSON.stringify(veilRaw)), false);
@@ -178,14 +178,14 @@ test('B9: el pico del cast de Tower Chime cae en el golpe y a 60 bpm son 300 ms'
   const tower = Boss.compile(JSON.parse(fs.readFileSync(path.join(root, 'assets', 'bosses', 'tower-chime', 'timings.json'), 'utf8')));
   const chart = Chart.parse(JSON.parse(fs.readFileSync(path.join(root, 'charts', 'tower-chime.json'), 'utf8')));
   const bpb = Chart.beatsPerBar(chart);
-  const defend = Chart.barAt(chart, 1);
+  const defend = Chart.barAt(chart, 2);
   const hits = Boss.attackHits([defend]);
   const hit = hits[0];
   const at72 = [133, 117, 167, 150, 133, 133];
   const at60 = Boss.scaledFrameMs(tower, 60);
   assert.strictEqual(defend.kind, 'defend');
   assert.strictEqual(hit, defend.startBeat + Chart.BEAT_CENTER);
-  assert.strictEqual(hit, 3.5);
+  assert.strictEqual(hit, 6.5);
   assert.deepStrictEqual(Boss.scaledFrameMs(tower, 72), at72);
   for (let i = 0; i < at72.length; i++) assert.ok(Math.abs(at60[i] - at72[i] * 1.2) < 1e-9);
   assert.strictEqual(Boss.peakOffsetMs(tower, 72), 250);

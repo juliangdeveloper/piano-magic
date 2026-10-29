@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.45';
+  var VERSION = '0.1.46';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -507,6 +507,7 @@
       notes = bar.notes || [];
       for (j = 0; j < notes.length; j++) {
         note = notes[j];
+        if (note.tie) continue;
         abs = Chart.hitOnset(bar.startBeat + note.beat);
         if (abs <= from || abs > to + 1e-4) continue;
         id = bar.globalBar + ':' + note.beat + ':' + note.pitch;

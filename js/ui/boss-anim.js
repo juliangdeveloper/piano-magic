@@ -219,7 +219,7 @@
       if (bar.kind !== 'defend' && bar.kind !== 'setup') continue;
       notes = bar.notes || [];
       for (j = 0; j < notes.length; j++) {
-        if (!notes[j] || typeof notes[j].beat !== 'number' || !isFinite(notes[j].beat)) continue;
+        if (!notes[j] || notes[j].tie || typeof notes[j].beat !== 'number' || !isFinite(notes[j].beat)) continue;
         hits.push((bar.startBeat || 0) + notes[j].beat + BEAT_CENTER);
       }
     }

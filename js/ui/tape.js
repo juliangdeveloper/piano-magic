@@ -117,6 +117,7 @@
       var d = (typeof n.dur === 'number' && isFinite(n.dur) && n.dur > 0) ? n.dur : 1;
       spans.push([b, Math.min(bpb, b + d)]);
     }
+    if (!spans.length) return [{ beat: 0, dur: bpb, whole: true }];
     spans.sort(function (a, c) { return a[0] - c[0]; });
     var rests = [];
     var cursor = 0;
@@ -141,6 +142,23 @@
       return { parts: parts, step: parts.step + BASS_SHIFT, staff: 'bass', low: -2, high: 10, hand: 'L' };
     }
     return { parts: parts, step: parts.step, staff: 'treble', low: -2, high: 10, hand: 'R' };
+  }
+
+  function chordInfo(notes, note) {
+    var lo = null;
+    var hi = null;
+    var count = 0;
+    for (var i = 0; i < (notes || []).length; i++) {
+      var n = notes[i];
+      if (!n || n.hand !== note.hand || Math.abs((n.beat || 0) - (note.beat || 0)) > BEAT_EPS) continue;
+      var placed = placeNote(n.pitch, n.hand);
+      if (!placed) continue;
+      count++;
+      if (lo == null || placed.step < lo) lo = placed.step;
+      if (hi == null || placed.step > hi) hi = placed.step;
+    }
+    if (count < 2) return null;
+    return { lo: lo, hi: hi, up: (lo + hi) / 2 < STAFF_MIDDLE_STEP };
   }
 
   function staffGapFor(bars, minGap) {
@@ -318,14 +336,35 @@
       c.fill();
     }
 
-    function drawFingerNum(c, x, y, step, mark, lineGap, color, canvasH) {
+    function fingerY(y, step, below, lineGap, stemUp, hasStem) {
+      var up = stemUp != null ? stemUp : step < STAFF_MIDDLE_STEP;
+      var stemH = hasStem === false ? 0 : lineGap * 3.15;
+      var gap = Math.max(8, lineGap * 0.95);
+      return below ? ((up ? y : y + stemH) + gap) : ((up ? y - stemH : y) - gap);
+    }
+
+    function chordFingerY(notes, note, chord, below, bottomLine, bassBottomLine, lineGap, hasStem) {
+      var placed = placeNote(note.pitch, note.hand);
+      var edge = below ? chord.lo : chord.hi;
+      var sb = placed.staff === 'bass' ? bassBottomLine : bottomLine;
+      var base = fingerY(yFor(edge, sb, lineGap), edge, below, lineGap, chord.up, hasStem);
+      var rank = 0;
+      for (var i = 0; i < notes.length; i++) {
+        var n = notes[i];
+        if (n === note || !fingerMark(n) || n.hand !== note.hand || Math.abs((n.beat || 0) - (note.beat || 0)) > BEAT_EPS) continue;
+        var p2 = placeNote(n.pitch, n.hand);
+        if (!p2) continue;
+        if (below ? p2.step > placed.step : p2.step < placed.step) rank++;
+      }
+      var size = Math.max(8, Math.round(lineGap * 0.72)) * 1.15;
+      return below ? base + rank * size : base - rank * size;
+    }
+
+    function drawFingerNum(c, x, y, step, mark, lineGap, color, canvasH, fixedY) {
       if (!mark) return;
       var num = mark.finger;
       var below = !!mark.below;
-      var up = step < STAFF_MIDDLE_STEP;
-      var stemH = lineGap * 3.15;
-      var gap = Math.max(8, lineGap * 0.95);
-      var fy = below ? ((up ? y : y + stemH) + gap) : ((up ? y - stemH : y) - gap);
+      var fy = fixedY != null ? fixedY : fingerY(y, step, below, lineGap);
       if (fy < 7) fy = 7;
       if (canvasH && fy > canvasH - 7) fy = canvasH - 7;
       var size = Math.max(8, Math.round(lineGap * 0.72));
@@ -359,7 +398,7 @@
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.lineCap = 'butt';
       drawLedgers(c, x, step, bottomLine, lineGap, style.low, style.high, style.ledgerMin, style.ledgerMax);
-      var up = stemDown ? false : step < STAFF_MIDDLE_STEP;
+      var up = stemDown ? false : (style.stemUp != null ? !!style.stemUp : step < STAFF_MIDDLE_STEP);
       var stemH = lineGap * 3.15;
       var showStem = style.stem !== false;
       var y2 = up ? y - stemH : y + stemH;
@@ -616,6 +655,46 @@
       c.restore();
     }
 
+    function drawTie(c, x1, x2, y, below, lineGap, color) {
+      var rx = Math.max(4, lineGap * 0.52);
+      var a = x1 + rx * 0.9;
+      var b = x2 - rx * 0.9;
+      if (b - a < lineGap * 0.6) {
+        a = x1 + rx * 0.4;
+        b = x2 - rx * 0.4;
+      }
+      if (b <= a) return;
+      var dir = below ? 1 : -1;
+      var y0 = y + dir * lineGap * 0.55;
+      var lift = dir * Math.min(lineGap * 1.1, Math.max(lineGap * 0.5, (b - a) * 0.12));
+      var thick = dir * Math.max(1.2, lineGap * 0.16);
+      c.save();
+      c.fillStyle = color || INK;
+      c.beginPath();
+      c.moveTo(a, y0);
+      c.bezierCurveTo(a + (b - a) * 0.25, y0 + lift, b - (b - a) * 0.25, y0 + lift, b, y0);
+      c.bezierCurveTo(b - (b - a) * 0.25, y0 + lift + thick, a + (b - a) * 0.25, y0 + lift + thick, a, y0);
+      c.closePath();
+      c.fill();
+      c.restore();
+    }
+
+    function drawAccent(c, x, y, below, lineGap, color) {
+      var wd = lineGap * 0.55;
+      var ht = lineGap * 0.28;
+      var cy = y + (below ? 1 : -1) * lineGap * 1.25;
+      c.save();
+      c.strokeStyle = color || INK;
+      c.lineWidth = Math.max(1.3, lineGap * 0.13);
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x - wd, cy - ht);
+      c.lineTo(x + wd, cy);
+      c.lineTo(x - wd, cy + ht);
+      c.stroke();
+      c.restore();
+    }
+
     function drawRest(c, x, staffBottom, lineGap, rest, color) {
       var col = color || REST_INK;
       var midY = yFor(STAFF_MIDDLE_STEP, staffBottom, lineGap);
@@ -842,13 +921,20 @@
           var shape = noteShape(note.dur);
           var staffBottom = placed.staff === 'bass' ? bassBottom : bottomLine;
           var ink = HAND_INK[placed.hand] || INK;
-          nx = xAt(chartNoteBeat(bar.startBeat, note.beat));
+          var barBeat0 = bar.startBeat;
+          nx = xAt(chartNoteBeat(barBeat0, note.beat));
           if (nx < clefRight - 2 || nx > w + 8) continue;
           var ny = yFor(placed.step, staffBottom, lineGap);
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
+          var chord = chordInfo(notes, note);
+          var stemUp = chord ? chord.up : placed.step < STAFF_MIDDLE_STEP;
+          if (note.tie && note.tieBack > 0) {
+            var tieBelow = chord ? placed.step === chord.lo && placed.step !== chord.hi : stemUp;
+            drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink);
+          }
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
-            color: ink, low: placed.low, high: placed.high,
+            color: ink, low: placed.low, high: placed.high, stemUp: stemUp,
             hollow: shape.hollow, stem: shape.stem, dot: shape.dot,
             stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
             stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
@@ -856,7 +942,8 @@
             ledgerMax: placed.staff === 'bass' ? null : bassTop - lineGap * 0.45
           });
           var mark = fingerMark(note);
-          if (mark) drawFingerNum(ctx, nx, ny, placed.step, mark, lineGap, ink, h);
+          if (note.accent) drawAccent(ctx, nx, ny, stemUp && shape.stem, lineGap, ink);
+          if (mark) drawFingerNum(ctx, nx, ny, placed.step, mark, lineGap, ink, h, chord ? chordFingerY(notes, note, chord, !!mark.below, bottomLine, bassBottom, lineGap, shape.stem) : null);
         }
         drawBarRests(ctx, bar, bpb, xAt, bar.startBeat, bottomLine, bassBottom, lineGap, clefRight + 4, w - 4);
       }
@@ -1050,12 +1137,19 @@
           var shape = noteShape(note.dur);
           var staffBottom = placed.staff === 'bass' ? bassBottom : bottomLine;
           var ink = HAND_INK[placed.hand] || INK;
-          nx = xAt(chartNoteBeat(bar.startBeat || i * bpb, note.beat));
+          var barBeat0 = bar.startBeat || i * bpb;
+          nx = xAt(chartNoteBeat(barBeat0, note.beat));
           var ny = yFor(placed.step, staffBottom, lineGap);
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
+          var chord = chordInfo(notes, note);
+          var stemUp = chord ? chord.up : placed.step < STAFF_MIDDLE_STEP;
+          if (note.tie && note.tieBack > 0) {
+            var tieBelow = chord ? placed.step === chord.lo && placed.step !== chord.hi : stemUp;
+            drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink);
+          }
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
-            color: ink, low: placed.low, high: placed.high,
+            color: ink, low: placed.low, high: placed.high, stemUp: stemUp,
             hollow: shape.hollow, stem: shape.stem, dot: shape.dot,
             stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
             stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
@@ -1063,7 +1157,8 @@
             ledgerMax: placed.staff === 'bass' ? null : bassTop - lineGap * 0.45
           });
           var finger = fingerMark(note);
-          if (finger) drawFingerNum(ctx, nx, ny, placed.step, finger, lineGap, ink, h);
+          if (note.accent) drawAccent(ctx, nx, ny, stemUp && shape.stem, lineGap, ink);
+          if (finger) drawFingerNum(ctx, nx, ny, placed.step, finger, lineGap, ink, h, chord ? chordFingerY(notes, note, chord, !!finger.below, bottomLine, bassBottom, lineGap, shape.stem) : null);
         }
         drawBarRests(ctx, bar, bpb, xAt, bar.startBeat || i * bpb, bottomLine, bassBottom, lineGap, 0, w);
       }
@@ -1139,6 +1234,7 @@
     noteShape: noteShape,
     staffGapFor: staffGapFor,
     handRests: handRests,
+    chordInfo: chordInfo,
     BEAT_CENTER: BEAT_CENTER,
     KIND_LABEL: KIND_LABEL
   };

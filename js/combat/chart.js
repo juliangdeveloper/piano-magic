@@ -65,6 +65,7 @@
       note.finger = n.finger;
     }
     if (n.accent === true) note.accent = true;
+    if (n.tie === true) note.tie = true;
     if (n.dynamic === 'f' || n.dynamic === 'p' || n.dynamic === 'mf' || n.dynamic === 'mp' || n.dynamic === 'ff') {
       note.dynamic = n.dynamic;
     }
@@ -86,6 +87,60 @@
   }
 
   var PLAYER_HP = 1000;
+  var TIE_EPS = 1e-6;
+
+  function tieSource(loop, b, note, bpb) {
+    var cands = [];
+    var j;
+    var notes = loop[b].notes;
+    for (j = 0; j < notes.length; j++) {
+      if (notes[j] !== note) cands.push({ n: notes[j], back: note.beat - notes[j].beat });
+    }
+    if (b > 0 && note.beat < TIE_EPS && loop[b - 1].kind === loop[b].kind) {
+      notes = loop[b - 1].notes;
+      for (j = 0; j < notes.length; j++) cands.push({ n: notes[j], back: bpb - notes[j].beat });
+    }
+    for (j = 0; j < cands.length; j++) {
+      var c = cands[j];
+      if (c.n.pitch !== note.pitch || c.n.hand !== note.hand) continue;
+      if (Math.abs(c.back - c.n.dur) < TIE_EPS) return c;
+    }
+    return null;
+  }
+
+  function linkTies(loop, bpb) {
+    var tied = [];
+    var heads = [];
+    function headOf(n) {
+      var k = tied.indexOf(n);
+      return k < 0 ? n : heads[k];
+    }
+    for (var b = 0; b < loop.length; b++) {
+      var notes = loop[b].notes;
+      for (var j = 0; j < notes.length; j++) {
+        var note = notes[j];
+        if (!note.tie) continue;
+        var src = tieSource(loop, b, note, bpb);
+        if (!src) {
+          delete note.tie;
+          continue;
+        }
+        note.tieBack = src.back;
+        var head = headOf(src.n);
+        tied.push(note);
+        heads.push(head);
+        head.hold = (head.hold || head.dur) + note.dur;
+      }
+    }
+  }
+
+  function attacks(notes) {
+    var out = [];
+    for (var i = 0; i < (notes || []).length; i++) {
+      if (notes[i] && !notes[i].tie) out.push(notes[i]);
+    }
+    return out;
+  }
 
   function parse(raw) {
     if (!raw || typeof raw !== 'object') fail('chart vacío');
@@ -108,6 +163,7 @@
     if (typeof player !== 'number' || player < 1) fail('hp.player inválido');
     if (typeof boss !== 'number' || boss < 1) fail('hp.boss inválido');
     if (typeof PLAYER_HP === 'number' && PLAYER_HP >= 1) player = PLAYER_HP;
+    linkTies(loop, timeSig[0] * (4 / timeSig[1]));
 
     return {
       id: String(raw.id),
@@ -221,6 +277,7 @@
   return {
     PLAYER_HP: PLAYER_HP,
     parse: parse,
+    attacks: attacks,
     activePitches: activePitches,
     beatsForDuration: beatsForDuration,
     DURATION_BEATS: DURATION_BEATS,

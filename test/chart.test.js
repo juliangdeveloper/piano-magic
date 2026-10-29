@@ -121,105 +121,91 @@ test('C9: una nota sin mano no carga, y L/l se conservan', () => {
   assert.throws(() => Chart.parse(bad), /sin mano/);
 });
 
-test('C10: Veil Boat es Row Your Boat entero en 6/8, desde C4 hasta el dream', () => {
+const shape = (bar) => bar.notes.map((n) => [n.pitch, n.beat, n.dur, n.hand, n.finger || 0]);
+
+test('C10: Veil Boat en 3/4 empieza en la izquierda y toca dos veces sus 7 compases', () => {
   const c = load('veil-boat');
-  assert.deepStrictEqual(c.timeSig, [6, 8]);
+  assert.deepStrictEqual(c.timeSig, [3, 4]);
   assert.strictEqual(Chart.beatsPerBar(c), 3);
-  const right = (bar) => bar.notes.filter((n) => n.hand === 'R');
-  assert.strictEqual(right(c.loop[1])[0].pitch, 'C4');
-  assert.strictEqual(right(c.loop[1])[0].dur, 1.5);
-  assert.deepStrictEqual(right(c.loop[6]).map((n) => n.pitch), ['C5', 'C5', 'C5', 'G4', 'G4', 'G4']);
-  assert.deepStrictEqual(right(c.loop[9]).map((n) => [n.pitch, n.dur]), [['C4', 3]]);
-  assert.deepStrictEqual(c.loop[1].notes.filter((n) => n.hand === 'L').map((n) => [n.pitch, n.beat, n.dur]), [
-    ['C3', 0, 1.5],
-    ['G3', 1.5, 1.5]
-  ]);
+  assert.strictEqual(c.roomKey, 'C');
+  const holes = c.loop.map((b, i) => (b.kind === 'hole' ? i : -1)).filter((i) => i >= 0);
+  assert.deepStrictEqual(holes, [0, 8]);
+  const first = c.loop.slice(1, 8).map(shape);
+  const second = c.loop.slice(9, 16).map(shape);
+  assert.strictEqual(first.length, 7);
+  assert.deepStrictEqual(second, first);
+  assert.deepStrictEqual(first[0], [['G3', 0, 3, 'L', 3]]);
+  assert.deepStrictEqual(first[5], [['B3', 0, 2, 'L', 1], ['C4', 2, 1, 'R', 1]]);
+  assert.deepStrictEqual(first[6], [['D4', 0, 3, 'R', 0]]);
 });
 
-test('C11: Tower Chime son 24 compases, ataques tras el 7 y el 14, y campana E3', () => {
+test('C11: Tower Chime en Do, 8 compases, pausa y campanada C3 de la izquierda', () => {
   const c = load('tower-chime');
   assert.deepStrictEqual(c.timeSig, [3, 4]);
-  assert.strictEqual(c.roomKey, 'E');
+  assert.strictEqual(c.roomKey, 'C');
   assert.strictEqual(c.bpm, 60);
-  const defend = c.loop.filter((b) => b.kind === 'defend');
-  assert.strictEqual(defend.length, 24);
   const holes = c.loop.map((b, i) => (b.kind === 'hole' ? i : -1)).filter((i) => i >= 0);
-  assert.deepStrictEqual(holes, [7, 15]);
-  assert.deepStrictEqual(defend[0].notes.map((n) => [n.pitch, n.beat, n.dur, n.hand]), [
-    ['G#4', 0, 1, 'R'],
-    ['F#4', 1, 1, 'R'],
-    ['E4', 2, 1, 'R']
-  ]);
-  assert.deepStrictEqual(defend[1].notes.map((n) => [n.pitch, n.beat, n.dur, n.hand]), [
-    ['B3', 0, 3, 'R']
-  ]);
-  assert.strictEqual(defend[2].notes.length, 0);
-  assert.strictEqual(defend[13].notes.length, 0);
-  assert.strictEqual(defend[22].notes.length, 0);
-  assert.deepStrictEqual(defend[23].notes.map((n) => [n.pitch, n.beat, n.dur, n.hand]), [
-    ['E3', 0, 3, 'L']
-  ]);
+  assert.deepStrictEqual(holes, [0, 5]);
+  assert.strictEqual(c.loop.length, 12);
+  assert.deepStrictEqual(shape(c.loop[1]), [['E4', 0, 1, 'R', 3], ['C4', 1, 1, 'R', 1], ['D4', 2, 1, 'R', 2]]);
+  assert.deepStrictEqual(shape(c.loop[2]), [['G3', 0, 3, 'L', 3]]);
+  assert.deepStrictEqual(shape(c.loop[3]), [['G3', 0, 1, 'L', 0], ['D4', 1, 1, 'R', 2], ['E4', 2, 1, 'R', 3]]);
+  assert.deepStrictEqual(shape(c.loop[7]), [['G3', 0, 3, 'L', 3]]);
+  assert.strictEqual(c.loop[10].kind, 'defend');
+  assert.strictEqual(c.loop[10].notes.length, 0);
+  assert.deepStrictEqual(shape(c.loop[11]), [['C3', 0, 3, 'L', 0]]);
+  const pitches = c.loop.flatMap((b) => b.notes.map((n) => n.pitch));
+  assert.ok(pitches.every((p) => !p.includes('#')));
 });
 
-test('C12: New World Largo lleva piano y forte, sin acentos', () => {
+test('C12: New World Largo liga la quinta de la izquierda y no la vuelve a pedir', () => {
   const c = load('new-world-largo');
   assert.strictEqual(c.bpm, 104);
-  const notes = c.loop.flatMap((b) => b.notes);
-  assert.ok(notes.some((n) => n.dynamic === 'p'));
-  assert.ok(notes.some((n) => n.dynamic === 'f'));
-  assert.ok(notes.every((n) => n.accent !== true));
-  assert.strictEqual(c.loop[1].notes[0].pitch, 'E4');
-  assert.strictEqual(c.loop[1].notes[0].dur, 1.5);
+  assert.strictEqual(c.loop.length, 20);
+  assert.deepStrictEqual(shape(c.loop[1]), [['E4', 0, 3, 'R', 3], ['G4', 3, 1, 'R', 0], ['C3', 0, 4, 'L', 5], ['G3', 0, 4, 'L', 1]]);
+  const tied = (i) => c.loop[i].notes.filter((n) => n.tie).map((n) => n.pitch + n.hand);
+  assert.deepStrictEqual(tied(1), []);
+  assert.deepStrictEqual(tied(2), ['C3L', 'G3L']);
+  assert.deepStrictEqual(tied(4), ['C3L', 'G3L']);
+  assert.deepStrictEqual(tied(9), ['D4R']);
+  assert.deepStrictEqual(tied(19), ['C4R', 'C3L', 'G3L']);
+  assert.strictEqual(c.loop[1].notes[2].hold, 16);
+  assert.strictEqual(c.loop[8].notes[0].hold, 8);
+  assert.strictEqual(c.loop[9].notes[0].tieBack, 4);
+  assert.deepStrictEqual(Chart.attacks(c.loop[19].notes), []);
+  assert.deepStrictEqual(Chart.attacks(c.loop[9].notes).map((n) => n.pitch), ['G3']);
 });
 
-test('C13: Camptown compases 7 y 15, y Eine Kleine baja de G a D', () => {
-  const rh = (bar) => bar.notes.filter((n) => n.hand === 'R');
-  const camp = load('camptown-races').loop.filter((b) => b.kind === 'defend');
-  assert.deepStrictEqual(rh(camp[6]).map((n) => [n.pitch, n.beat, n.dur]), [
-    ['A4', 0, 2],
-    ['B4', 2, 1],
-    ['A4', 3, 1]
-  ]);
-  assert.deepStrictEqual(rh(camp[14]).map((n) => [n.pitch, n.beat, n.dur]), [
-    ['A4', 0, 1],
-    ['B4', 1, 0.5],
-    ['C5', 1.5, 0.5],
-    ['B4', 2, 0.5],
-    ['A4', 2.5, 1],
-    ['A4', 3.5, 0.5]
-  ]);
-  assert.ok(camp[0].notes.some((n) => n.hand === 'L' && n.pitch === 'G3'));
-  const eine = load('eine-kleine').loop.filter((b) => b.kind === 'defend');
-  assert.deepStrictEqual(rh(eine[0]).map((n) => [n.pitch, n.beat, n.dur]), [
-    ['G4', 0, 1],
-    ['D4', 1.5, 0.5],
-    ['G4', 2, 1],
-    ['D4', 3.5, 0.5]
-  ]);
-  assert.ok(rh(eine[0]).every((n) => n.hand === 'R'));
-  assert.strictEqual(rh(eine[7])[rh(eine[7]).length - 1].pitch, 'F#4');
+test('C13: una ligadura sin nota previa igual se toca como ataque', () => {
+  const base = raw('new-world-largo');
+  base.loop[2].notes[1].pitch = 'A3';
+  const c = Chart.parse(base);
+  const a3 = c.loop[2].notes.find((n) => n.pitch === 'A3');
+  assert.strictEqual(a3.tie, undefined);
+  assert.ok(Chart.attacks(c.loop[2].notes).includes(a3));
+  const slice = raw('new-world-largo');
+  slice.loop = slice.loop.slice(2);
+  const s = Chart.parse(slice);
+  assert.ok(s.loop[0].notes.every((n) => !n.tie));
 });
 
-test('C14: la mano izquierda corregida, y "2.5" no es una duración', () => {
-  const lh = (id, measure) => {
-    const bars = load(id).loop.filter((b) => b.kind === 'defend');
-    return bars[measure - 1].notes.filter((n) => n.hand === 'L').map((n) => [n.pitch, n.beat, n.dur]);
-  };
-  assert.deepStrictEqual(lh('new-world-largo', 7), [['F3', 0, 2], ['G3', 2, 2]]);
-  assert.deepStrictEqual(lh('camptown-races', 7), [['D3', 0, 4]]);
-  assert.deepStrictEqual(lh('camptown-races', 9), [['G3', 0, 2], ['G3', 2, 2]]);
-  assert.deepStrictEqual(lh('camptown-races', 12), [['G3', 0, 4]]);
-  assert.deepStrictEqual(lh('camptown-races', 15), [['C3', 0, 2], ['D3', 2, 2]]);
-  assert.deepStrictEqual(lh('eine-kleine', 3), [['D3', 0, 2], ['A3', 2, 2]]);
-  assert.deepStrictEqual(lh('eine-kleine', 5), [['G3', 0, 4]]);
-  assert.deepStrictEqual(lh('eine-kleine', 6), [['G3', 0, 4]]);
-  assert.deepStrictEqual(lh('eine-kleine', 7), [['G3', 0, 4]]);
-  assert.deepStrictEqual(lh('eine-kleine', 8), [['G3', 0, 4]]);
-  assert.deepStrictEqual(lh('tower-chime', 24), [['E3', 0, 3]]);
-  assert.deepStrictEqual(lh('tower-chime', 23), []);
-  const camp = raw('camptown-races');
-  assert.match(camp.remark, /Foster 1850/);
-  assert.equal(/attack|ataque|chart|pickup/i.test(camp.remark), false);
+test('C14: Camptown en Fa casi toda en la izquierda y Eine Kleine en Do con acentos', () => {
+  const camp = load('camptown-races');
+  assert.deepStrictEqual(camp.timeSig, [4, 4]);
+  assert.strictEqual(camp.roomKey, 'F');
+  assert.ok(camp.roomScale.includes('Bb'));
+  assert.deepStrictEqual(shape(camp.loop[1]), [['C4', 0, 1, 'L', 1], ['C4', 1, 1, 'L', 0], ['A3', 2, 1, 'L', 0], ['C4', 3, 1, 'L', 0]]);
+  assert.deepStrictEqual(shape(camp.loop[2]), [['D4', 0, 1, 'R', 1], ['C4', 1, 1, 'L', 0], ['A3', 2, 2, 'L', 0]]);
+  assert.deepStrictEqual(shape(camp.loop[12]), [['F4', 0, 4, 'R', 3]]);
+  assert.deepStrictEqual(shape(camp.loop[14]), [['C4', 0, 4, 'L', 1]]);
+  assert.deepStrictEqual(shape(camp.loop[19]), [['F3', 0, 4, 'L', 0]]);
+  const eine = load('eine-kleine');
+  assert.strictEqual(eine.roomKey, 'C');
+  assert.deepStrictEqual(shape(eine.loop[1]), [['C4', 0, 3, 'R', 1], ['G3', 3, 1, 'L', 3]]);
+  assert.deepStrictEqual(shape(eine.loop[8]), [['F4', 0, 1, 'R', 0], ['D4', 1, 1, 'R', 0], ['B3', 2, 1, 'L', 1], ['D4', 3, 1, 'R', 0]]);
+  assert.deepStrictEqual(shape(eine.loop[9]), [['G3', 0, 3, 'L', 0]]);
+  const accents = eine.loop.map((b, i) => (b.notes.some((n) => n.accent) ? i : -1)).filter((i) => i >= 0);
+  assert.deepStrictEqual(accents, [1, 2, 6, 7]);
 
   assert.strictEqual(Chart.beatsForDuration('2.5'), null);
   assert.strictEqual(Chart.beatsForDuration('eighth'), 0.5);

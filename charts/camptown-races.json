@@ -10,21 +10,20 @@
   "id": "camptown-races",
   "title": "Camptown Races",
   "tune": "Camptown Races (Foster, 1850)",
-  "remark": "Foster 1850 (original in D, 2/4), here in G, 4/4 with note values doubled; verse then chorus.",
   "bpm": 104,
   "timeSig": [
     4,
     4
   ],
-  "roomKey": "G",
+  "roomKey": "F",
   "roomScale": [
+    "F",
     "G",
     "A",
-    "B",
+    "Bb",
     "C",
     "D",
-    "E",
-    "F#"
+    "E"
   ],
   "loop": [
     {
@@ -36,40 +35,27 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D5",
-          "beat": 0,
-          "dur": 1,
-          "hand": "R",
-          "finger": 5
-        },
-        {
-          "pitch": "D5",
-          "beat": 1,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 2,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "D5",
-          "beat": 3,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
+          "pitch": "C4",
           "beat": 0,
           "dur": 1,
           "hand": "L",
-          "finger": 2
+          "finger": 1
         },
         {
-          "pitch": "D3",
+          "pitch": "C4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "L"
+        },
+        {
+          "pitch": "A3",
           "beat": 2,
+          "dur": 1,
+          "hand": "L"
+        },
+        {
+          "pitch": "C4",
+          "beat": 3,
           "dur": 1,
           "hand": "L"
         }
@@ -80,31 +66,20 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "E5",
+          "pitch": "D4",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 1
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 1,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 2,
-          "dur": 2,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
           "dur": 1,
           "hand": "L"
         },
         {
-          "pitch": "D3",
+          "pitch": "A3",
           "beat": 2,
           "dur": 2,
           "hand": "L"
@@ -116,25 +91,13 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "B4",
-          "beat": 0,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "A4",
-          "beat": 1,
-          "dur": 3,
-          "hand": "R"
-        },
-        {
-          "pitch": "D3",
+          "pitch": "A3",
           "beat": 0,
           "dur": 1,
           "hand": "L"
         },
         {
-          "pitch": "A3",
+          "pitch": "G3",
           "beat": 1,
           "dur": 3,
           "hand": "L"
@@ -146,25 +109,13 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "B4",
-          "beat": 0,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "A4",
-          "beat": 1,
-          "dur": 3,
-          "hand": "R"
-        },
-        {
-          "pitch": "D3",
+          "pitch": "A3",
           "beat": 0,
           "dur": 1,
           "hand": "L"
         },
         {
-          "pitch": "A3",
+          "pitch": "G3",
           "beat": 1,
           "dur": 3,
           "hand": "L"
@@ -181,40 +132,26 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 0,
           "dur": 1,
-          "hand": "R",
-          "finger": 5
+          "hand": "L"
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 1,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
-          "pitch": "B4",
+          "pitch": "A3",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 3,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
-          "dur": 1,
-          "hand": "L",
-          "finger": 2
-        },
-        {
-          "pitch": "D3",
-          "beat": 2,
           "dur": 1,
           "hand": "L"
         }
@@ -225,31 +162,19 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "E5",
+          "pitch": "D4",
           "beat": 0,
           "dur": 1,
           "hand": "R"
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 1,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 2,
-          "dur": 2,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
           "dur": 1,
           "hand": "L"
         },
         {
-          "pitch": "D3",
+          "pitch": "A3",
           "beat": 2,
           "dur": 2,
           "hand": "L"
@@ -261,27 +186,21 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "A4",
+          "pitch": "G3",
           "beat": 0,
           "dur": 2,
-          "hand": "R"
+          "hand": "L"
         },
         {
-          "pitch": "B4",
+          "pitch": "A3",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
-          "pitch": "A4",
+          "pitch": "G3",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "D3",
-          "beat": 0,
-          "dur": 4,
           "hand": "L"
         }
       ],
@@ -291,13 +210,7 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G4",
-          "beat": 0,
-          "dur": 4,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
+          "pitch": "F3",
           "beat": 0,
           "dur": 4,
           "hand": "L"
@@ -314,41 +227,27 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G4",
+          "pitch": "F3",
           "beat": 0,
-          "dur": 1.5,
-          "hand": "R",
-          "finger": 1
+          "dur": 1,
+          "hand": "L"
         },
         {
-          "pitch": "G4",
-          "beat": 1.5,
-          "dur": 0.5,
-          "hand": "R"
+          "pitch": "F3",
+          "beat": 1,
+          "dur": 1,
+          "hand": "L"
         },
         {
-          "pitch": "B4",
+          "pitch": "A3",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
-          "dur": 2,
-          "hand": "L",
-          "finger": 1
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 2,
           "hand": "L"
         }
       ],
@@ -358,16 +257,11 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G5",
+          "pitch": "F4",
           "beat": 0,
           "dur": 4,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
-          "dur": 4,
-          "hand": "L"
+          "hand": "R",
+          "finger": 3
         }
       ],
       "i": 12
@@ -376,34 +270,29 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "E5",
+          "pitch": "D4",
           "beat": 0,
-          "dur": 1.5,
+          "dur": 1,
+          "hand": "R",
+          "finger": 1
+        },
+        {
+          "pitch": "D4",
+          "beat": 1,
+          "dur": 1,
           "hand": "R"
         },
         {
-          "pitch": "E5",
-          "beat": 1.5,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "G5",
+          "pitch": "F4",
           "beat": 2,
           "dur": 1,
           "hand": "R"
         },
         {
-          "pitch": "E5",
+          "pitch": "D4",
           "beat": 3,
           "dur": 1,
           "hand": "R"
-        },
-        {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 4,
-          "hand": "L"
         }
       ],
       "i": 13
@@ -412,16 +301,11 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 0,
           "dur": 4,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
-          "dur": 4,
-          "hand": "L"
+          "hand": "L",
+          "finger": 1
         }
       ],
       "i": 14
@@ -435,53 +319,27 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 0,
           "dur": 1,
-          "hand": "R",
-          "finger": 5
+          "hand": "L"
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 1,
           "dur": 1,
-          "hand": "R"
+          "hand": "L"
         },
         {
-          "pitch": "B4",
+          "pitch": "A3",
           "beat": 2,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 2.5,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "D5",
-          "beat": 3,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "D5",
-          "beat": 3.5,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
           "dur": 1,
-          "hand": "L",
-          "finger": 2
+          "hand": "L"
         },
         {
-          "pitch": "D3",
-          "beat": 2,
-          "dur": 2,
+          "pitch": "C4",
+          "beat": 3,
+          "dur": 1,
           "hand": "L"
         }
       ],
@@ -491,31 +349,19 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "E5",
+          "pitch": "D4",
           "beat": 0,
           "dur": 1,
           "hand": "R"
         },
         {
-          "pitch": "D5",
+          "pitch": "C4",
           "beat": 1,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 2,
-          "dur": 2,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
           "dur": 1,
           "hand": "L"
         },
         {
-          "pitch": "D3",
+          "pitch": "A3",
           "beat": 2,
           "dur": 2,
           "hand": "L"
@@ -527,51 +373,21 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "A4",
-          "beat": 0,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 1,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "C5",
-          "beat": 1.5,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "B4",
-          "beat": 2,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "A4",
-          "beat": 2.5,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "A4",
-          "beat": 3.5,
-          "dur": 0.5,
-          "hand": "R"
-        },
-        {
-          "pitch": "C3",
+          "pitch": "G3",
           "beat": 0,
           "dur": 2,
           "hand": "L"
         },
         {
-          "pitch": "D3",
+          "pitch": "A3",
           "beat": 2,
-          "dur": 2,
+          "dur": 1,
+          "hand": "L"
+        },
+        {
+          "pitch": "G3",
+          "beat": 3,
+          "dur": 1,
           "hand": "L"
         }
       ],
@@ -581,13 +397,7 @@
       "kind": "defend",
       "notes": [
         {
-          "pitch": "G4",
-          "beat": 0,
-          "dur": 4,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
+          "pitch": "F3",
           "beat": 0,
           "dur": 4,
           "hand": "L"

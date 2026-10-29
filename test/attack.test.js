@@ -84,15 +84,16 @@ for (const id of CHARTS) {
     assert.strictEqual(T.pitchClass(c.roomScale[0] + '4'), T.pitchClass(c.roomKey + '4'));
     const osk = new Set(Object.values(T.KEY_MAP).map((p) => T.pitchToMidi(p)));
     const bpb = Chart.beatsPerBar(c);
-    if (id === 'tower-chime') {
-      const holes = c.loop.map((b, i) => (b.kind === 'hole' ? i : -1)).filter((i) => i >= 0);
-      assert.deepStrictEqual(holes, [7, 15]);
-      assert.strictEqual(c.loop.filter((b) => b.kind === 'defend').length, 24);
+    const HOLES = { 'veil-boat': [0, 8], 'tower-chime': [0, 5] };
+    const holes = c.loop.map((b, i) => (b.kind === 'hole' ? i : -1)).filter((i) => i >= 0);
+    if (HOLES[id]) {
+      assert.deepStrictEqual(holes, HOLES[id]);
     } else {
       assert.strictEqual(c.loop.length % 5, 0);
+      assert.deepStrictEqual(holes, c.loop.map((b, i) => i).filter((i) => i % 5 === 0));
     }
     c.loop.forEach((b, i) => {
-      if (id !== 'tower-chime') assert.strictEqual(b.kind, i % 5 === 0 ? 'hole' : 'defend');
+      if (b.kind === 'hole') assert.strictEqual(b.notes.length, 0);
       const notes = b.notes.slice().sort((a, z) => a.beat - z.beat || (a.hand === 'L' ? -1 : 1));
       let active = [];
       for (const n of notes) {
@@ -103,9 +104,9 @@ for (const id of CHARTS) {
         assert.ok(n.hand === 'L' || n.hand === 'R', 'mano');
         assert.ok(n.beat + n.dur <= bpb + 1e-9);
         active = active.filter((a) => a.end > n.beat + 1e-9);
-        assert.ok(!active.some((a) => a.hand === n.hand), 'la misma mano no se pisa');
-        assert.ok(active.length < 2, 'como mucho dos voces');
-        active.push({ hand: n.hand, end: n.beat + n.dur });
+        assert.ok(!active.some((a) => a.hand === n.hand && (Math.abs(a.beat - n.beat) > 1e-9 || Math.abs(a.end - n.beat - n.dur) > 1e-9)), 'la misma mano no se pisa');
+        assert.ok(active.length < 3, 'como mucho tres voces');
+        active.push({ hand: n.hand, beat: n.beat, end: n.beat + n.dur });
       }
     });
     assert.ok(Rivals.options().some((o) => o.chart === 'charts/' + id + '.json'));

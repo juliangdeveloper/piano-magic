@@ -71,7 +71,7 @@ test('S3: la práctica usa solo las notas de la sección, al tempo elegido', () 
         const pack = Score.loopNotes(file, sec);
         const expected = [];
         for (let i = sec.from; i < sec.to; i++) {
-          for (const n of parsed.loop[i].notes) expected.push(n.pitch);
+          for (const n of parsed.loop[i].notes) if (!n.tie) expected.push(n.pitch);
         }
         assert.deepStrictEqual(pack.notes.map((n) => n.pitch), expected, id);
         assert.strictEqual(pack.beats, (sec.to - sec.from) * Chart.beatsPerBar(parsed), id);
@@ -119,7 +119,7 @@ test('S5: la partitura dibuja el chart completo y el compás cae en su sección'
     style: {},
     getContext: function () { return ctx; }
   };
-  const tape = Tape.create(canvas, { version: '0.1.45' });
+  const tape = Tape.create(canvas, { version: '0.1.46' });
   tape.renderSheet(model);
   assert.ok(calls.includes('fillRect'));
   const early = tape.barIndexAt(70);
@@ -151,7 +151,7 @@ test('S6: pausa abre la partitura y el toque del rival tiene dos salidas', () =>
   assert.match(html, /id="btnPractice"/);
   assert.match(html, /Practicar/);
   assert.match(html, /id="btnSheetLoop"/);
-  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.45/);
+  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.46/);
   assert.match(app, /duringSheet/);
 });
 
@@ -202,7 +202,7 @@ test('S7: cada mano queda en su pentagrama y solo las barras de compás cruzan e
   for (const id of IDS) {
     const model = Score.sheetModel(raw(id), null, null);
     const canvas = sheetCanvas(960, 240);
-    Tape.create(canvas, { version: '0.1.45' }).renderSheet(model);
+    Tape.create(canvas, { version: '0.1.46' }).renderSheet(model);
     const staff = canvas.segs.filter((s) => Math.abs(s.y1 - s.y0) < 0.6 && Math.abs(s.x1 - s.x0) > canvas.clientWidth * 0.7);
     const ys = staff.map((s) => s.y0).sort((a, b) => a - b);
     assert.strictEqual(ys.length, 10, id);
@@ -242,4 +242,24 @@ test('S7: cada mano queda en su pentagrama y solo las barras de compás cruzan e
       }
     });
   }
+});
+
+test('S9: un compás vacío de una mano es un silencio de compás entero en 3/4 y 4/4', () => {
+  for (const bpb of [3, 4]) {
+    const notes = [{ pitch: 'C4', beat: 0, dur: 1, hand: 'R' }];
+    assert.deepStrictEqual(Tape.handRests(notes, 'L', bpb), [{ beat: 0, dur: bpb, whole: true }]);
+    assert.deepStrictEqual(Tape.handRests([], 'R', bpb), [{ beat: 0, dur: bpb, whole: true }]);
+  }
+  const tower = Chart.parse(raw('tower-chime'));
+  assert.deepStrictEqual(Tape.handRests(tower.loop[2].notes, 'R', 3), [{ beat: 0, dur: 3, whole: true }]);
+});
+
+test('S10: la quinta de la izquierda comparte plica y la mano derecha no cuenta', () => {
+  const nw = Chart.parse(raw('new-world-largo'));
+  const notes = nw.loop[1].notes;
+  const c3 = notes.find((n) => n.pitch === 'C3');
+  const info = Tape.chordInfo(notes, c3);
+  assert.ok(info);
+  assert.strictEqual(info.up, Tape.chordInfo(notes, notes.find((n) => n.pitch === 'G3')).up);
+  assert.strictEqual(Tape.chordInfo(notes, notes.find((n) => n.pitch === 'E4')), null);
 });

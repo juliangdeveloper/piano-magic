@@ -401,7 +401,7 @@ test('D19: un par en voices es perfecto; una sola voz es parcial; el segundo eve
   assert.strictEqual(s.playerHp, FULL_HP - 2);
 });
 
-test('D20: Tower Chime se recorre entero: ataques tras 7 y 14, silencio sin daño, campana E3', () => {
+test('D20: Tower Chime en 3/4 se recorre entero: dos ataques, silencio sin daño, campana C3', () => {
   const chart = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', 'tower-chime.json'), 'utf8'));
   let t = 0;
   const dir = Director.create({ chart: chart, now: () => t });
@@ -423,12 +423,41 @@ test('D20: Tower Chime se recorre entero: ataques tras 7 y 14, silencio sin dañ
   }
   t = total * bpb * ms + 20;
   const end = dir.tick(t);
-  assert.deepStrictEqual(holes, [8, 16]);
+  assert.deepStrictEqual(holes, [1, 6]);
   assert.strictEqual(end.playerHp, FULL_HP);
   assert.strictEqual(end.bossHp, 20);
   assert.strictEqual(end.lastResolve.grade, 'perfect');
   const bell = chart.loop[chart.loop.length - 1];
   assert.strictEqual(bell.kind, 'defend');
-  assert.strictEqual(bell.notes[0].pitch, 'E3');
+  assert.strictEqual(bell.notes[0].pitch, 'C3');
   assert.strictEqual(bell.notes[0].hand, 'L');
+  assert.strictEqual(bell.notes[0].dur, 3);
+});
+
+test('D21: New World con ligaduras: la nota ligada no se vuelve a pedir ni a tocar', () => {
+  const chart = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', 'new-world-largo.json'), 'utf8'));
+  let t = 0;
+  const dir = Director.create({ chart: chart, now: () => t });
+  dir.start(0);
+  const bpb = 4;
+  const ms = 60000 / chart.bpm;
+  const total = 1 + chart.loop.length;
+  let defends = 0;
+  for (let g = 0; g < total; g++) {
+    t = g * bpb * ms + 20;
+    const s = dir.tick(t);
+    if (s.phase !== 'defend') continue;
+    defends++;
+    const notes = s.currentBar.notes.filter((n) => !n.tie).sort((a, b) => a.beat - b.beat);
+    for (const note of notes) {
+      t = (s.currentBar.startBeat + note.beat + 0.5) * ms;
+      dir.noteOn(note.pitch, t);
+    }
+    for (const note of notes) dir.noteOff(note.pitch, (s.currentBar.startBeat + note.beat + 0.5) * ms + 80);
+  }
+  t = total * bpb * ms + 20;
+  const end = dir.tick(t);
+  assert.strictEqual(defends, 16);
+  assert.strictEqual(end.playerHp, FULL_HP);
+  assert.strictEqual(end.lastResolve.grade, 'perfect');
 });

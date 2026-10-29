@@ -69,10 +69,11 @@
       bar = chart.loop[i];
       for (j = 0; j < bar.notes.length; j++) {
         n = bar.notes[j];
+        if (n.tie) continue;
         notes.push({
           pitch: n.pitch,
           hand: n.hand,
-          dur: n.dur,
+          dur: n.hold || n.dur,
           onset: (i - sec.from) * bpb + n.beat + Chart.BEAT_CENTER
         });
       }

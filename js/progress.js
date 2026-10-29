@@ -290,7 +290,7 @@
       if (Chart && typeof Chart.barAt === 'function') {
         for (var b = 0; b < barIndex; b++) {
           var bar = Chart.barAt(chart, b);
-          if (bar && bar.kind === 'defend' && bar.notes) expected += bar.notes.length;
+          if (bar && bar.kind === 'defend' && bar.notes) expected += bar.notes.filter(function (n) { return !n.tie; }).length;
         }
       }
       var notes = Array.isArray(state.defendNotes) ? state.defendNotes : [];
