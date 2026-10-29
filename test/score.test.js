@@ -119,7 +119,7 @@ test('S5: la partitura dibuja el chart completo y el compás cae en su sección'
     style: {},
     getContext: function () { return ctx; }
   };
-  const tape = Tape.create(canvas, { version: '0.1.44' });
+  const tape = Tape.create(canvas, { version: '0.1.45' });
   tape.renderSheet(model);
   assert.ok(calls.includes('fillRect'));
   const early = tape.barIndexAt(70);
@@ -151,7 +151,7 @@ test('S6: pausa abre la partitura y el toque del rival tiene dos salidas', () =>
   assert.match(html, /id="btnPractice"/);
   assert.match(html, /Practicar/);
   assert.match(html, /id="btnSheetLoop"/);
-  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.44/);
+  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.45/);
   assert.match(app, /duringSheet/);
 });
 
@@ -202,14 +202,15 @@ test('S7: cada mano queda en su pentagrama y solo las barras de compás cruzan e
   for (const id of IDS) {
     const model = Score.sheetModel(raw(id), null, null);
     const canvas = sheetCanvas(960, 240);
-    Tape.create(canvas, { version: '0.1.44' }).renderSheet(model);
+    Tape.create(canvas, { version: '0.1.45' }).renderSheet(model);
     const staff = canvas.segs.filter((s) => Math.abs(s.y1 - s.y0) < 0.6 && Math.abs(s.x1 - s.x0) > canvas.clientWidth * 0.7);
     const ys = staff.map((s) => s.y0).sort((a, b) => a - b);
     assert.strictEqual(ys.length, 10, id);
     const lineGap = ys[1] - ys[0];
     const trebleBottom = ys[4];
     const bassTop = ys[5];
-    assert.ok((bassTop - trebleBottom) / lineGap > 3, id);
+    const gapLines = (bassTop - trebleBottom) / lineGap;
+    assert.ok(gapLines >= 2 && gapLines <= 3.2, id + ' hueco ' + gapLines);
     const drawn = [];
     model.bars.forEach((bar) => {
       if (bar.kind === 'hole') return;

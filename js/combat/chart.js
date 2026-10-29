@@ -53,6 +53,9 @@
     } else if (typeof rawDur === 'number') {
       dur = (isFinite(rawDur) && rawDur > 0) ? rawDur : 1;
     }
+    if (n.hand !== 'L' && n.hand !== 'l' && n.hand !== 'R' && n.hand !== 'r') {
+      fail('nota[' + i + '] sin mano (hand debe ser L o R)');
+    }
     var hand = (n.hand === 'L' || n.hand === 'l') ? 'L' : 'R';
     var note = { pitch: n.pitch, beat: n.beat, dur: dur, hand: hand };
     if (n.finger != null) {

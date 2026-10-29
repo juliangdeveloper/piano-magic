@@ -23,6 +23,15 @@
   var REST_UNITS = [4, 2, 1, 0.5];
   var BEAT_EPS = 1e-6;
   var LEDGER_HALF = 0.76;
+  var SHEET_GAP_MIN = 2.2;
+  var TAPE_GAP = 1.35;
+  var GAP_HEAD = 0.45;
+  var GAP_CLEAR = 0.35;
+  var TREBLE_BOTTOM_STEP = 0;
+  var BASS_TOP_STEP = 8;
+  var BASS_SHIFT = 12;
+  var BRACE_W = 0.95;
+  var F_CLEF_W = 2.75;
   var REST_INK = 'rgba(28, 20, 12, 0.62)';
   var HANDS = ['R', 'L'];
 
@@ -129,9 +138,26 @@
     if (!parts) return null;
     var bass = hand === 'L' || (hand !== 'R' && parts.step <= -3);
     if (bass) {
-      return { parts: parts, step: parts.step + 12, staff: 'bass', low: -2, high: 10, hand: 'L' };
+      return { parts: parts, step: parts.step + BASS_SHIFT, staff: 'bass', low: -2, high: 10, hand: 'L' };
     }
     return { parts: parts, step: parts.step, staff: 'treble', low: -2, high: 10, hand: 'R' };
+  }
+
+  function staffGapFor(bars, minGap) {
+    var gap = minGap;
+    var deepR = 0;
+    var highL = 0;
+    for (var i = 0; i < (bars || []).length; i++) {
+      var notes = (bars[i] && bars[i].notes) || [];
+      for (var j = 0; j < notes.length; j++) {
+        var placed = placeNote(notes[j].pitch, notes[j].hand);
+        if (!placed) continue;
+        if (placed.staff === 'treble') deepR = Math.max(deepR, (TREBLE_BOTTOM_STEP - placed.step) / 2);
+        else highL = Math.max(highL, (placed.step - BASS_TOP_STEP) / 2);
+      }
+    }
+    var need = (deepR > 0 ? deepR + GAP_HEAD : 0) + (highL > 0 ? highL + GAP_HEAD : 0) + GAP_CLEAR;
+    return Math.max(gap, need);
   }
 
   function attackBeatMarks(barStart, beatsPerBar, playBeat) {
@@ -550,24 +576,42 @@
 
     function drawBassClef(c, x, bottomLine, lineGap) {
       var fY = yFor(6, bottomLine, lineGap);
-      var s = lineGap;
+      var u = lineGap;
       c.save();
-      c.translate(x + s * 0.85, fY);
-      c.strokeStyle = INK;
       c.fillStyle = INK;
-      c.lineWidth = Math.max(1.5, s * 0.16);
-      c.lineCap = 'round';
       c.beginPath();
-      c.moveTo(s * 0.2, -s * 1.45);
-      c.bezierCurveTo(-s * 0.85, -s * 1.55, -s * 1.05, -s * 0.1, -s * 0.1, s * 0.38);
-      c.bezierCurveTo(s * 0.95, s * 0.95, s * 0.72, -s * 0.42, s * 0.02, -s * 0.62);
-      c.stroke();
-      c.beginPath();
-      c.arc(s * 0.2, -s * 1.45, Math.max(1.2, s * 0.14), 0, Math.PI * 2);
+      c.moveTo(x + u * 0.12, fY);
+      c.bezierCurveTo(x + u * 0.12, fY - u * 1.3, x + u * 2.05, fY - u * 1.4, x + u * 2.05, fY + u * 0.1);
+      c.bezierCurveTo(x + u * 2.05, fY + u * 1.35, x + u * 1.15, fY + u * 2.25, x + u * 0.12, fY + u * 2.8);
+      c.bezierCurveTo(x + u * 0.95, fY + u * 2.1, x + u * 1.55, fY + u * 1.25, x + u * 1.55, fY + u * 0.1);
+      c.bezierCurveTo(x + u * 1.55, fY - u * 0.95, x + u * 0.75, fY - u * 1.0, x + u * 0.55, fY - u * 0.35);
+      c.closePath();
       c.fill();
       c.beginPath();
-      c.arc(s * 0.62, -s * 0.48, Math.max(1.3, s * 0.13), 0, Math.PI * 2);
-      c.arc(s * 0.62, s * 0.48, Math.max(1.3, s * 0.13), 0, Math.PI * 2);
+      c.arc(x + u * 0.42, fY + u * 0.02, u * 0.34, 0, Math.PI * 2);
+      c.fill();
+      c.beginPath();
+      c.arc(x + u * 2.5, fY - u * 0.5, Math.max(1.2, u * 0.15), 0, Math.PI * 2);
+      c.fill();
+      c.beginPath();
+      c.arc(x + u * 2.5, fY + u * 0.5, Math.max(1.2, u * 0.15), 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    }
+
+    function drawBrace(c, x, top, bottom, width) {
+      var mid = (top + bottom) / 2;
+      var half = (bottom - top) / 2;
+      var w = width;
+      c.save();
+      c.fillStyle = INK;
+      c.beginPath();
+      c.moveTo(x + w, top);
+      c.bezierCurveTo(x + w * 0.05, top + half * 0.08, x + w * 0.75, mid - half * 0.25, x, mid);
+      c.bezierCurveTo(x + w * 0.75, mid + half * 0.25, x + w * 0.05, bottom - half * 0.08, x + w, bottom);
+      c.bezierCurveTo(x + w * 0.45, bottom - half * 0.12, x + w * 1.05, mid + half * 0.3, x + w * 0.22, mid);
+      c.bezierCurveTo(x + w * 1.05, mid - half * 0.3, x + w * 0.45, top + half * 0.12, x + w, top);
+      c.closePath();
       c.fill();
       c.restore();
     }
@@ -664,7 +708,7 @@
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
 
-      var gapRatio = 1.35;
+      var gapRatio = TAPE_GAP;
       var stemPad = 2.85;
       var lineGap = (h - 8) / (8 + gapRatio + stemPad * 2);
       lineGap = Math.max(4.5, Math.min(16, lineGap));
@@ -683,6 +727,8 @@
       var playheadX = 4 + historyBeats * pxPerBeat;
       var beat = state && typeof state.beat === 'number' ? state.beat : 0;
       var bpb = (state && state.beatsPerBar) || 4;
+      var braceW = lineGap * BRACE_W;
+      var sysX = braceW + 2;
 
       ctx.strokeStyle = '#2c2116';
       ctx.lineWidth = Math.max(1.2, lineGap * 0.09);
@@ -690,12 +736,12 @@
       for (s = 0; s < 5; s++) {
         var sy = topLine + s * lineGap;
         ctx.beginPath();
-        ctx.moveTo(0, sy);
+        ctx.moveTo(sysX, sy);
         ctx.lineTo(w, sy);
         ctx.stroke();
         var by = bassTop + s * lineGap;
         ctx.beginPath();
-        ctx.moveTo(0, by);
+        ctx.moveTo(sysX, by);
         ctx.lineTo(w, by);
         ctx.stroke();
       }
@@ -706,7 +752,7 @@
       if (clefH < lineGap * 2.8) clefH = lineGap * 2.8;
       var clefW = clefH * (ready(clefImg) ? (clefImg.naturalWidth / clefImg.naturalHeight) : 0.36);
       var clefTop = gLine - CLEF_G * clefH;
-      var clefRight = Math.max(4 + clefW, lineGap * 2.4);
+      var clefRight = sysX + Math.max(3 + clefW, lineGap * (F_CLEF_W + 0.2));
 
       function xAt(absBeat) {
         return playheadX + (absBeat - beat) * pxPerBeat;
@@ -874,10 +920,11 @@
       }
 
       if (ready(clefImg)) {
-        ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
+        ctx.drawImage(clefImg, sysX + 1, clefTop, clefW, clefH);
       }
-      drawBassClef(ctx, 2, bassBottom, lineGap);
-      drawSystemLine(ctx, 0.75, topLine, bassBottom, Math.max(1.5, lineGap * 0.16));
+      drawBassClef(ctx, sysX + 2, bassBottom, lineGap);
+      drawSystemLine(ctx, sysX, topLine, bassBottom, Math.max(1.5, lineGap * 0.16));
+      drawBrace(ctx, 1, topLine, bassBottom, braceW);
 
       var beatFrac = beat - Math.floor(beat);
       var pulse = state && state.running && !state.paused && beatFrac >= BEAT_CENTER && beatFrac < BEAT_CENTER + 0.12;
@@ -913,7 +960,7 @@
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
-      var gapRatio = 3.6;
+      var gapRatio = staffGapFor(model.bars, SHEET_GAP_MIN);
       var stemPad = 2.85;
       var lineGap = (h - 8) / (8 + gapRatio + stemPad * 2);
       lineGap = Math.max(4.5, Math.min(16, lineGap));
@@ -929,7 +976,9 @@
       var bars = model.bars || [];
       var bpb = model.bpb || 4;
       var total = Math.max(1, bars.length * bpb);
-      var padL = Math.max(28, lineGap * 3.1);
+      var braceW = lineGap * BRACE_W;
+      var sysX = braceW + 2;
+      var padL = sysX + Math.max(28, lineGap * (F_CLEF_W + 0.6));
       var padR = 12;
       var pxPerBeat = (w - padL - padR) / total;
       if (pxPerBeat < 1) pxPerBeat = 1;
@@ -941,12 +990,12 @@
       for (s = 0; s < 5; s++) {
         var sy = topLine + s * lineGap;
         ctx.beginPath();
-        ctx.moveTo(0, sy);
+        ctx.moveTo(sysX, sy);
         ctx.lineTo(w, sy);
         ctx.stroke();
         var by = bassTop + s * lineGap;
         ctx.beginPath();
-        ctx.moveTo(0, by);
+        ctx.moveTo(sysX, by);
         ctx.lineTo(w, by);
         ctx.stroke();
       }
@@ -983,8 +1032,8 @@
         ctx.moveTo(x0, topLine);
         ctx.lineTo(x0, bassBottom);
         ctx.stroke();
-        var midY = (bottomLine + bassTop) / 2;
-        var markX = x0 + lineGap * 0.35;
+        var midY = Math.max(lineGap * 0.6, topLine - lineGap * 2.15);
+        var markX = x0 + lineGap * 0.6;
         if (markX < x1 - lineGap * 0.5) drawZoneMark(ctx, markX, midY, zone, Math.max(8, lineGap * 0.62));
         ctx.fillStyle = KIND_INK[zone] || '#5c4630';
         ctx.font = '700 ' + Math.round(Math.max(10, lineGap * 0.8)) + 'px Georgia, serif';
@@ -1024,9 +1073,10 @@
       if (clefH < lineGap * 2.8) clefH = lineGap * 2.8;
       var clefW = clefH * (ready(clefImg) ? (clefImg.naturalWidth / clefImg.naturalHeight) : 0.36);
       var clefTop = gLine - CLEF_G * clefH;
-      if (ready(clefImg)) ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
-      drawBassClef(ctx, 2, bassBottom, lineGap);
-      drawSystemLine(ctx, 0.75, topLine, bassBottom, Math.max(1.5, lineGap * 0.16));
+      if (ready(clefImg)) ctx.drawImage(clefImg, sysX + 1, clefTop, clefW, clefH);
+      drawBassClef(ctx, sysX + 2, bassBottom, lineGap);
+      drawSystemLine(ctx, sysX, topLine, bassBottom, Math.max(1.5, lineGap * 0.16));
+      drawBrace(ctx, 1, topLine, bassBottom, braceW);
       if (typeof model.beat === 'number' && isFinite(model.beat)) {
         var playX = xAt(model.beat);
         if (playX >= 0 && playX <= w) {
@@ -1087,6 +1137,7 @@
     chartNoteBeat: chartNoteBeat,
     fingerMark: fingerMark,
     noteShape: noteShape,
+    staffGapFor: staffGapFor,
     handRests: handRests,
     BEAT_CENTER: BEAT_CENTER,
     KIND_LABEL: KIND_LABEL

@@ -106,15 +106,19 @@ test('C8: el centro del tiempo es continuo al cruzar Ataque → Defiende', () =>
   assert.strictEqual(Chart.centerReached(8.5) - Chart.centerReached(7.5), 1);
 });
 
-test('C9: la mano falta vale R, y L se conserva', () => {
+test('C9: una nota sin mano no carga, y L/l se conservan', () => {
   const base = raw('parade-feather');
-  delete base.loop[1].notes[0].hand;
   base.loop[1].notes[1].hand = 'L';
   base.loop[1].notes[2].hand = 'l';
   const again = Chart.parse(base);
-  assert.strictEqual(again.loop[1].notes[0].hand, 'R');
   assert.strictEqual(again.loop[1].notes[1].hand, 'L');
   assert.strictEqual(again.loop[1].notes[2].hand, 'L');
+  const missing = raw('parade-feather');
+  delete missing.loop[1].notes[0].hand;
+  assert.throws(() => Chart.parse(missing), /sin mano/);
+  const bad = raw('parade-feather');
+  bad.loop[1].notes[0].hand = 'X';
+  assert.throws(() => Chart.parse(bad), /sin mano/);
 });
 
 test('C10: Veil Boat es Row Your Boat entero en 6/8, desde C4 hasta el dream', () => {

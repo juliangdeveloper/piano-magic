@@ -32,7 +32,7 @@ function tinyChart() {
     setup: { bars: 1 },
     loop: [
       { kind: 'hole', notes: [] },
-      { kind: 'defend', notes: [{ pitch: 'C4', beat: 0 }, { pitch: 'D4', beat: 1 }] }
+      { kind: 'defend', notes: [{ pitch: 'C4', beat: 0, hand: 'R' }, { pitch: 'D4', beat: 1, hand: 'R' }] }
     ],
     hp: { player: 15, boss: 20 }
   });
@@ -340,8 +340,8 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /pagehide/);
   assert.match(app, /visibilitychange/);
   assert.match(app, /visibilityState === 'hidden'/);
-  assert.match(html, /js\/meta\.js\?v=0\.1\.44/);
-  assert.match(html, /js\/progress\.js\?v=0\.1\.44/);
+  assert.match(html, /js\/meta\.js\?v=0\.1\.45/);
+  assert.match(html, /js\/progress\.js\?v=0\.1\.45/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');

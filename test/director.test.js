@@ -8,7 +8,7 @@ const Director = require(path.join(__dirname, '..', 'js', 'combat', 'director.js
 const FULL_HP = Chart.PLAYER_HP;
 
 function n(pitch, beat) {
-  return { pitch, beat, dur: 1 };
+  return { pitch, beat, dur: 1, hand: 'R' };
 }
 
 const raw = {
