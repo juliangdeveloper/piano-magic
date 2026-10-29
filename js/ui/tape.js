@@ -24,8 +24,9 @@
   var BEAT_EPS = 1e-6;
   var LEDGER_HALF = 0.76;
   var SHEET_GAP_MIN = 2.2;
-  var TAPE_GAP = 1.35;
   var GAP_HEAD = 0.45;
+  var ACCENT_OFF = 1.1;
+  var ACCENT_H = 0.28;
   var GAP_CLEAR = 0.35;
   var TREBLE_BOTTOM_STEP = 0;
   var BASS_TOP_STEP = 8;
@@ -161,21 +162,45 @@
     return { lo: lo, hi: hi, up: (lo + hi) / 2 < STAFF_MIDDLE_STEP };
   }
 
+  function tiePlan(y, below, lineGap, span, lo, hi) {
+    var thick = Math.max(1.2, lineGap * 0.16);
+    var want = Math.min(lineGap * 1.1, Math.max(lineGap * 0.5, span * 0.12));
+    function fit(down) {
+      var dir = down ? 1 : -1;
+      var y0 = y + dir * lineGap * 0.55;
+      var room = down ? hi - y0 : y0 - lo;
+      var lift = Math.min(want, room / 0.75 - thick);
+      if (lift < lineGap * 0.22) return null;
+      return { below: down, y0: y0, lift: dir * lift, thick: dir * thick };
+    }
+    return fit(below) || fit(!below) || { below: below, y0: y + (below ? 1 : -1) * lineGap * 0.55, lift: (below ? 1 : -1) * lineGap * 0.22, thick: (below ? 1 : -1) * thick };
+  }
+
+  function tieBounds(staff, topLine, bottomLine, bassTop, bassBottom, lineGap) {
+    var mid = (bottomLine + bassTop) / 2;
+    if (staff === 'bass') return { lo: mid + lineGap * 0.12, hi: bassBottom + lineGap * 0.5 };
+    return { lo: topLine - lineGap * 0.5, hi: mid - lineGap * 0.12 };
+  }
+
   function staffGapFor(bars, minGap) {
     var gap = minGap;
     var deepR = 0;
     var highL = 0;
+    var accentR = 0;
     for (var i = 0; i < (bars || []).length; i++) {
       var notes = (bars[i] && bars[i].notes) || [];
       for (var j = 0; j < notes.length; j++) {
         var placed = placeNote(notes[j].pitch, notes[j].hand);
         if (!placed) continue;
         if (placed.staff === 'treble') deepR = Math.max(deepR, (TREBLE_BOTTOM_STEP - placed.step) / 2);
+        if (placed.staff === 'treble' && notes[j].accent && placed.step < STAFF_MIDDLE_STEP) {
+          accentR = Math.max(accentR, (TREBLE_BOTTOM_STEP - placed.step) / 2 + ACCENT_OFF + ACCENT_H + 0.55);
+        }
         else highL = Math.max(highL, (placed.step - BASS_TOP_STEP) / 2);
       }
     }
     var need = (deepR > 0 ? deepR + GAP_HEAD : 0) + (highL > 0 ? highL + GAP_HEAD : 0) + GAP_CLEAR;
-    return Math.max(gap, need);
+    return Math.max(gap, need, accentR);
   }
 
   function attackBeatMarks(barStart, beatsPerBar, playBeat) {
@@ -240,6 +265,8 @@
     var clefImg = loadImage(opts.clef || ('assets/ui/treble-clef.png?v=' + version));
     var lastState = null;
     var lastSheet = null;
+    var gapLoop = null;
+    var gapValue = SHEET_GAP_MIN;
     var sheetGeom = null;
 
     function resize() {
@@ -655,7 +682,7 @@
       c.restore();
     }
 
-    function drawTie(c, x1, x2, y, below, lineGap, color) {
+    function drawTie(c, x1, x2, y, below, lineGap, color, bounds) {
       var rx = Math.max(4, lineGap * 0.52);
       var a = x1 + rx * 0.9;
       var b = x2 - rx * 0.9;
@@ -664,10 +691,10 @@
         b = x2 - rx * 0.4;
       }
       if (b <= a) return;
-      var dir = below ? 1 : -1;
-      var y0 = y + dir * lineGap * 0.55;
-      var lift = dir * Math.min(lineGap * 1.1, Math.max(lineGap * 0.5, (b - a) * 0.12));
-      var thick = dir * Math.max(1.2, lineGap * 0.16);
+      var plan = tiePlan(y, below, lineGap, b - a, bounds ? bounds.lo : -Infinity, bounds ? bounds.hi : Infinity);
+      var y0 = plan.y0;
+      var lift = plan.lift;
+      var thick = plan.thick;
       c.save();
       c.fillStyle = color || INK;
       c.beginPath();
@@ -681,8 +708,8 @@
 
     function drawAccent(c, x, y, below, lineGap, color) {
       var wd = lineGap * 0.55;
-      var ht = lineGap * 0.28;
-      var cy = y + (below ? 1 : -1) * lineGap * 1.25;
+      var ht = lineGap * ACCENT_H;
+      var cy = y + (below ? 1 : -1) * lineGap * ACCENT_OFF;
       c.save();
       c.strokeStyle = color || INK;
       c.lineWidth = Math.max(1.3, lineGap * 0.13);
@@ -775,6 +802,18 @@
       c.restore();
     }
 
+    function tapeGap(state) {
+      var loop = state && state.loop;
+      if (loop && loop === gapLoop) return gapValue;
+      var src = loop || (state && (state.ribbon || state.upcoming)) || [];
+      var g = staffGapFor(src, SHEET_GAP_MIN);
+      if (loop) {
+        gapLoop = loop;
+        gapValue = g;
+      }
+      return g;
+    }
+
     function render(state) {
       lastState = state || lastState;
       state = lastState;
@@ -787,7 +826,7 @@
       ctx.fillStyle = PARCHMENT;
       ctx.fillRect(0, 0, w, h);
 
-      var gapRatio = TAPE_GAP;
+      var gapRatio = tapeGap(state);
       var stemPad = 2.85;
       var lineGap = (h - 8) / (8 + gapRatio + stemPad * 2);
       lineGap = Math.max(4.5, Math.min(16, lineGap));
@@ -847,23 +886,23 @@
         ctx.save();
         ctx.lineCap = 'round';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
+        ctx.textBaseline = 'top';
         ctx.font = '700 13px Georgia, serif';
         for (mi = 0; mi < marks.length; mi++) {
           m = marks[mi];
           x = xAt(m.beat);
           if (x < clefRight + 4 || x > w - 6) continue;
           on = !!m.current;
-          tickTop = topLine - (on ? 11 : 8);
+          tickTop = bassBottom + (on ? 11 : 8);
           ctx.strokeStyle = on ? 'rgba(122, 72, 16, 0.95)' : 'rgba(74, 52, 28, 0.72)';
           ctx.lineWidth = on ? 2 : 1.35;
           ctx.beginPath();
-          ctx.moveTo(x, topLine - 1);
+          ctx.moveTo(x, bassBottom + 1);
           ctx.lineTo(x, tickTop);
           ctx.stroke();
-          if (tickTop > 16) {
+          if (tickTop + 14 < h) {
             ctx.fillStyle = on ? 'rgba(110, 64, 12, 0.98)' : 'rgba(74, 52, 28, 0.78)';
-            ctx.fillText(m.label, x, tickTop - 1);
+            ctx.fillText(m.label, x, tickTop + 1);
           }
         }
         ctx.restore();
@@ -871,6 +910,10 @@
 
       var bars = (state && (state.ribbon || state.upcoming)) || [];
       var i, j, bar, x0, x1, note, parts, nx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clefRight, 0, w - clefRight, h);
+      ctx.clip();
       for (i = 0; i < bars.length; i++) {
         bar = bars[i];
         x0 = xAt(bar.startBeat);
@@ -894,14 +937,14 @@
         ctx.lineTo(x0, bassBottom);
         ctx.stroke();
 
-        var midY = (bottomLine + bassTop) / 2;
-        var markX = Math.max(x0 + lineGap * 0.2, clefRight + 2);
-        if (markX < x1 - lineGap * 0.5 && markX < w - 8) {
-          drawZoneMark(ctx, markX, midY, zone, Math.max(9, lineGap * 0.72));
+        var midY = Math.max(lineGap * 0.6, topLine - lineGap * 2.15);
+        var markX = x0 + lineGap * 0.6;
+        if (markX > clefRight + lineGap * 0.6 && markX < x1 - lineGap * 0.5 && markX < w - 8) {
+          drawZoneMark(ctx, markX, midY, zone, Math.max(8, lineGap * 0.62));
         }
 
         ctx.fillStyle = KIND_INK[zone] || '#5c4630';
-        ctx.font = '700 ' + Math.round(Math.max(11, lineGap * 0.85)) + 'px Georgia, serif';
+        ctx.font = '700 ' + Math.round(Math.max(10, lineGap * 0.8)) + 'px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         var numX = (Math.max(x0, clefRight) + Math.min(x1, w)) / 2;
@@ -923,7 +966,8 @@
           var ink = HAND_INK[placed.hand] || INK;
           var barBeat0 = bar.startBeat;
           nx = xAt(chartNoteBeat(barBeat0, note.beat));
-          if (nx < clefRight - 2 || nx > w + 8) continue;
+          if (nx > w + 8) continue;
+          if (nx < clefRight - lineGap * 2 && !(note.tie && note.tieBack > 0)) continue;
           var ny = yFor(placed.step, staffBottom, lineGap);
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
@@ -931,7 +975,7 @@
           var stemUp = chord ? chord.up : placed.step < STAFF_MIDDLE_STEP;
           if (note.tie && note.tieBack > 0) {
             var tieBelow = chord ? placed.step === chord.lo && placed.step !== chord.hi : stemUp;
-            drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink);
+            drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink, tieBounds(placed.staff, topLine, bottomLine, bassTop, bassBottom, lineGap));
           }
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
             color: ink, low: placed.low, high: placed.high, stemUp: stemUp,
@@ -985,7 +1029,7 @@
           if (tx > -8 && tx < w + 12) drawSparkles(ctx, tx, ty, lineGap, vis.sparkle, age);
         }
         nx = px + (tx - px) * vis.lerp;
-        if (!vis.showPlayer || nx < clefRight - 2 || nx > w + 12) continue;
+        if (!vis.showPlayer || nx < clefRight - lineGap * 2 || nx > w + 12) continue;
         var col = vis.miss ? '#b42323' : inkHit;
         var headAlpha = vis.miss ? 0.95 : Math.max(0.35, 1 - vis.lerp * 0.45);
         if (hit.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ty, lineGap, col);
@@ -1005,6 +1049,7 @@
         });
         if (vis.miss) drawMiss(ctx, nx, ty, lineGap);
       }
+      ctx.restore();
 
       if (ready(clefImg)) {
         ctx.drawImage(clefImg, sysX + 1, clefTop, clefW, clefH);
@@ -1146,7 +1191,7 @@
           var stemUp = chord ? chord.up : placed.step < STAFF_MIDDLE_STEP;
           if (note.tie && note.tieBack > 0) {
             var tieBelow = chord ? placed.step === chord.lo && placed.step !== chord.hi : stemUp;
-            drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink);
+            drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink, tieBounds(placed.staff, topLine, bottomLine, bassTop, bassBottom, lineGap));
           }
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
             color: ink, low: placed.low, high: placed.high, stemUp: stemUp,
@@ -1235,6 +1280,8 @@
     staffGapFor: staffGapFor,
     handRests: handRests,
     chordInfo: chordInfo,
+    tiePlan: tiePlan,
+    tieBounds: tieBounds,
     BEAT_CENTER: BEAT_CENTER,
     KIND_LABEL: KIND_LABEL
   };

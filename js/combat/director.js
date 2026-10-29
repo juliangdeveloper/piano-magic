@@ -284,6 +284,7 @@
         },
         upcoming: upcoming,
         ribbon: ribbon,
+        loop: chart.loop,
         improvNotes: improvNotes,
         defendNotes: defendNotes,
         playerHp: playerHp,

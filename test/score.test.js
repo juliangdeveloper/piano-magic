@@ -119,7 +119,7 @@ test('S5: la partitura dibuja el chart completo y el compás cae en su sección'
     style: {},
     getContext: function () { return ctx; }
   };
-  const tape = Tape.create(canvas, { version: '0.1.46' });
+  const tape = Tape.create(canvas, { version: '0.1.47' });
   tape.renderSheet(model);
   assert.ok(calls.includes('fillRect'));
   const early = tape.barIndexAt(70);
@@ -151,7 +151,7 @@ test('S6: pausa abre la partitura y el toque del rival tiene dos salidas', () =>
   assert.match(html, /id="btnPractice"/);
   assert.match(html, /Practicar/);
   assert.match(html, /id="btnSheetLoop"/);
-  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.46/);
+  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.47/);
   assert.match(app, /duringSheet/);
 });
 
@@ -202,7 +202,7 @@ test('S7: cada mano queda en su pentagrama y solo las barras de compás cruzan e
   for (const id of IDS) {
     const model = Score.sheetModel(raw(id), null, null);
     const canvas = sheetCanvas(960, 240);
-    Tape.create(canvas, { version: '0.1.46' }).renderSheet(model);
+    Tape.create(canvas, { version: '0.1.47' }).renderSheet(model);
     const staff = canvas.segs.filter((s) => Math.abs(s.y1 - s.y0) < 0.6 && Math.abs(s.x1 - s.x0) > canvas.clientWidth * 0.7);
     const ys = staff.map((s) => s.y0).sort((a, b) => a - b);
     assert.strictEqual(ys.length, 10, id);
@@ -262,4 +262,56 @@ test('S10: la quinta de la izquierda comparte plica y la mano derecha no cuenta'
   assert.ok(info);
   assert.strictEqual(info.up, Tape.chordInfo(notes, notes.find((n) => n.pitch === 'G3')).up);
   assert.strictEqual(Tape.chordInfo(notes, notes.find((n) => n.pitch === 'E4')), null);
+});
+
+test('S11: la cinta usa el hueco de la partitura: MD siempre por encima de MI, con línea adicional del Do central', () => {
+  for (const id of IDS) {
+    const c = Chart.parse(raw(id));
+    const gap = Tape.staffGapFor(c.loop, 2.2);
+    assert.ok(gap >= 2, id + ' hueco ' + gap);
+    let lowR = -Infinity;
+    let highL = Infinity;
+    for (const b of c.loop) {
+      for (const n of b.notes) {
+        const p = Tape.placeNote(n.pitch, n.hand);
+        const y = p.staff === 'bass' ? gap + 4 - p.step / 2 : -p.step / 2;
+        if (n.hand === 'R') lowR = Math.max(lowR, y);
+        else highL = Math.min(highL, y);
+        if (n.pitch === 'C4' && n.hand === 'R') assert.ok(1 < gap - 0.45, id + ' cabe la línea del Do central');
+      }
+    }
+    assert.ok(highL - lowR >= 0.9, id + ' ' + lowR + ' ' + highL);
+  }
+});
+
+test('S12: las ligaduras quedan dentro de su pentagrama y la MD no toca la de la MI', () => {
+  const lg = 10;
+  const top = 0;
+  const bottom = 40;
+  const bassTop = bottom + 2.2 * lg;
+  const bassBottom = bassTop + 40;
+  const tb = Tape.tieBounds('treble', top, bottom, bassTop, bassBottom, lg);
+  const bb = Tape.tieBounds('bass', top, bottom, bassTop, bassBottom, lg);
+  const ext = (p) => p.y0 + 0.75 * (p.lift + p.thick);
+  const c4 = Tape.tiePlan(bottom + lg, true, lg, 80, tb.lo, tb.hi);
+  assert.strictEqual(c4.below, false);
+  assert.ok(ext(c4) >= tb.lo && ext(c4) <= tb.hi);
+  const g3 = Tape.tiePlan(bassTop + 0.5 * lg, false, lg, 80, bb.lo, bb.hi);
+  assert.strictEqual(g3.below, false);
+  assert.ok(ext(g3) >= bb.lo && ext(g3) > tb.hi);
+  const c3 = Tape.tiePlan(bassBottom - 1.5 * lg, true, lg, 80, bb.lo, bb.hi);
+  assert.strictEqual(c3.below, true);
+  assert.ok(ext(c3) <= bb.hi);
+});
+
+test('S13: los acentos bajo la cabeza no tocan el pentagrama de la izquierda', () => {
+  const c = Chart.parse(raw('eine-kleine'));
+  const gap = Tape.staffGapFor(c.loop, 2.2);
+  const accented = c.loop.flatMap((b) => b.notes).filter((n) => n.accent);
+  assert.ok(accented.length > 0);
+  for (const n of accented) {
+    const p = Tape.placeNote(n.pitch, n.hand);
+    assert.strictEqual(p.staff, 'treble');
+    assert.ok(-p.step / 2 + 1.1 + 0.28 <= gap - 0.5, n.pitch + ' ' + gap);
+  }
 });
