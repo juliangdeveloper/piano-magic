@@ -17,6 +17,14 @@
   var HAND_INK = { R: '#1e4d8c', L: '#c2410c' };
   var CLEF_G = 0.486;
   var LETTER = { C: -2, D: -1, E: 0, F: 1, G: 2, A: 3, B: 4 };
+  var STAFF_MIDDLE_STEP = 4;
+  var HOLLOW_FROM_BEATS = 2;
+  var STEMLESS_FROM_BEATS = 4;
+  var REST_UNITS = [4, 2, 1, 0.5];
+  var BEAT_EPS = 1e-6;
+  var LEDGER_HALF = 0.76;
+  var REST_INK = 'rgba(28, 20, 12, 0.62)';
+  var HANDS = ['R', 'L'];
 
   function loadImage(src) {
     if (typeof Image === 'undefined' || !src) return null;
@@ -53,6 +61,64 @@
     return { finger: note.finger, hand: hand, below: hand === 'L' };
   }
 
+  function noteShape(dur) {
+    var d = (typeof dur === 'number' && isFinite(dur) && dur > 0) ? dur : 1;
+    var dotted = false;
+    var base = d;
+    if (REST_UNITS.indexOf(d) < 0) {
+      for (var k = 0; k < REST_UNITS.length; k++) {
+        if (Math.abs(REST_UNITS[k] * 1.5 - d) < BEAT_EPS) { base = REST_UNITS[k]; dotted = true; break; }
+      }
+    }
+    return { hollow: base >= HOLLOW_FROM_BEATS, stem: base < STEMLESS_FROM_BEATS, dot: dotted };
+  }
+
+  function splitRest(start, len, bpb) {
+    var out = [];
+    var pos = start;
+    var left = len;
+    var guard = 0;
+    while (left > BEAT_EPS && guard++ < 64) {
+      var picked = 0;
+      for (var k = 0; k < REST_UNITS.length; k++) {
+        var u = REST_UNITS[k];
+        if (u > left + BEAT_EPS) continue;
+        if (u >= bpb - BEAT_EPS && pos > BEAT_EPS) continue;
+        if (Math.abs(pos / u - Math.round(pos / u)) > BEAT_EPS) continue;
+        picked = u;
+        break;
+      }
+      if (!picked) picked = Math.min(left, REST_UNITS[REST_UNITS.length - 1]);
+      out.push({ beat: pos, dur: picked >= bpb - BEAT_EPS ? bpb : picked, whole: picked >= bpb - BEAT_EPS });
+      pos += picked;
+      left -= picked;
+    }
+    return out;
+  }
+
+  function handRests(notes, hand, beatsPerBar) {
+    var bpb = (typeof beatsPerBar === 'number' && beatsPerBar > 0) ? beatsPerBar : 4;
+    var spans = [];
+    var i;
+    for (i = 0; i < (notes || []).length; i++) {
+      var n = notes[i];
+      var h = n.hand === 'L' ? 'L' : 'R';
+      if (h !== hand) continue;
+      var b = (typeof n.beat === 'number' && isFinite(n.beat)) ? n.beat : 0;
+      var d = (typeof n.dur === 'number' && isFinite(n.dur) && n.dur > 0) ? n.dur : 1;
+      spans.push([b, Math.min(bpb, b + d)]);
+    }
+    spans.sort(function (a, c) { return a[0] - c[0]; });
+    var rests = [];
+    var cursor = 0;
+    for (i = 0; i < spans.length; i++) {
+      if (spans[i][0] > cursor + BEAT_EPS) rests = rests.concat(splitRest(cursor, spans[i][0] - cursor, bpb));
+      if (spans[i][1] > cursor) cursor = spans[i][1];
+    }
+    if (bpb > cursor + BEAT_EPS) rests = rests.concat(splitRest(cursor, bpb - cursor, bpb));
+    return rests;
+  }
+
   function staffStep(pitch) {
     var p = pitchParts(pitch);
     return p ? p.step : null;
@@ -65,7 +131,7 @@
     if (bass) {
       return { parts: parts, step: parts.step + 12, staff: 'bass', low: -2, high: 10, hand: 'L' };
     }
-    return { parts: parts, step: parts.step, staff: 'treble', low: -2, high: 10, hand: hand === 'R' ? 'R' : 'R' };
+    return { parts: parts, step: parts.step, staff: 'treble', low: -2, high: 10, hand: 'R' };
   }
 
   function attackBeatMarks(barStart, beatsPerBar, playBeat) {
@@ -182,7 +248,7 @@
     }
 
     function drawLedger(c, x, y, lineGap) {
-      var hw = Math.min(lineGap * 0.48, 6.5);
+      var hw = lineGap * LEDGER_HALF;
       c.beginPath();
       c.moveTo(x - hw, y);
       c.lineTo(x + hw, y);
@@ -230,7 +296,7 @@
       if (!mark) return;
       var num = mark.finger;
       var below = !!mark.below;
-      var up = below ? false : step < 4;
+      var up = step < STAFF_MIDDLE_STEP;
       var stemH = lineGap * 3.15;
       var gap = Math.max(8, lineGap * 0.95);
       var fy = below ? ((up ? y : y + stemH) + gap) : ((up ? y - stemH : y) - gap);
@@ -267,8 +333,9 @@
       c.lineWidth = Math.max(1, lineGap * 0.09);
       c.lineCap = 'butt';
       drawLedgers(c, x, step, bottomLine, lineGap, style.low, style.high, style.ledgerMin, style.ledgerMax);
-      var up = stemDown ? false : step < 4;
+      var up = stemDown ? false : step < STAFF_MIDDLE_STEP;
       var stemH = lineGap * 3.15;
+      var showStem = style.stem !== false;
       var y2 = up ? y - stemH : y + stemH;
       if (up && style.stemCeil != null && y2 < style.stemCeil) y2 = style.stemCeil;
       if (!up && style.stemFloor != null && y2 > style.stemFloor) y2 = style.stemFloor;
@@ -276,15 +343,23 @@
       if (!up && y2 < y) y2 = y;
       c.strokeStyle = color;
       c.lineWidth = Math.max(1, lineGap * 0.1);
-      c.beginPath();
-      if (up) {
-        c.moveTo(x + rx * 0.82, y + ry * 0.1);
-        c.lineTo(x + rx * 0.82, y2);
-      } else {
-        c.moveTo(x - rx * 0.82, y - ry * 0.1);
-        c.lineTo(x - rx * 0.82, y2);
+      if (showStem) {
+        c.beginPath();
+        if (up) {
+          c.moveTo(x + rx * 0.82, y + ry * 0.1);
+          c.lineTo(x + rx * 0.82, y2);
+        } else {
+          c.moveTo(x - rx * 0.82, y - ry * 0.1);
+          c.lineTo(x - rx * 0.82, y2);
+        }
+        c.stroke();
       }
-      c.stroke();
+      if (style.dot) {
+        c.fillStyle = color;
+        c.beginPath();
+        c.arc(x + rx * 1.75, y - (step % 2 === 0 ? lineGap * 0.28 : 0), Math.max(1.5, lineGap * 0.13), 0, Math.PI * 2);
+        c.fill();
+      }
       c.save();
       c.translate(x, y);
       c.rotate(-0.42);
@@ -497,6 +572,71 @@
       c.restore();
     }
 
+    function drawRest(c, x, staffBottom, lineGap, rest, color) {
+      var col = color || REST_INK;
+      var midY = yFor(STAFF_MIDDLE_STEP, staffBottom, lineGap);
+      var bw = lineGap * 0.95;
+      var bh = lineGap * 0.48;
+      c.save();
+      c.fillStyle = col;
+      c.strokeStyle = col;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      if (rest.whole || rest.dur >= STEMLESS_FROM_BEATS) {
+        c.fillRect(x - bw / 2, midY - lineGap, bw, bh);
+      } else if (rest.dur >= HOLLOW_FROM_BEATS) {
+        c.fillRect(x - bw / 2, midY - bh, bw, bh);
+      } else if (rest.dur >= 1) {
+        var s = lineGap;
+        c.lineWidth = Math.max(1.4, s * 0.2);
+        c.beginPath();
+        c.moveTo(x - s * 0.2, midY - s * 1.45);
+        c.lineTo(x + s * 0.3, midY - s * 0.75);
+        c.lineTo(x - s * 0.22, midY - s * 0.1);
+        c.lineTo(x + s * 0.3, midY + s * 0.55);
+        c.quadraticCurveTo(x - s * 0.45, midY + s * 0.2, x - s * 0.05, midY + s * 1.15);
+        c.stroke();
+      } else {
+        var e = lineGap;
+        c.lineWidth = Math.max(1.2, e * 0.14);
+        c.beginPath();
+        c.arc(x - e * 0.2, midY - e * 0.45, Math.max(1.4, e * 0.18), 0, Math.PI * 2);
+        c.fill();
+        c.beginPath();
+        c.moveTo(x - e * 0.2, midY - e * 0.3);
+        c.quadraticCurveTo(x + e * 0.15, midY - e * 0.25, x + e * 0.35, midY - e * 0.6);
+        c.lineTo(x - e * 0.05, midY + e * 0.75);
+        c.stroke();
+      }
+      c.restore();
+    }
+
+    function drawBarRests(c, bar, bpb, xAt, barStart, trebleBottom, bassBottomLine, lineGap, xMin, xMax) {
+      var notes = bar.notes || [];
+      for (var hi = 0; hi < HANDS.length; hi++) {
+        var hand = HANDS[hi];
+        var rests = handRests(notes, hand, bpb);
+        var staffBottom = hand === 'L' ? bassBottomLine : trebleBottom;
+        for (var ri = 0; ri < rests.length; ri++) {
+          var r = rests[ri];
+          var rx = r.whole ? (xAt(barStart) + xAt(barStart + bpb)) / 2 : xAt(chartNoteBeat(barStart, r.beat));
+          if (rx < xMin || rx > xMax) continue;
+          drawRest(c, rx, staffBottom, lineGap, r);
+        }
+      }
+    }
+
+    function drawSystemLine(c, x, top, bottom, width) {
+      c.save();
+      c.strokeStyle = 'rgba(44, 33, 22, 0.9)';
+      c.lineWidth = width;
+      c.beginPath();
+      c.moveTo(x, top);
+      c.lineTo(x, bottom);
+      c.stroke();
+      c.restore();
+    }
+
     function drawMiss(c, x, y, lineGap) {
       var s = lineGap * 0.55;
       c.save();
@@ -626,8 +766,6 @@
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x0, topLine);
-        ctx.lineTo(x0, bottomLine);
-        ctx.moveTo(x0, bassTop);
         ctx.lineTo(x0, bassBottom);
         ctx.stroke();
 
@@ -655,6 +793,7 @@
           note = notes[j];
           var placed = placeNote(note.pitch, note.hand);
           if (!placed) continue;
+          var shape = noteShape(note.dur);
           var staffBottom = placed.staff === 'bass' ? bassBottom : bottomLine;
           var ink = HAND_INK[placed.hand] || INK;
           nx = xAt(chartNoteBeat(bar.startBeat, note.beat));
@@ -663,7 +802,8 @@
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
-            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass',
+            color: ink, low: placed.low, high: placed.high,
+            hollow: shape.hollow, stem: shape.stem, dot: shape.dot,
             stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
             stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
             ledgerMin: placed.staff === 'bass' ? bottomLine + lineGap * 0.45 : null,
@@ -672,6 +812,7 @@
           var mark = fingerMark(note);
           if (mark) drawFingerNum(ctx, nx, ny, placed.step, mark, lineGap, ink, h);
         }
+        drawBarRests(ctx, bar, bpb, xAt, bar.startBeat, bottomLine, bassBottom, lineGap, clefRight + 4, w - 4);
       }
 
       function rhythmPlace(parts) {
@@ -736,6 +877,7 @@
         ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
       }
       drawBassClef(ctx, 2, bassBottom, lineGap);
+      drawSystemLine(ctx, 0.75, topLine, bassBottom, Math.max(1.5, lineGap * 0.16));
 
       var beatFrac = beat - Math.floor(beat);
       var pulse = state && state.running && !state.paused && beatFrac >= BEAT_CENTER && beatFrac < BEAT_CENTER + 0.12;
@@ -808,6 +950,17 @@
         ctx.lineTo(w, by);
         ctx.stroke();
       }
+      var from = typeof model.from === 'number' ? model.from : 0;
+      var to = typeof model.to === 'number' ? model.to : bars.length;
+      if (to > from) {
+        var sx0 = xAt(from * bpb);
+        var sx1 = xAt(to * bpb);
+        ctx.save();
+        ctx.strokeStyle = '#8a5a12';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(sx0 + 1.5, topLine - 4, Math.max(1, sx1 - sx0 - 3), bassBottom - topLine + 8);
+        ctx.restore();
+      }
       var i;
       var j;
       var bar;
@@ -828,8 +981,6 @@
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x0, topLine);
-        ctx.lineTo(x0, bottomLine);
-        ctx.moveTo(x0, bassTop);
         ctx.lineTo(x0, bassBottom);
         ctx.stroke();
         var midY = (bottomLine + bassTop) / 2;
@@ -847,6 +998,7 @@
           note = notes[j];
           var placed = placeNote(note.pitch, note.hand);
           if (!placed) continue;
+          var shape = noteShape(note.dur);
           var staffBottom = placed.staff === 'bass' ? bassBottom : bottomLine;
           var ink = HAND_INK[placed.hand] || INK;
           nx = xAt(chartNoteBeat(bar.startBeat || i * bpb, note.beat));
@@ -854,7 +1006,8 @@
           if (placed.parts.acc === '#') drawSharp(ctx, nx - lineGap * 0.85, ny, lineGap, ink);
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
           drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
-            color: ink, low: placed.low, high: placed.high, stemDown: placed.staff === 'bass',
+            color: ink, low: placed.low, high: placed.high,
+            hollow: shape.hollow, stem: shape.stem, dot: shape.dot,
             stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
             stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
             ledgerMin: placed.staff === 'bass' ? bottomLine + lineGap * 0.45 : null,
@@ -863,17 +1016,7 @@
           var finger = fingerMark(note);
           if (finger) drawFingerNum(ctx, nx, ny, placed.step, finger, lineGap, ink, h);
         }
-      }
-      var from = typeof model.from === 'number' ? model.from : 0;
-      var to = typeof model.to === 'number' ? model.to : bars.length;
-      if (to > from) {
-        var sx0 = xAt(from * bpb);
-        var sx1 = xAt(to * bpb);
-        ctx.save();
-        ctx.strokeStyle = '#8a5a12';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(sx0 + 1.5, topLine - 4, Math.max(1, sx1 - sx0 - 3), bassBottom - topLine + 8);
-        ctx.restore();
+        drawBarRests(ctx, bar, bpb, xAt, bar.startBeat || i * bpb, bottomLine, bassBottom, lineGap, 0, w);
       }
       var gLine = yFor(2, bottomLine, lineGap);
       var clefH = (lineGap + staffGap - 1) / (1 - CLEF_G);
@@ -883,6 +1026,7 @@
       var clefTop = gLine - CLEF_G * clefH;
       if (ready(clefImg)) ctx.drawImage(clefImg, 1, clefTop, clefW, clefH);
       drawBassClef(ctx, 2, bassBottom, lineGap);
+      drawSystemLine(ctx, 0.75, topLine, bassBottom, Math.max(1.5, lineGap * 0.16));
       if (typeof model.beat === 'number' && isFinite(model.beat)) {
         var playX = xAt(model.beat);
         if (playX >= 0 && playX <= w) {
@@ -942,6 +1086,8 @@
     attackBeatMarks: attackBeatMarks,
     chartNoteBeat: chartNoteBeat,
     fingerMark: fingerMark,
+    noteShape: noteShape,
+    handRests: handRests,
     BEAT_CENTER: BEAT_CENTER,
     KIND_LABEL: KIND_LABEL
   };

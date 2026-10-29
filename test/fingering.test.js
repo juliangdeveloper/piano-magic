@@ -62,8 +62,14 @@ test('F2: el pentagrama numera solo la nota que trae dedo, arriba en la derecha 
 
 const PHRASES = {
   'parade-feather': [
-    ['R', 'C4', 1], ['L', 'C3', 5],
-    ['R', 'C4', 1], ['L', 'C3', 5]
+    ['R', 'C4', 1], ['R', 'D4', 2], ['R', 'E4', 3],
+    ['R', 'C4', 1], ['R', 'E4', 3], ['R', 'D4', 2],
+    ['R', 'C4', 1], ['R', 'D4', 2], ['R', 'E4', 3],
+    ['R', 'C4', 1], ['L', 'B3', 1],
+    ['R', 'C4', 1], ['R', 'D4', 2], ['R', 'E4', 3],
+    ['R', 'F4', 4], ['R', 'E4', 3], ['R', 'D4', 2], ['R', 'C4', 1],
+    ['L', 'B3', 1], ['L', 'G3', 3], ['L', 'A3', 2], ['L', 'B3', 1],
+    ['R', 'C4', 1]
   ],
   'veil-boat': [
     ['R', 'C4', 1], ['L', 'C3', 5],
@@ -92,7 +98,7 @@ const PHRASES = {
   ]
 };
 
-test('F3: cada canción numera solo el ataque de cada frase, por mano', () => {
+test('F3: cada canción numera los dedos que trae su fuente, por mano', () => {
   for (const [id, expect] of Object.entries(PHRASES)) {
     const file = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', id + '.json'), 'utf8'));
     const got = [];

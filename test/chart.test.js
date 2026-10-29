@@ -41,7 +41,7 @@ test('C2: loop es grupos de hole + 4 defend, y el compás 8 son dos blancas', ()
   assert.strictEqual(c.loop[1].notes[0].pitch, 'C4');
   const last = c.loop[9].notes.filter((n) => n.hand === 'R').map((n) => [n.pitch, n.beat, n.dur, n.hand]);
   assert.deepStrictEqual(last, [['C4', 0, 2, 'R'], ['C4', 2, 2, 'R']]);
-  assert.deepStrictEqual(c.loop[9].notes.filter((n) => n.hand === 'L').map((n) => [n.pitch, n.beat, n.dur]), [['C3', 0, 4]]);
+  assert.deepStrictEqual(c.loop[9].notes.filter((n) => n.hand === 'L'), []);
 });
 
 test('C3: beatsPerBar 4/4 → 4', () => {
@@ -84,19 +84,15 @@ test('C6: chart inválido lanza ChartError', () => {
   assert.throws(() => Chart.parse(null), /vacío/);
 });
 
-test('C7: el segundo defend es C E D G en la derecha, con bajo', () => {
+test('C7: el segundo defend es C E D blanca en la derecha, sin bajo', () => {
   const c = load();
   const rh = c.loop[2].notes.filter((n) => n.hand === 'R').map((n) => [n.pitch, n.beat, n.dur, n.hand]);
   assert.deepStrictEqual(rh, [
     ['C4', 0, 1, 'R'],
     ['E4', 1, 1, 'R'],
-    ['D4', 2, 1, 'R'],
-    ['G3', 3, 1, 'R']
+    ['D4', 2, 2, 'R']
   ]);
-  assert.deepStrictEqual(c.loop[2].notes.filter((n) => n.hand === 'L').map((n) => [n.pitch, n.beat, n.dur]), [
-    ['C3', 0, 2],
-    ['G3', 2, 1]
-  ]);
+  assert.deepStrictEqual(c.loop[2].notes.filter((n) => n.hand === 'L'), []);
 });
 
 test('C8: el centro del tiempo es continuo al cruzar Ataque → Defiende', () => {

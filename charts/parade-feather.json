@@ -42,13 +42,6 @@
           "finger": 1
         },
         {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 2,
-          "hand": "L",
-          "finger": 5
-        },
-        {
           "pitch": "C4",
           "beat": 1,
           "dur": 1,
@@ -58,19 +51,15 @@
           "pitch": "D4",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 2,
-          "hand": "L"
+          "hand": "R",
+          "finger": 2
         },
         {
           "pitch": "E4",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 3
         }
       ],
       "i": 1
@@ -82,37 +71,22 @@
           "pitch": "C4",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 2,
-          "hand": "L"
+          "hand": "R",
+          "finger": 1
         },
         {
           "pitch": "E4",
           "beat": 1,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 3
         },
         {
           "pitch": "D4",
           "beat": 2,
-          "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 1,
-          "hand": "L"
-        },
-        {
-          "pitch": "G3",
-          "beat": 3,
-          "dur": 1,
-          "hand": "R"
+          "dur": 2,
+          "hand": "R",
+          "finger": 2
         }
       ],
       "i": 2
@@ -124,13 +98,8 @@
           "pitch": "C4",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 2,
-          "hand": "L"
+          "hand": "R",
+          "finger": 1
         },
         {
           "pitch": "C4",
@@ -142,19 +111,15 @@
           "pitch": "D4",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 2,
-          "hand": "L"
+          "hand": "R",
+          "finger": 2
         },
         {
           "pitch": "E4",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 3
         }
       ],
       "i": 3
@@ -166,25 +131,15 @@
           "pitch": "C4",
           "beat": 0,
           "dur": 2,
-          "hand": "R"
-        },
-        {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 2,
-          "hand": "L"
+          "hand": "R",
+          "finger": 1
         },
         {
           "pitch": "B3",
           "beat": 2,
           "dur": 2,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 2,
-          "hand": "L"
+          "hand": "L",
+          "finger": 1
         }
       ],
       "i": 4
@@ -205,13 +160,6 @@
           "finger": 1
         },
         {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 2,
-          "hand": "L",
-          "finger": 5
-        },
-        {
           "pitch": "C4",
           "beat": 1,
           "dur": 1,
@@ -221,19 +169,15 @@
           "pitch": "D4",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 2,
-          "hand": "L"
+          "hand": "R",
+          "finger": 2
         },
         {
           "pitch": "E4",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 3
         }
       ],
       "i": 6
@@ -245,31 +189,29 @@
           "pitch": "F4",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "F3",
-          "beat": 0,
-          "dur": 4,
-          "hand": "L"
+          "hand": "R",
+          "finger": 4
         },
         {
           "pitch": "E4",
           "beat": 1,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 3
         },
         {
           "pitch": "D4",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 2
         },
         {
           "pitch": "C4",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "R",
+          "finger": 1
         }
       ],
       "i": 7
@@ -281,37 +223,29 @@
           "pitch": "B3",
           "beat": 0,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 0,
-          "dur": 1,
-          "hand": "L"
+          "hand": "L",
+          "finger": 1
         },
         {
           "pitch": "G3",
           "beat": 1,
           "dur": 1,
-          "hand": "R"
+          "hand": "L",
+          "finger": 3
         },
         {
           "pitch": "A3",
           "beat": 2,
           "dur": 1,
-          "hand": "R"
-        },
-        {
-          "pitch": "G3",
-          "beat": 2,
-          "dur": 2,
-          "hand": "L"
+          "hand": "L",
+          "finger": 2
         },
         {
           "pitch": "B3",
           "beat": 3,
           "dur": 1,
-          "hand": "R"
+          "hand": "L",
+          "finger": 1
         }
       ],
       "i": 8
@@ -323,13 +257,8 @@
           "pitch": "C4",
           "beat": 0,
           "dur": 2,
-          "hand": "R"
-        },
-        {
-          "pitch": "C3",
-          "beat": 0,
-          "dur": 4,
-          "hand": "L"
+          "hand": "R",
+          "finger": 1
         },
         {
           "pitch": "C4",
