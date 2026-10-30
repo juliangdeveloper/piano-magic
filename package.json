@@ -1,8 +1,18 @@
 {
   "name": "piano-magic",
-  "version": "0.1.47",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
-    "test": "node --test test/spell.test.js test/chart.test.js test/score.test.js test/director.test.js test/ui.test.js test/mic-gate.test.js test/beats.test.js test/rivals.test.js test/attack.test.js test/boss-anim.test.js test/fingering.test.js test/levels.test.js test/meta.test.js test/meta-proyecto.test.js test/meta-tipos.test.js test/progress.test.js"
+    "test": "node --test test/spell.test.js test/chart.test.js test/score.test.js test/director.test.js test/ui.test.js test/mic-gate.test.js test/beats.test.js test/rivals.test.js test/attack.test.js test/boss-anim.test.js test/fingering.test.js test/levels.test.js test/meta.test.js test/meta-proyecto.test.js test/meta-tipos.test.js test/progress.test.js test/midi-input.test.js",
+    "web:copy": "node -e \"const fs=require('fs');fs.rmSync('www',{recursive:true,force:true});for(const p of ['index.html','VERSION','css','js','assets','charts'])fs.cpSync(p,'www/'+p,{recursive:true})\"",
+    "ios:sync": "npm run web:copy && cap sync ios",
+    "ios:open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
   }
 }

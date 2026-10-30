@@ -1,6 +1,6 @@
 # 🎹 piano-magic
 
-> Un combate RPG que se juega tocando piano: improvisa para atacar y copia la melodía del jefe para defenderte. Con teclado, MIDI o micrófono.
+> Un combate RPG que se juega tocando piano: improvisa para atacar y copia la melodía del jefe para defenderte. Con teclado, MIDI o micrófono, en la web o en iPhone y iPad.
 
 **[▶ Jugar ahora](https://juliangdeveloper.github.io/piano-magic/)** · gratis, en el navegador, sin instalar
 
@@ -18,12 +18,26 @@
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 
 ## Stack
-JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia local del detector.
+JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. La web no usa dependencias de npm ni copia local del detector.
 
 ```
 python3 -m http.server 8000   # abrir http://localhost:8000 (file:// no carga los charts)
 npm test                      # tests en Node, sin npm install
 ```
+
+## Web e iOS
+- **Web** (GitHub Pages): el MIDI entra por Web MIDI. Safari de iPhone y iPad no tiene Web MIDI, así que ahí solo sirven el teclado en pantalla, QWERTY y el micrófono.
+- **iOS** (Capacitor 8, en `ios/`): la misma web dentro de una app nativa. El MIDI entra por CoreMIDI con el plugin propio `NativeMidi` (`ios/App/App/NativeMidiPlugin.swift`), que conecta todos los teclados, también los que se enchufan con la app abierta. `js/instrument/midi-input.js` elige Web MIDI o `NativeMidi`, y los dos llegan al mismo manejador de notas.
+
+Para compilar la app hace falta un Mac con Xcode 26 o más y Node 22 o más. Las dependencias nativas van por Swift Package Manager, sin CocoaPods.
+
+```
+npm install
+npm run ios:sync    # copia la web a www/ y corre cap sync ios
+npm run ios:open    # abre ios/App en Xcode
+```
+
+En Xcode, cambia el Bundle ID de ejemplo (`com.example.pianomagic`) por el tuyo, elige tu equipo en Signing & Capabilities y usa Product → Archive para subirla a TestFlight.
 
 ## Relacionado
 🎼 [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe): motor de notas y partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-transcribe/)

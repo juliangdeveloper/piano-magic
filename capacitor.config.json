@@ -1,0 +1,8 @@
+{
+  "appId": "com.example.pianomagic",
+  "appName": "Piano Magic",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  }
+}
