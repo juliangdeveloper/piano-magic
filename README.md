@@ -27,6 +27,7 @@ npm test                      # tests en Node, sin npm install
 
 ## Web e iOS
 - **Web** (GitHub Pages): el MIDI entra por Web MIDI. Safari de iPhone y iPad no tiene Web MIDI, así que ahí solo sirven el teclado en pantalla, QWERTY y el micrófono.
+- **Pantalla**: no hace scroll. En horizontal en el iPhone, el jefe, la vida, los botones y los gestos van en una sola fila arriba y la pausa a la derecha, para dejarle a la partitura casi todo el alto. En vertical, la vida del jugador cabe en una línea.
 - **iOS** (SwiftUI, en `ios/`): un paquete de Swift que se compila con [xtool](https://github.com/xtool-org/xtool), sin Mac ni Xcode. Un `WKWebView` sirve la web empaquetada desde `app://localhost` (con `file://` no cargan los charts). El MIDI entra por CoreMIDI, conecta todos los teclados, también los que se enchufan con la app abierta, y llega a la web por el manejador `nativeMidi`. `js/instrument/midi-input.js` elige ese puente o Web MIDI, y los dos llegan al mismo manejador de notas.
 
 Para compilar hace falta Linux (o WSL2) con Swift 6.4, xtool y su SDK de iOS. `xtool setup` lo genera desde el `Xcode_27.1.xip`, que se descarga una vez con un Apple ID gratuito. [omarchy-apple-dev](https://github.com/joshuaswarren/omarchy-apple-dev) instala todo con `install-toolchain.sh`.

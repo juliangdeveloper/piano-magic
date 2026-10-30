@@ -15,6 +15,18 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  --hp-num-size: 15px;
+  --hp-num-size-compact: 12px;
+  --player-hp-compact-w: 112px;
+  --short-boss-h: clamp(44px, 13dvh, 64px);
+  --short-boss-hp-w: 150px;
+  --short-player-hp-w: 132px;
+  --short-room-mark: 40px;
+  --short-tool-btn: 32px;
+  --short-orb-w: 52px;
+  --short-chip: 32px;
+  --short-action-btn: 42px;
+  --short-piano-h: clamp(56px, 17dvh, 68px);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -257,11 +269,12 @@ body {
   position: absolute;
   right: 7%;
   top: 18%;
-  font-size: 15px;
+  font-size: var(--hp-num-size);
   font-weight: 800;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   pointer-events: none;
   line-height: 1;
 }
@@ -798,7 +811,8 @@ footer {
   .room-card { flex-direction: column; gap: 2px; align-items: center; }
   .room-mark, #roomIcon, .room-emoji { width: 44px; height: 44px; }
   .room-emoji { line-height: 44px; font-size: 26px; }
-  .player-hp { width: 78px; }
+  .player-hp { width: var(--player-hp-compact-w); }
+  .player-hp .hp-num { font-size: var(--hp-num-size-compact); letter-spacing: -0.02em; }
   .bpm-orb { width: 64px; }
   #bpmVal { font-size: 16px; }
   .boss-hp { width: min(240px, 78%); }
@@ -960,6 +974,7 @@ body.picking.kb-on #bossSprite { max-height: clamp(110px, 20dvh, 200px); }
 
 html, body { overscroll-behavior: none; touch-action: manipulation; }
 #frame, #scroll, footer, #keys { overscroll-behavior: none; }
+#frame:has(> #keys:not([hidden])) { padding-bottom: 0; }
 button { touch-action: manipulation; }
 
 #sheet[hidden] { display: none !important; }
@@ -1072,4 +1087,75 @@ body.sheet-open #tapeFrame { min-height: 168px; }
 @media (max-width: 430px) {
   #btnPractice, #btnGateScore, #btnGateFight { min-height: 40px; font-size: 14px; padding: 0 12px; }
   body.sheet-open #tapeFrame { min-height: 156px; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  #scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "top legend"
+      "top buffs"
+      "tape tape";
+    column-gap: 8px;
+  }
+  #stageTop {
+    grid-area: top;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "room boss util bpm";
+    gap: 0 8px;
+    padding: 2px 0 0 10px;
+  }
+  .room-card { flex-direction: row; gap: 4px; padding-top: 0; }
+  .room-mark, #roomIcon, .room-emoji { width: var(--short-room-mark); height: var(--short-room-mark); }
+  .room-emoji { line-height: var(--short-room-mark); font-size: 22px; }
+  #roomKeyTag { min-width: 18px; height: 18px; font-size: 11px; }
+  .player-hp { width: var(--short-player-hp-w); margin-top: 0; }
+  .player-hp .hp-num { font-size: var(--hp-num-size-compact); }
+  .utility { padding: 0; flex-wrap: nowrap; gap: 5px; }
+  .wordmark { margin-right: 0; }
+  #btnKeyboard, #btnMic, #btnHelp {
+    width: var(--short-tool-btn);
+    height: var(--short-tool-btn);
+    min-height: var(--short-tool-btn);
+    flex: 0 0 auto;
+  }
+  #btnKeyboard svg, #btnMic svg { width: 18px; height: 18px; }
+  .bpm-orb { width: var(--short-orb-w); padding-top: 0; }
+  #bpmVal { font-size: 14px; }
+  .beats { margin-top: 2px; }
+  .boss-hp { width: var(--short-boss-hp-w); margin: 0 auto; }
+  #bossPortrait, #bossSprite,
+  body.picking #bossPortrait, body.picking #bossSprite,
+  body.kb-on #bossPortrait, body.kb-on #bossSprite,
+  body.picking.kb-on #bossPortrait, body.picking.kb-on #bossSprite,
+  body.sheet-open #bossPortrait, body.sheet-open #bossSprite { max-height: var(--short-boss-h); }
+  #gestureLegend { grid-area: legend; align-self: end; flex-wrap: nowrap; gap: 6px; padding: 0 10px 0 0; }
+  #buffs { grid-area: buffs; align-self: start; justify-content: flex-end; padding: 4px 10px 0 0; }
+  .chip { width: var(--short-chip); height: var(--short-chip); }
+  .chip.live { min-width: var(--short-chip); }
+  .chip svg { width: 18px; height: 18px; }
+  #tapeFrame, body.sheet-open #tapeFrame { grid-area: tape; min-height: 0; margin: 4px 10px; }
+  footer { padding: 2px 28px 2px; }
+  #btnStart, #btnPause, #btnRestart, #btnPauseRestart, #btnPauseRival, .ghost-btn {
+    width: var(--short-action-btn); min-width: var(--short-action-btn);
+    height: var(--short-action-btn); min-height: var(--short-action-btn);
+  }
+  .rival-opt { width: var(--short-action-btn); height: var(--short-action-btn); min-width: var(--short-action-btn); min-height: var(--short-action-btn); }
+  #keys { padding: 4px 8px calc(4px + var(--safe-bottom)); }
+  .piano { height: var(--short-piano-h); }
+  body:not(.picking) #frame {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "scroll side"
+      "keys keys";
+  }
+  body:not(.picking) #scroll { grid-area: scroll; }
+  body:not(.picking) footer { grid-area: side; flex-direction: column; padding: 4px 10px 12px 0; }
+  body:not(.picking) .fight-actions,
+  body:not(.picking) .pause-actions { flex-direction: column; }
+  body:not(.picking) #keys { grid-area: keys; }
 }

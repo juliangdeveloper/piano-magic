@@ -102,7 +102,7 @@ test('MI6: un webkit sin el manejador nativeMidi sigue usando Web MIDI', () => {
 test('MI5: index carga midi-input antes de app y app usa MidiInput', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /js\/instrument\/midi-input\.js\?v=0\.2\.1/);
+  assert.match(html, /js\/instrument\/midi-input\.js\?v=0\.2\.2/);
   assert.ok(html.indexOf('midi-input.js') < html.indexOf('js/app.js'));
   assert.match(app, /MidiInput\.start\(/);
   assert.doesNotMatch(app, /requestMIDIAccess/);

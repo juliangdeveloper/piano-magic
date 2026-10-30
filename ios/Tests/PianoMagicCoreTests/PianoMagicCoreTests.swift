@@ -32,7 +32,7 @@ final class PianoMagicCoreTests: XCTestCase {
         XCTAssertEqual(WebFiles.entryURL.absoluteString, "app://localhost/index.html")
         XCTAssertEqual(WebFiles.file(for: URL(string: "app://localhost/")!, in: root)?.path, "/bundle/web/index.html")
         XCTAssertEqual(
-            WebFiles.file(for: URL(string: "app://localhost/charts/a.json?v=0.2.1")!, in: root)?.path,
+            WebFiles.file(for: URL(string: "app://localhost/charts/a.json?v=0.2.2")!, in: root)?.path,
             "/bundle/web/charts/a.json"
         )
         XCTAssertNil(WebFiles.file(for: URL(string: "app://localhost/../secret")!, in: root))
