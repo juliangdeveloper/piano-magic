@@ -27,17 +27,19 @@ npm test                      # tests en Node, sin npm install
 
 ## Web e iOS
 - **Web** (GitHub Pages): el MIDI entra por Web MIDI. Safari de iPhone y iPad no tiene Web MIDI, así que ahí solo sirven el teclado en pantalla, QWERTY y el micrófono.
-- **iOS** (Capacitor 8, en `ios/`): la misma web dentro de una app nativa. El MIDI entra por CoreMIDI con el plugin propio `NativeMidi` (`ios/App/App/NativeMidiPlugin.swift`), que conecta todos los teclados, también los que se enchufan con la app abierta. `js/instrument/midi-input.js` elige Web MIDI o `NativeMidi`, y los dos llegan al mismo manejador de notas.
+- **iOS** (SwiftUI, en `ios/`): un paquete de Swift que se compila con [xtool](https://github.com/xtool-org/xtool), sin Mac ni Xcode. Un `WKWebView` sirve la web empaquetada desde `app://localhost` (con `file://` no cargan los charts). El MIDI entra por CoreMIDI, conecta todos los teclados, también los que se enchufan con la app abierta, y llega a la web por el manejador `nativeMidi`. `js/instrument/midi-input.js` elige ese puente o Web MIDI, y los dos llegan al mismo manejador de notas.
 
-Para compilar la app hace falta un Mac con Xcode 26 o más y Node 22 o más. Las dependencias nativas van por Swift Package Manager, sin CocoaPods.
+Para compilar hace falta Linux (o WSL2) con Swift 6.4, xtool y su SDK de iOS. `xtool setup` lo genera desde el `Xcode_27.1.xip`, que se descarga una vez con un Apple ID gratuito. [omarchy-apple-dev](https://github.com/joshuaswarren/omarchy-apple-dev) instala todo con `install-toolchain.sh`.
 
 ```
-npm install
-npm run ios:sync    # copia la web a www/ y corre cap sync ios
-npm run ios:open    # abre ios/App en Xcode
+npm run ios:web        # copia la web a ios/Sources/PianoMagic/web
+npm run ios:test       # tests de Swift del puente MIDI y de la carga de archivos
+cd ios
+xtool dev build        # crea ios/xtool/PianoMagic.app
+xtool dev run          # firma e instala en el iPhone conectado por USB
 ```
 
-En Xcode, cambia el Bundle ID de ejemplo (`com.example.pianomagic`) por el tuyo, elige tu equipo en Signing & Capabilities y usa Product → Archive para subirla a TestFlight.
+Antes de instalar, cambia el Bundle ID de ejemplo (`com.example.pianomagic`) en `ios/xtool.yml`. Para TestFlight hace falta una cuenta de Apple Developer de pago, una clave de la API de App Store Connect y la app creada en App Store Connect. Desde `ios/`, `ship.sh --upload` de omarchy-apple-dev compila, firma, valida y sube la build.
 
 ## Relacionado
 🎼 [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe): motor de notas y partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-transcribe/)

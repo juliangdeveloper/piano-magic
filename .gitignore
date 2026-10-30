@@ -1,12 +1,9 @@
 node_modules/
 *.log
 .DS_Store
-www/
-ios/App/build/
-ios/App/output/
-ios/App/App/public/
-ios/DerivedData/
-*.xcarchive
+ios/.build/
+ios/.swiftpm/
+ios/xtool/
+ios/Sources/PianoMagic/web/
 *.ipa
-*.dSYM.zip
 xcuserdata/

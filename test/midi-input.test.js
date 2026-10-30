@@ -8,21 +8,13 @@ const MidiInput = require('../js/instrument/midi-input.js');
 
 const root = path.join(__dirname, '..');
 
-function fakePlugin(count) {
-  const listeners = {};
-  return {
-    started: 0,
-    addListener(name, fn) { (listeners[name] = listeners[name] || []).push(fn); return { remove() {} }; },
-    start() { this.started += 1; return Promise.resolve({ count }); },
-    emit(name, data) { (listeners[name] || []).forEach((fn) => fn(data)); }
-  };
-}
-
-function nativeEnv(plugin, webAccess) {
-  return {
-    Capacitor: { isNativePlatform: () => true, registerPlugin: (name) => (name === MidiInput.PLUGIN_NAME ? plugin : null) },
+function nativeEnv(webAccess, fail) {
+  const posted = [];
+  const env = {
+    webkit: { messageHandlers: { nativeMidi: { postMessage(m) { if (fail) throw new Error('x'); posted.push(m); } } } },
     navigator: { requestMIDIAccess: () => { webAccess.called = true; return Promise.reject(new Error('web')); } }
   };
+  return { env, posted, bridge: () => env[MidiInput.GLOBAL_NAME] };
 }
 
 function recorder() {
@@ -46,21 +38,23 @@ test('MI1: parse reconoce note on, note off y note on con velocidad 0', () => {
   assert.strictEqual(MidiInput.parse(0xb0, 64, 127), null);
 });
 
-test('MI2: en la app nativa el plugin alimenta el mismo onNote y no se usa Web MIDI', async () => {
-  const plugin = fakePlugin(1);
+test('MI2: en la app nativa el puente nativeMidi alimenta el mismo onNote y no se usa Web MIDI', () => {
   const web = { called: false };
   const rec = recorder();
-  assert.strictEqual(MidiInput.start(rec, nativeEnv(plugin, web)), 'native');
-  await Promise.resolve();
-  await Promise.resolve();
-  plugin.emit('midi', { status: 0x90, data1: 60, data2: 90, timestamp: 1 });
-  plugin.emit('midi', { status: 0x80, data1: 60, data2: 0, timestamp: 2 });
-  plugin.emit('midi', { status: 0xe0, data1: 0, data2: 64, timestamp: 3 });
-  plugin.emit('devices', { count: 2 });
-  assert.strictEqual(plugin.started, 1);
+  const n = nativeEnv(web);
+  assert.strictEqual(MidiInput.start(rec, n.env), 'native');
+  assert.deepStrictEqual(n.posted, [{ action: 'start' }]);
+  const bridge = n.bridge();
+  bridge.devices(1);
+  bridge.emit({ status: 0x90, data1: 60, data2: 90, timestamp: 1 });
+  bridge.emit({ status: 0x80, data1: 60, data2: 0, timestamp: 2 });
+  bridge.emit({ status: 0xe0, data1: 0, data2: 64, timestamp: 3 });
+  bridge.emit(null);
+  bridge.devices(2);
+  bridge.devices(0);
   assert.strictEqual(web.called, false);
   assert.deepStrictEqual(rec.notes, [['on', 60, 90], ['off', 60, 0]]);
-  assert.deepStrictEqual(rec.devices, [1, 2]);
+  assert.deepStrictEqual(rec.devices, [1, 2, 0]);
 });
 
 test('MI3: en el navegador Web MIDI alimenta el mismo onNote y reengancha al conectar', async () => {
@@ -85,39 +79,30 @@ test('MI4: sin MIDI o con permiso denegado avisa igual que antes', async () => {
   assert.strictEqual(MidiInput.start(none, { navigator: {} }), 'none');
   assert.deepStrictEqual(none.devices, ['none']);
   const web = recorder();
-  MidiInput.start(web, { Capacitor: { isNativePlatform: () => false }, navigator: { requestMIDIAccess: () => Promise.reject(new Error('x')) } });
+  MidiInput.start(web, { navigator: { requestMIDIAccess: () => Promise.reject(new Error('x')) } });
   await new Promise((r) => setImmediate(r));
   assert.deepStrictEqual(web.devices, ['blocked']);
-  const plugin = fakePlugin(0);
-  plugin.start = () => Promise.reject(new Error('x'));
   const nat = recorder();
-  MidiInput.start(nat, nativeEnv(plugin, {}));
-  await new Promise((r) => setImmediate(r));
+  MidiInput.start(nat, nativeEnv({}, true).env);
   assert.deepStrictEqual(nat.devices, ['blocked']);
+  const denied = recorder();
+  const n = nativeEnv({});
+  MidiInput.start(denied, n.env);
+  n.bridge().blocked();
+  assert.deepStrictEqual(denied.devices, ['blocked']);
 });
 
-test('MI6: sin @capacitor/core usa el puente nativo de Capacitor directamente', async () => {
-  const listeners = {};
-  const calls = [];
-  const cap = {
-    isNativePlatform: () => true,
-    nativePromise: (plugin, method, opts) => { calls.push([plugin, method, opts]); return Promise.resolve({ count: 1 }); },
-    addListener: (plugin, eventName, fn) => { listeners[plugin + ':' + eventName] = fn; return { remove() {} }; }
-  };
+test('MI6: un webkit sin el manejador nativeMidi sigue usando Web MIDI', () => {
   const rec = recorder();
-  assert.strictEqual(MidiInput.start(rec, { Capacitor: cap, navigator: {} }), 'native');
-  await new Promise((r) => setImmediate(r));
-  listeners['NativeMidi:midi']({ status: 0x90, data1: 72, data2: 50, timestamp: 0 });
-  listeners['NativeMidi:midi']({ status: 0x80, data1: 72, data2: 0, timestamp: 1 });
-  assert.deepStrictEqual(calls, [['NativeMidi', 'start', {}]]);
-  assert.deepStrictEqual(rec.notes, [['on', 72, 50], ['off', 72, 0]]);
-  assert.deepStrictEqual(rec.devices, [1]);
+  const env = { webkit: { messageHandlers: {} }, navigator: { requestMIDIAccess: () => new Promise(() => {}) } };
+  assert.strictEqual(MidiInput.start(rec, env), 'web');
+  assert.strictEqual(env[MidiInput.GLOBAL_NAME], undefined);
 });
 
 test('MI5: index carga midi-input antes de app y app usa MidiInput', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /js\/instrument\/midi-input\.js\?v=0\.2\.0/);
+  assert.match(html, /js\/instrument\/midi-input\.js\?v=0\.2\.1/);
   assert.ok(html.indexOf('midi-input.js') < html.indexOf('js/app.js'));
   assert.match(app, /MidiInput\.start\(/);
   assert.doesNotMatch(app, /requestMIDIAccess/);

@@ -340,8 +340,8 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /pagehide/);
   assert.match(app, /visibilitychange/);
   assert.match(app, /visibilityState === 'hidden'/);
-  assert.match(html, /js\/meta\.js\?v=0\.2\.0/);
-  assert.match(html, /js\/progress\.js\?v=0\.2\.0/);
+  assert.match(html, /js\/meta\.js\?v=0\.2\.1/);
+  assert.match(html, /js\/progress\.js\?v=0\.2\.1/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');

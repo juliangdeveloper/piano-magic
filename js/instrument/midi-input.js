@@ -14,9 +14,9 @@
   var NOTE_OFF = 0x80;
   var MIN_MESSAGE_BYTES = 2;
   var VELOCITY_INDEX = 2;
-  var PLUGIN_NAME = 'NativeMidi';
-  var EVENT_MESSAGE = 'midi';
-  var EVENT_DEVICES = 'devices';
+  var HANDLER_NAME = 'nativeMidi';
+  var GLOBAL_NAME = '__nativeMidi';
+  var ACTION_START = 'start';
   var KIND_ON = 'on';
   var KIND_OFF = 'off';
   var SOURCE_NATIVE = 'native';
@@ -40,31 +40,30 @@
     if (typeof fn === 'function') fn(arg);
   }
 
-  function nativePlugin(env) {
-    var cap = env && env.Capacitor;
-    if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return null;
-    if (typeof cap.registerPlugin === 'function') return cap.registerPlugin(PLUGIN_NAME);
-    if (cap.Plugins && cap.Plugins[PLUGIN_NAME]) return cap.Plugins[PLUGIN_NAME];
-    if (typeof cap.nativePromise !== 'function' || typeof cap.addListener !== 'function') return null;
-    return {
-      start: function () { return cap.nativePromise(PLUGIN_NAME, 'start', {}); },
-      addListener: function (eventName, fn) { return cap.addListener(PLUGIN_NAME, eventName, fn); }
-    };
+  function nativeHandler(env) {
+    var handlers = env && env.webkit && env.webkit.messageHandlers;
+    var handler = handlers && handlers[HANDLER_NAME];
+    return handler && typeof handler.postMessage === 'function' ? handler : null;
   }
 
-  function startNative(plugin, handlers) {
-    plugin.addListener(EVENT_MESSAGE, function (m) {
-      if (!m) return;
-      dispatch(handlers, m.status, m.data1, m.data2);
-    });
-    plugin.addListener(EVENT_DEVICES, function (d) {
-      call(handlers.onDevices, (d && d.count) || 0);
-    });
-    return Promise.resolve(plugin.start()).then(function (r) {
-      call(handlers.onDevices, (r && r.count) || 0);
-    }).catch(function () {
+  function startNative(env, handler, handlers) {
+    env[GLOBAL_NAME] = {
+      emit: function (m) {
+        if (!m) return;
+        dispatch(handlers, m.status, m.data1, m.data2);
+      },
+      devices: function (count) {
+        call(handlers.onDevices, count || 0);
+      },
+      blocked: function () {
+        call(handlers.onBlocked);
+      }
+    };
+    try {
+      handler.postMessage({ action: ACTION_START });
+    } catch (e) {
       call(handlers.onBlocked);
-    });
+    }
   }
 
   function startWeb(nav, handlers) {
@@ -91,9 +90,9 @@
   function start(handlers, env) {
     handlers = handlers || {};
     env = env || (typeof window !== 'undefined' ? window : {});
-    var plugin = nativePlugin(env);
-    if (plugin) {
-      startNative(plugin, handlers);
+    var handler = nativeHandler(env);
+    if (handler) {
+      startNative(env, handler, handlers);
       return SOURCE_NATIVE;
     }
     var nav = env.navigator;
@@ -108,7 +107,8 @@
   return {
     KIND_ON: KIND_ON,
     KIND_OFF: KIND_OFF,
-    PLUGIN_NAME: PLUGIN_NAME,
+    HANDLER_NAME: HANDLER_NAME,
+    GLOBAL_NAME: GLOBAL_NAME,
     parse: parse,
     start: start
   };
