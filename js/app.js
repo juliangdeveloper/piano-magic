@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.47';
+  var VERSION = '0.2.2';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -1011,35 +1011,25 @@
 
   function setupMidi() {
     var status = $('midiStatus');
-    if (!navigator.requestMIDIAccess) {
-      midiStatus = 'MIDI no disponible · teclado A–K y el teclado en pantalla';
+    function show(text) {
+      midiStatus = text;
       if (status) status.textContent = midiStatus;
-      return;
     }
-    navigator.requestMIDIAccess().then(function (access) {
-      function hook() {
-        var n = 0;
-        access.inputs.forEach(function (input) {
-          n += 1;
-          input.onmidimessage = function (ev) {
-            var d = ev.data;
-            if (!d || d.length < 2) return;
-            var cmd = d[0] & 0xf0;
-            var note = d[1];
-            var vel = d.length > 2 ? d[2] : 0;
-            var pitch = InstrumentTranslator.midiToName(note);
-            if (cmd === 0x90 && vel > 0) noteOn(pitch, 'midi');
-            else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) noteOff(pitch, 'midi');
-          };
-        });
-        midiStatus = n ? ('MIDI · ' + n + ' dispositivo' + (n > 1 ? 's' : '')) : 'MIDI: sin dispositivo · usa el teclado';
-        if (status) status.textContent = midiStatus;
+    MidiInput.start({
+      onNote: function (kind, note) {
+        var pitch = InstrumentTranslator.midiToName(note);
+        if (kind === MidiInput.KIND_ON) noteOn(pitch, 'midi');
+        else noteOff(pitch, 'midi');
+      },
+      onDevices: function (n) {
+        show(n ? ('MIDI · ' + n + ' dispositivo' + (n > 1 ? 's' : '')) : 'MIDI: sin dispositivo · usa el teclado');
+      },
+      onBlocked: function () {
+        show('MIDI bloqueado · usa el teclado A S D');
+      },
+      onUnavailable: function () {
+        show('MIDI no disponible · teclado A–K y el teclado en pantalla');
       }
-      hook();
-      access.onstatechange = hook;
-    }).catch(function () {
-      midiStatus = 'MIDI bloqueado · usa el teclado A S D';
-      if (status) status.textContent = midiStatus;
     });
   }
 

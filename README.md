@@ -1,6 +1,6 @@
 # 🎹 piano-magic
 
-> Un combate RPG que se juega tocando piano: improvisa para atacar y copia la melodía del jefe para defenderte. Con teclado, MIDI o micrófono.
+> Un combate RPG que se juega tocando piano: improvisa para atacar y copia la melodía del jefe para defenderte. Con teclado, MIDI o micrófono, en la web o en iPhone y iPad.
 
 **[▶ Jugar ahora](https://juliangdeveloper.github.io/piano-magic/)** · gratis, en el navegador, sin instalar
 
@@ -18,12 +18,29 @@
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 
 ## Stack
-JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia local del detector.
+JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. La web no usa dependencias de npm ni copia local del detector.
 
 ```
 python3 -m http.server 8000   # abrir http://localhost:8000 (file:// no carga los charts)
 npm test                      # tests en Node, sin npm install
 ```
+
+## Web e iOS
+- **Web** (GitHub Pages): el MIDI entra por Web MIDI. Safari de iPhone y iPad no tiene Web MIDI, así que ahí solo sirven el teclado en pantalla, QWERTY y el micrófono.
+- **Pantalla**: no hace scroll. En horizontal en el iPhone, el jefe, la vida, los botones y los gestos van en una sola fila arriba y la pausa a la derecha, para dejarle a la partitura casi todo el alto. En vertical, la vida del jugador cabe en una línea.
+- **iOS** (SwiftUI, en `ios/`): un paquete de Swift que se compila con [xtool](https://github.com/xtool-org/xtool), sin Mac ni Xcode. Un `WKWebView` sirve la web empaquetada desde `app://localhost` (con `file://` no cargan los charts). El MIDI entra por CoreMIDI, conecta todos los teclados, también los que se enchufan con la app abierta, y llega a la web por el manejador `nativeMidi`. `js/instrument/midi-input.js` elige ese puente o Web MIDI, y los dos llegan al mismo manejador de notas.
+
+Para compilar hace falta Linux (o WSL2) con Swift 6.4, xtool y su SDK de iOS. `xtool setup` lo genera desde el `Xcode_27.1.xip`, que se descarga una vez con un Apple ID gratuito. [omarchy-apple-dev](https://github.com/joshuaswarren/omarchy-apple-dev) instala todo con `install-toolchain.sh`.
+
+```
+npm run ios:web        # copia la web a ios/Sources/PianoMagic/web
+npm run ios:test       # tests de Swift del puente MIDI y de la carga de archivos
+cd ios
+xtool dev build        # crea ios/xtool/PianoMagic.app
+xtool dev run          # firma e instala en el iPhone conectado por USB
+```
+
+Antes de instalar, cambia el Bundle ID de ejemplo (`com.example.pianomagic`) en `ios/xtool.yml`. Para TestFlight hace falta una cuenta de Apple Developer de pago, una clave de la API de App Store Connect y la app creada en App Store Connect. Desde `ios/`, `ship.sh --upload` de omarchy-apple-dev compila, firma, valida y sube la build.
 
 ## Relacionado
 🎼 [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe): motor de notas y partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-transcribe/)

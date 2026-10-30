@@ -1,3 +1,9 @@
 node_modules/
 *.log
 .DS_Store
+ios/.build/
+ios/.swiftpm/
+ios/xtool/
+ios/Sources/PianoMagic/web/
+*.ipa
+xcuserdata/
