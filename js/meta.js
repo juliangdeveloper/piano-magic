@@ -21,18 +21,12 @@
     tipo: TIPO_PROYECTO.PROYECTO,
     bloqueada: true,
     aportes: [
-      { id: 'programacion', aporte: 2, fuente: 'creacion' },
-      { id: 'juegos', aporte: 3, fuente: 'creacion' },
-      { id: 'musica', aporte: 3, fuente: 'creacion' },
-      { id: 'audio', aporte: 2, fuente: 'creacion' },
-      { id: 'ux', aporte: 2, fuente: 'creacion' },
-      { id: 'graficos', aporte: 2, fuente: 'creacion' },
-      { id: 'musical', aporte: 3, fuente: 'uso' },
-      { id: 'oido', aporte: 2, fuente: 'uso' },
-      { id: 'ritmo', aporte: 2, fuente: 'uso' },
-      { id: 'lectura', aporte: 2, fuente: 'uso' },
-      { id: 'perseverancia', aporte: 2, fuente: 'uso' },
-      { id: 'disciplina', aporte: 1, fuente: 'uso' }
+      { stat: 'Programación', exp: 64, fuente: 'creacion' },
+      { stat: 'Diseño', exp: 12, fuente: 'creacion' },
+      { stat: 'Arte', exp: 2, fuente: 'creacion' },
+      { stat: 'Música', exp: 6, fuente: 'creacion' },
+      { stat: 'Oído musical', exp: 20, fuente: 'uso' },
+      { stat: 'Lectura musical', exp: 10, fuente: 'uso' }
     ]
   };
 
@@ -56,25 +50,27 @@
     return Object.keys(stats).map(function (key) { return { key: key, tipo: stats[key] && stats[key].tipo }; });
   }
 
+  var APORTE_STAT_MAX = 32;
+  var APORTE_EXP_MAX = 99;
+
   function aportesValidos(lista) {
     if (!Array.isArray(lista)) return null;
     var out = [];
     var seen = {};
-    var i;
-    for (i = 0; i < lista.length; i++) {
+    for (var i = 0; i < lista.length; i++) {
       var it = lista[i];
       if (!it || typeof it !== 'object' || Array.isArray(it)) return null;
-      var id = it.id;
+      var stat = it.stat;
+      var exp = it.exp;
       var fuente = it.fuente;
-      var aporte = it.aporte;
-      if (typeof id !== 'string' || !/^[a-z][a-z0-9]*$/.test(id)) return null;
+      if (typeof stat !== 'string' || !stat.trim() || stat !== stat.trim() || Array.from(stat).length > APORTE_STAT_MAX) return null;
       if (fuente !== 'creacion' && fuente !== 'uso') return null;
-      if (!proyectoInt(aporte, 1, 3)) return null;
-      var key = id + '\n' + fuente;
+      if (!(proyectoInt(exp, 1, APORTE_EXP_MAX))) return null;
+      var key = stat + '\n' + fuente;
       if (seen[key]) return null;
       if (Object.keys(it).length !== 3) return null;
       seen[key] = true;
-      out.push({ id: id, aporte: aporte, fuente: fuente });
+      out.push({ stat: stat, exp: exp, fuente: fuente });
     }
     return out;
   }
@@ -104,6 +100,36 @@
     proyectoSource = p === null ? PROYECTO : p;
   }
 
+  function metaDeclararProyecto(slug, version) {
+    try {
+      var store = globalThis.localStorage;
+      if (!store || !slug) return null;
+      var clave = 'meta.v1.' + slug;
+      var raw = store.getItem(clave);
+      var base = null;
+      if (raw != null && raw !== '') {
+        try {
+          var previo = JSON.parse(raw);
+          if (previo && typeof previo === 'object' && !Array.isArray(previo) && previo.v === 1 && previo.slug === slug) base = previo;
+        } catch (e) {
+          base = null;
+        }
+        if (!base) store.setItem(clave + '.corrupt', String(raw));
+      }
+      if (!base) base = { v: 1, slug: slug, version: String(version == null ? '' : version).replace(/^[vV]/, ''), updatedAt: new Date().toISOString(), stats: {}, logros: [], hitos: {} };
+      var p = metaProyecto(proyectoSource);
+      if (p) base.proyecto = p;
+      var texto = JSON.stringify(base);
+      if (texto !== raw) {
+        store.setItem(clave, texto);
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) window.parent.postMessage({ type: 'meta', key: clave, data: base }, location.origin);
+      }
+      return base;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function withProyecto(record) {
     var p = metaProyecto(proyectoSource);
     if (p) record.proyecto = p;
@@ -122,18 +148,6 @@
     var s = version == null ? '' : String(version);
     if (s.charAt(0) === 'v' || s.charAt(0) === 'V') s = s.slice(1);
     return s;
-  }
-
-  function demoOn(opts) {
-    if (opts && opts.demo === true) return true;
-    var search = '';
-    if (opts && typeof opts.search === 'string') search = opts.search;
-    else {
-      try {
-        if (typeof location !== 'undefined' && location && typeof location.search === 'string') search = location.search;
-      } catch (e) {}
-    }
-    return /(^|[?&])(demo|preview)=1(&|$)/.test(search);
   }
 
   function declaredList(declare) {
@@ -175,7 +189,6 @@
     try {
       opts = opts || {};
       patch = patch || {};
-      if (demoOn(opts)) return null;
       var storage = opts.storage;
       if (!storage) {
         try { storage = (typeof localStorage !== 'undefined') ? localStorage : null; } catch (eStore) { storage = null; }
@@ -275,6 +288,7 @@
     metaUpdate: metaUpdate,
     metaProyecto: metaProyecto,
     metaSetProyecto: metaSetProyecto,
+    metaDeclararProyecto: metaDeclararProyecto,
     PROYECTO: PROYECTO,
     FASE: FASE,
     ESTADO_FASE: ESTADO_FASE,

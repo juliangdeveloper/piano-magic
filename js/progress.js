@@ -118,18 +118,6 @@
     return null;
   }
 
-  function demoOn(opts) {
-    if (opts && opts.demo === true) return true;
-    var search = '';
-    if (opts && typeof opts.search === 'string') search = opts.search;
-    else {
-      try {
-        if (typeof location !== 'undefined' && location && typeof location.search === 'string') search = location.search;
-      } catch (e) {}
-    }
-    return /(^|[?&])(demo|preview)=1(&|$)/.test(search);
-  }
-
   function clockMs(opts) {
     if (opts && typeof opts.nowMs === 'function') return opts.nowMs();
     if (opts && typeof opts.nowMs === 'number') return opts.nowMs;
@@ -146,7 +134,6 @@
     if (opts.storage) o.storage = opts.storage;
     if (opts.now != null) o.now = opts.now;
     if (opts.nowMs != null) o.nowMs = opts.nowMs;
-    if (opts.demo != null) o.demo = opts.demo;
     if (opts.search != null) o.search = opts.search;
     if (Object.prototype.hasOwnProperty.call(opts, 'window')) o.window = opts.window;
     if (opts.location) o.location = opts.location;
@@ -265,9 +252,21 @@
     }
   }
 
-  function backfill(version, opts) {
+  function declararProyecto(version) {
     try {
-      if (demoOn(opts)) return null;
+      if (Meta && typeof Meta.metaDeclararProyecto === 'function') Meta.metaDeclararProyecto(SLUG, version);
+    } catch (e) {
+    }
+  }
+
+  function backfill(version, opts) {
+    var record = backfillStats(version, opts);
+    declararProyecto(version);
+    return record;
+  }
+
+  function backfillStats(version, opts) {
+    try {
       var storage = storageOf(opts);
       if (!storage || !Meta) return null;
       var raw;
@@ -355,7 +354,6 @@
 
   function commit(version, stats, opts) {
     if (!Meta) return null;
-    if (demoOn(opts)) return null;
     return Meta.metaUpdate(SLUG, version, { stats: stats, logros: unlocked(stats) }, opts);
   }
 
@@ -397,7 +395,6 @@
   }
 
   function enqueue(version, stats, opts) {
-    if (demoOn(opts)) return null;
     var storage = storageOf(opts);
     if (!storage) return null;
     var use = callOpts(opts);
@@ -412,7 +409,6 @@
 
   function flush(storage, opts) {
     try {
-      if (demoOn(opts)) return null;
       var st = storage || storageOf(opts);
       if (!st) return null;
       var sess = sessionFor(st);
@@ -433,7 +429,6 @@
 
   function recordFight(chart, state, version, opts) {
     try {
-      if (demoOn(opts)) return null;
       var summary = summarizeFight(chart, state);
       if (!summary) return null;
       var storage = storageOf(opts);
