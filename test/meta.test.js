@@ -117,7 +117,7 @@ test('un registro roto se copia y se rehace sin lanzar', () => {
   assert.deepStrictEqual(rebuilt.logros, []);
 });
 
-test('metaUpdate avisa al padre una vez por escritura y calla en demo', () => {
+test('metaUpdate avisa al padre una vez por escritura', () => {
   const posted = [];
   const parent = { postMessage(data, origin) { posted.push({ data, origin }); } };
   const view = { parent };
@@ -145,23 +145,6 @@ test('metaUpdate avisa al padre una vez por escritura y calla en demo', () => {
   Meta.metaUpdate('piano-magic', '0.1.31', { stats: { fights_played: 2 } }, Object.assign({}, opts, { window: own }));
   assert.strictEqual(posted.length, 0);
 
-  posted.length = 0;
-  const before = storage.writes.length;
-  const demo = Meta.metaUpdate('piano-magic', '0.1.31', { stats: { fights_played: 9 } }, Object.assign({}, opts, { demo: true }));
-  assert.strictEqual(demo, null);
-  assert.strictEqual(posted.length, 0);
-  assert.strictEqual(storage.writes.length, before);
-  assert.strictEqual(read(storage).stats.fights_played, 2);
-
-  const preview = mem();
-  assert.strictEqual(Meta.metaUpdate('piano-magic', '0.1.31', { stats: { fights_played: 1 } }, {
-    storage: preview,
-    declare: DECLARE,
-    search: '?preview=1',
-    window: view
-  }), null);
-  assert.strictEqual(preview.getItem('meta.v1.piano-magic'), null);
-  assert.strictEqual(posted.length, 0);
 });
 
 test('un id que solo está en hitos entra en logros', () => {

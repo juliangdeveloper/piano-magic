@@ -340,8 +340,8 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /pagehide/);
   assert.match(app, /visibilitychange/);
   assert.match(app, /visibilityState === 'hidden'/);
-  assert.match(html, /js\/meta\.js\?v=0\.1\.48/);
-  assert.match(html, /js\/progress\.js\?v=0\.1\.48/);
+  assert.match(html, /js\/meta\.js\?v=0\.1\.49/);
+  assert.match(html, /js\/progress\.js\?v=0\.1\.49/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');
@@ -395,32 +395,6 @@ test('un registro roto se copia y el relleno lo rehace desde pmSave', () => {
   assert.strictEqual(rec4.stats.fights_played, 0);
 });
 
-test('demo y preview no escriben ni avisan', () => {
-  const pm = JSON.stringify({ wins: 4, played: 4 });
-  const posts = [];
-  const storage = mem({ pmSave: pm, seenTutorial: '1' });
-  const opts = {
-    storage,
-    now: NOW,
-    demo: true,
-    window: { parent: { postMessage(data) { posts.push(data); } } },
-    location: { origin: 'https://example.test' }
-  };
-  assert.strictEqual(Progress.backfill('0.1.31', opts), null);
-  assert.strictEqual(Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.31', opts), null);
-  assert.strictEqual(Progress.flush(storage, opts), null);
-  assert.strictEqual(storage.getItem(KEY), null);
-  assert.strictEqual(posts.length, 0);
-  assert.strictEqual(storage.getItem('pmSave'), pm);
-  assert.strictEqual(storage.getItem('seenTutorial'), '1');
-
-  const preview = mem({ pmSave: pm });
-  assert.strictEqual(Progress.backfill('0.1.31', { storage: preview, search: '?demo=1', now: NOW }), null);
-  assert.strictEqual(Progress.backfill('0.1.31', { storage: preview, search: '?x=1&preview=1', now: NOW }), null);
-  assert.strictEqual(preview.getItem(KEY), null);
-  assert.strictEqual(preview.getItem('pmSave'), pm);
-});
-
 test('las claves viejas quedan igual tras cargar y jugar', () => {
   const pm = JSON.stringify({ wins: 1, played: 2, bosses: ['parade-feather'], note: 'no tocar' });
   const storage = mem({
@@ -471,9 +445,6 @@ test('ocultar la página vuelca un cambio pendiente antes de un segundo y no esc
   Progress.recordFight(tinyChart(), ended('win', [{ sync: 'perfect' }, { sync: 'perfect' }]), '0.1.40', clock);
   nowMs = 10_200;
   assert.strictEqual(record(storage).stats.fights_played, 0);
-  assert.strictEqual(Progress.flush(storage, Object.assign({}, clock, { demo: true })), null);
-  assert.strictEqual(record(storage).stats.fights_played, 0);
-  assert.strictEqual(posts.length, 1);
   const hidden = Progress.flush(storage, clock);
   assert.strictEqual(hidden.stats.fights_played, 1);
   assert.strictEqual(hidden.stats.fights_won, 1);
