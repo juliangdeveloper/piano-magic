@@ -4,10 +4,10 @@
 
 **[▶ Jugar ahora](https://juliangdeveloper.github.io/piano-magic/)** · gratis, en el navegador, sin instalar
 
-<img src="docs/screenshot.png" alt="Partitura de Parade Feather en piano-magic, en gran pentagrama con las secciones de práctica" width="720">
+<img src="assets/screenshot.png" alt="Partitura de Jingle Bells en piano-magic, en gran pentagrama con las secciones de práctica" width="720">
 
 ## Cómo se juega
-- Elige un rival (*Parade Feather*; *The Veil Boat*; *Tower Chime*; *New World Largo*; *Camptown Races*; *Eine Kleine Nachtmusik*) o el **Modo libre**.
+- Elige un rival (*Parade Feather*; *The Veil Boat*; *Tower Chime*; *New World Largo*; *Camptown Races*; *Eine Kleine Nachtmusik*; *Jingle Bells*; *Surprise Symphony*; *Morning*; *Simple Gifts*) o el **Modo libre**.
 - El combate alterna compases de **Ataque** y **Defiende** sobre una partitura que avanza al ritmo del metrónomo.
 - En **Ataque** improvisas: escalas mayores atacan, menores te mejoran y pentatónicas te curan.
 - En **Defiende** copias las dos manos: la derecha en clave de sol y la izquierda en clave de fa. Un par a la vez es perfecto si suenan las dos notas, y parcial si solo entra una.
@@ -15,6 +15,7 @@
 - El teclado en pantalla siempre está a la vista: la nota del jefe se enciende en morado y la tuya en verde.
 - Los números junto a las notas indican el dedo (1–5): arriba para la mano derecha, abajo para la izquierda.
 - Las notas ligadas se tocan una sola vez.
+- El jefe toca con las dinámicas de la partitura: *p*, *f*, reguladores y staccato cambian su volumen y su duración.
 - Para practicar, abre la partitura del rival (o pausa el combate), elige una sección y escúchala en loop a tempo real, ×0.75 o ×0.5. **Practicar** inicia un combate con ese loop, y no cuenta como pelea real.
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 

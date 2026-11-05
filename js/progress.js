@@ -29,7 +29,11 @@
     tower_chime_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Tower Chime' },
     new_world_largo_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe New World Largo' },
     camptown_races_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Camptown Races' },
-    eine_kleine_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Eine Kleine' }
+    eine_kleine_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Eine Kleine' },
+    jingle_bells_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Jingle Bells' },
+    surprise_symphony_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Surprise Symphony' },
+    peer_gynt_morning_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Morning' },
+    simple_gifts_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'victorias contra el jefe Simple Gifts' }
   });
   var STAT_KEYS = Object.keys(STATS);
 
@@ -39,7 +43,11 @@
     'tower-chime',
     'new-world-largo',
     'camptown-races',
-    'eine-kleine'
+    'eine-kleine',
+    'jingle-bells',
+    'surprise-symphony',
+    'peer-gynt-morning',
+    'simple-gifts'
   ];
 
   var ACHIEVEMENTS = [
@@ -53,7 +61,7 @@
     { id: 'boss_eine_kleine', test: function (s) { return (s.eine_kleine_wins || 0) >= 1; } },
     { id: 'perfect_fight', test: function (s) { return (s.perfect_fights || 0) >= 1; } },
     { id: 'perfect_notes_50', test: function (s) { return (s.perfect_notes_total || 0) >= 50; } },
-    { id: 'all_bosses', test: function (s) { return (s.bosses_defeated || 0) >= 6; } },
+    { id: 'all_bosses', test: function (s) { return (s.bosses_defeated || 0) >= BOSSES.length; } },
     { id: 'fights_10', test: function (s) { return (s.fights_played || 0) >= 10; } }
   ];
 

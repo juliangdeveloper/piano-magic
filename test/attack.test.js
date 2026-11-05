@@ -75,7 +75,7 @@ test('A7: ligaduras: 1.25 = negra⁀semicorchea; cruza mitad y barra', () => {
   assert.ok(s[0].tied && !s[1].tied);
 });
 
-const CHARTS = ['parade-feather', 'veil-boat', 'tower-chime', 'new-world-largo', 'camptown-races', 'eine-kleine'];
+const CHARTS = ['parade-feather', 'veil-boat', 'tower-chime', 'new-world-largo', 'camptown-races', 'eine-kleine', 'jingle-bells', 'surprise-symphony', 'peer-gynt-morning', 'simple-gifts'];
 for (const id of CHARTS) {
   test('A8: chart ' + id + ' válido, escala de sala, rango C3–A5, una nota por mano', () => {
     const raw = JSON.parse(fs.readFileSync(path.join(root, 'charts', id + '.json'), 'utf8'));
@@ -84,7 +84,7 @@ for (const id of CHARTS) {
     assert.strictEqual(T.pitchClass(c.roomScale[0] + '4'), T.pitchClass(c.roomKey + '4'));
     const osk = new Set(Object.values(T.KEY_MAP).map((p) => T.pitchToMidi(p)));
     const bpb = Chart.beatsPerBar(c);
-    const HOLES = { 'veil-boat': [0, 8], 'tower-chime': [0, 5] };
+    const HOLES = { 'veil-boat': [0, 8], 'tower-chime': [0, 5], 'simple-gifts': [0, 6] };
     const holes = c.loop.map((b, i) => (b.kind === 'hole' ? i : -1)).filter((i) => i >= 0);
     if (HOLES[id]) {
       assert.deepStrictEqual(holes, HOLES[id]);
@@ -105,7 +105,7 @@ for (const id of CHARTS) {
         assert.ok(n.beat + n.dur <= bpb + 1e-9);
         active = active.filter((a) => a.end > n.beat + 1e-9);
         assert.ok(!active.some((a) => a.hand === n.hand && (Math.abs(a.beat - n.beat) > 1e-9 || Math.abs(a.end - n.beat - n.dur) > 1e-9)), 'la misma mano no se pisa');
-        assert.ok(active.length < 3, 'como mucho tres voces');
+        assert.ok(active.length < 4, 'como mucho cuatro voces');
         active.push({ hand: n.hand, beat: n.beat, end: n.beat + n.dur });
       }
     });

@@ -40,6 +40,14 @@
     return null;
   }
 
+  var DYNAMIC_ORDER = ['p', 'mp', 'mf', 'f', 'ff'];
+  var DYNAMIC_LEVEL = { p: 0.5, mp: 0.64, mf: 0.8, f: 1, ff: 1 };
+  var DEFAULT_LEVEL = 1;
+  var HAIRPIN_CRESC = 'cresc';
+  var HAIRPIN_DIM = 'dim';
+  var SUS_INTERVALS = [0, 5, 7];
+  var PITCH_CLASS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
   function normalizeNote(n, i) {
     if (!n || !isPitch(n.pitch)) fail('nota[' + i + '] pitch inválido');
     if (typeof n.beat !== 'number' || !isFinite(n.beat) || n.beat < 0) {
@@ -65,10 +73,10 @@
       note.finger = n.finger;
     }
     if (n.accent === true) note.accent = true;
+    if (n.staccato === true) note.staccato = true;
     if (n.tie === true) note.tie = true;
-    if (n.dynamic === 'f' || n.dynamic === 'p' || n.dynamic === 'mf' || n.dynamic === 'mp' || n.dynamic === 'ff') {
-      note.dynamic = n.dynamic;
-    }
+    if (Object.prototype.hasOwnProperty.call(DYNAMIC_LEVEL, n.dynamic)) note.dynamic = n.dynamic;
+    if (n.hairpin === HAIRPIN_CRESC || n.hairpin === HAIRPIN_DIM) note.hairpin = n.hairpin;
     return note;
   }
 
@@ -134,6 +142,125 @@
     }
   }
 
+  function midiOf(pitch) {
+    var m = /^([A-Ga-g])([#b♭♯]?)(-?\d+)$/.exec(String(pitch).trim());
+    if (!m) return null;
+    var acc = m[2] === '#' || m[2] === '♯' ? 1 : (m[2] === 'b' || m[2] === '♭' ? -1 : 0);
+    return (parseInt(m[3], 10) + 1) * 12 + PITCH_CLASS[m[1].toUpperCase()] + acc;
+  }
+
+  function timeline(loop, bpb) {
+    var list = [];
+    for (var b = 0; b < loop.length; b++) {
+      for (var j = 0; j < loop[b].notes.length; j++) {
+        list.push({ n: loop[b].notes[j], t: b * bpb + loop[b].notes[j].beat });
+      }
+    }
+    list.sort(function (a, z) { return a.t - z.t; });
+    return list;
+  }
+
+  function stepFrom(dynamic, dir) {
+    var k = DYNAMIC_ORDER.indexOf(dynamic);
+    if (k < 0) k = DYNAMIC_ORDER.length - 2;
+    k = Math.max(0, Math.min(DYNAMIC_ORDER.length - 1, k + dir));
+    return DYNAMIC_ORDER[k];
+  }
+
+  function hairpinRuns(list) {
+    var runs = [];
+    var run = null;
+    for (var i = 0; i < list.length; i++) {
+      var kind = list[i].n.hairpin;
+      if (!kind) continue;
+      if (run && run.kind === kind && list[i].t <= run.end + TIE_EPS) {
+        run.items.push(list[i]);
+        run.end = Math.max(run.end, list[i].t + list[i].n.dur);
+        continue;
+      }
+      run = { kind: kind, start: list[i].t, end: list[i].t + list[i].n.dur, items: [list[i]] };
+      runs.push(run);
+    }
+    return runs;
+  }
+
+  function shapeDynamics(loop, bpb) {
+    var list = timeline(loop, bpb);
+    var marked = list.some(function (e) { return e.n.dynamic || e.n.hairpin; });
+    if (!marked) return;
+    var runs = hairpinRuns(list);
+    var cur = null;
+    var r = 0;
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      while (r < runs.length && runs[r].end <= e.t + TIE_EPS && runs[r].done) r += 1;
+      if (e.n.dynamic) cur = e.n.dynamic;
+      var level = cur ? DYNAMIC_LEVEL[cur] : DEFAULT_LEVEL;
+      var run = runs[r];
+      if (run && e.t >= run.start - TIE_EPS && e.t < run.end - TIE_EPS) {
+        if (run.from == null) {
+          run.from = cur || DYNAMIC_ORDER[DYNAMIC_ORDER.length - 2];
+          run.to = stepFrom(run.from, run.kind === HAIRPIN_CRESC ? 1 : -1);
+        }
+        var span = run.end - run.start;
+        var frac = span > 0 ? (e.t - run.start) / span : 0;
+        level = DYNAMIC_LEVEL[run.from] + (DYNAMIC_LEVEL[run.to] - DYNAMIC_LEVEL[run.from]) * frac;
+        if (e.n.hairpin === run.kind) {
+          e.n.wedge = {
+            kind: run.kind,
+            from: span > 0 ? (e.t - run.start) / span : 0,
+            to: span > 0 ? Math.min(1, (e.t + e.n.dur - run.start) / span) : 1
+          };
+        }
+      } else if (run && run.from != null && e.t >= run.end - TIE_EPS) {
+        cur = run.to;
+        run.done = true;
+        r += 1;
+        level = DYNAMIC_LEVEL[e.n.dynamic || cur];
+        if (e.n.dynamic) cur = e.n.dynamic;
+      }
+      e.n.level = Math.round(level * 1000) / 1000;
+    }
+  }
+
+  function chordGroups(notes, hand) {
+    var by = {};
+    var keys = [];
+    for (var i = 0; i < notes.length; i++) {
+      var n = notes[i];
+      if (n.hand !== hand || n.tie) continue;
+      var k = String(n.beat);
+      if (!by[k]) { by[k] = []; keys.push(k); }
+      by[k].push(n);
+    }
+    keys.sort(function (a, z) { return parseFloat(a) - parseFloat(z); });
+    return keys.map(function (k) { return by[k]; }).filter(function (g) { return g.length >= 3; });
+  }
+
+  function isSus(group) {
+    var ms = group.map(function (n) { return midiOf(n.pitch); });
+    var low = Math.min.apply(null, ms);
+    var pcs = {};
+    ms.forEach(function (m) { pcs[(m - low) % 12] = true; });
+    var keys = Object.keys(pcs).map(Number).sort(function (a, z) { return a - z; });
+    return keys.length === SUS_INTERVALS.length && keys.every(function (v, i) { return v === SUS_INTERVALS[i]; });
+  }
+
+  function markSuspensions(loop) {
+    var hanging = false;
+    for (var b = 0; b < loop.length; b++) {
+      var groups = chordGroups(loop[b].notes, 'L');
+      for (var g = 0; g < groups.length; g++) {
+        var sus = isSus(groups[g]);
+        for (var k = 0; k < groups[g].length; k++) {
+          if (sus) groups[g][k].sus = true;
+          else if (hanging) groups[g][k].resolves = true;
+        }
+        hanging = sus;
+      }
+    }
+  }
+
   function attacks(notes) {
     var out = [];
     for (var i = 0; i < (notes || []).length; i++) {
@@ -164,6 +291,8 @@
     if (typeof boss !== 'number' || boss < 1) fail('hp.boss inválido');
     if (typeof PLAYER_HP === 'number' && PLAYER_HP >= 1) player = PLAYER_HP;
     linkTies(loop, timeSig[0] * (4 / timeSig[1]));
+    shapeDynamics(loop, timeSig[0] * (4 / timeSig[1]));
+    markSuspensions(loop);
 
     return {
       id: String(raw.id),
@@ -276,6 +405,8 @@
 
   return {
     PLAYER_HP: PLAYER_HP,
+    DYNAMIC_LEVEL: DYNAMIC_LEVEL,
+    DEFAULT_LEVEL: DEFAULT_LEVEL,
     parse: parse,
     attacks: attacks,
     activePitches: activePitches,

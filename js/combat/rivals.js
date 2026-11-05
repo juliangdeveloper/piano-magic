@@ -51,6 +51,38 @@
       label: 'Eine Kleine Nachtmusik',
       chart: 'charts/eine-kleine.json',
       hue: 'hue-rotate(200deg) saturate(0.85) brightness(0.75)'
+    },
+    {
+      id: 'jingle-bells',
+      label: 'Jingle Bells',
+      chart: 'charts/jingle-bells.json',
+      sprite: 'assets/bosses/jingle-bells/spritesheet.png',
+      timings: 'assets/bosses/jingle-bells/timings.json',
+      portrait: 'assets/bosses/jingle-bells/portrait.png'
+    },
+    {
+      id: 'surprise-symphony',
+      label: 'Surprise Symphony',
+      chart: 'charts/surprise-symphony.json',
+      sprite: 'assets/bosses/surprise-symphony/spritesheet.png',
+      timings: 'assets/bosses/surprise-symphony/timings.json',
+      portrait: 'assets/bosses/surprise-symphony/portrait.png'
+    },
+    {
+      id: 'peer-gynt-morning',
+      label: 'Morning',
+      chart: 'charts/peer-gynt-morning.json',
+      sprite: 'assets/bosses/peer-gynt-morning/spritesheet.png',
+      timings: 'assets/bosses/peer-gynt-morning/timings.json',
+      portrait: 'assets/bosses/peer-gynt-morning/portrait.png'
+    },
+    {
+      id: 'simple-gifts',
+      label: 'Simple Gifts',
+      chart: 'charts/simple-gifts.json',
+      sprite: 'assets/bosses/simple-gifts/spritesheet.png',
+      timings: 'assets/bosses/simple-gifts/timings.json',
+      portrait: 'assets/bosses/simple-gifts/portrait.png'
     }
   ];
 

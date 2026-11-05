@@ -461,3 +461,56 @@ test('D21: New World con ligaduras: la nota ligada no se vuelve a pedir ni a toc
   assert.strictEqual(end.playerHp, FULL_HP);
   assert.strictEqual(end.lastResolve.grade, 'perfect');
 });
+
+for (const id of ['jingle-bells', 'surprise-symphony', 'peer-gynt-morning', 'simple-gifts']) {
+  test('D22: ' + id + ' tocado a tiempo, incluidas las corcheas sobre la barra, acaba perfecto', () => {
+    const chart = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'charts', id + '.json'), 'utf8'));
+    let t = 0;
+    const dir = Director.create({ chart: chart, now: () => t });
+    dir.start(0);
+    const bpb = chart.timeSig[0];
+    const ms = 60000 / chart.bpm;
+    const total = 1 + chart.loop.length;
+    let played = 0;
+    for (let g = 0; g < total; g++) {
+      t = g * bpb * ms + 20;
+      const s = dir.tick(t);
+      if (s.phase !== 'defend') continue;
+      const notes = s.currentBar.notes.filter((x) => !x.tie).sort((a, b) => a.beat - b.beat);
+      for (const note of notes) {
+        t = (s.currentBar.startBeat + note.beat + 0.5) * ms;
+        dir.noteOn(note.pitch, t);
+        played++;
+      }
+      for (const note of notes) dir.noteOff(note.pitch, (s.currentBar.startBeat + note.beat + 0.5) * ms + 80);
+    }
+    t = total * bpb * ms + 20;
+    const end = dir.tick(t);
+    assert.ok(played > 0);
+    assert.strictEqual(end.playerHp, FULL_HP, id);
+    assert.strictEqual(end.lastResolve.grade, 'perfect', id);
+  });
+}
+
+test('D23: una corchea al final del compás se juzga aunque suene sobre la barra', () => {
+  const late = JSON.parse(JSON.stringify(raw));
+  late.loop[1].notes = [n('C4', 0), n('C4', 1), n('C4', 2), { pitch: 'D4', beat: 3.5, dur: 0.5, hand: 'R' }];
+  late.loop[1].notes[2].dur = 1;
+  let t = 0;
+  const dir = Director.create({ chart: late, now: () => t });
+  dir.start(0);
+  const ms = 1000;
+  const bar = dir.tick(4 * ms * 2 + 20).currentBar;
+  for (const note of bar.notes) {
+    t = (bar.startBeat + note.beat + 0.5) * ms;
+    dir.noteOn(note.pitch, t);
+    dir.noteOff(note.pitch, t + 80);
+  }
+  t = (bar.startBeat + 4) * ms + 20;
+  const mid = dir.tick(t);
+  assert.strictEqual(mid.playerHp, FULL_HP);
+  t = (bar.startBeat + 4 + 1) * ms;
+  const after = dir.tick(t);
+  assert.strictEqual(after.playerHp, FULL_HP);
+  assert.strictEqual(after.lastResolve.grade, 'perfect');
+});

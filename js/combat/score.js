@@ -74,7 +74,9 @@
           pitch: n.pitch,
           hand: n.hand,
           dur: n.hold || n.dur,
-          onset: (i - sec.from) * bpb + n.beat + Chart.BEAT_CENTER
+          onset: (i - sec.from) * bpb + n.beat + Chart.BEAT_CENTER,
+          level: typeof n.level === 'number' ? n.level : Chart.DEFAULT_LEVEL,
+          staccato: !!n.staccato
         });
       }
     }

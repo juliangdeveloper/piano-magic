@@ -32,6 +32,14 @@ test('options: Parade Feather es el primero, Modo libre el último, y los ejerci
   assert.ok(o.some((r) => r.id === 'new-world-largo' && r.hue));
   assert.ok(o.some((r) => r.id === 'camptown-races'));
   assert.ok(o.some((r) => r.id === 'eine-kleine'));
+  for (const id of ['jingle-bells', 'surprise-symphony', 'peer-gynt-morning', 'simple-gifts']) {
+    const r = o.find((x) => x.id === id);
+    assert.ok(r, id);
+    assert.strictEqual(r.chart, 'charts/' + id + '.json');
+    for (const key of ['sprite', 'timings', 'portrait']) assert.ok(fs.existsSync(path.join(__dirname, '..', r[key])), r[key]);
+  }
+  const order = o.map((r) => r.id);
+  assert.deepStrictEqual(order.slice(order.indexOf('eine-kleine') + 1, order.indexOf('eine-kleine') + 5), ['jingle-bells', 'surprise-symphony', 'peer-gynt-morning', 'simple-gifts']);
 });
 
 test('freeChart: solo Ataque, sin Defiende, chart válido', () => {
