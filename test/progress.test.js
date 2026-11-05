@@ -64,7 +64,11 @@ test('las claves y los ids quedan fijos', () => {
     'tower_chime_wins',
     'new_world_largo_wins',
     'camptown_races_wins',
-    'eine_kleine_wins'
+    'eine_kleine_wins',
+    'jingle_bells_wins',
+    'surprise_symphony_wins',
+    'peer_gynt_morning_wins',
+    'simple_gifts_wins'
   ]);
   assert.deepStrictEqual(Progress.ACHIEVEMENTS.map((a) => a.id), [
     'first_fight',
@@ -101,8 +105,9 @@ test('las condiciones de cada logro', () => {
   assert.ok(Progress.unlocked({ perfect_fights: 1 }).includes('perfect_fight'));
   assert.equal(Progress.unlocked({ perfect_notes_total: 49 }).includes('perfect_notes_50'), false);
   assert.ok(Progress.unlocked({ perfect_notes_total: 50 }).includes('perfect_notes_50'));
-  assert.equal(Progress.unlocked({ bosses_defeated: 5 }).includes('all_bosses'), false);
-  assert.ok(Progress.unlocked({ bosses_defeated: 6 }).includes('all_bosses'));
+  assert.equal(Progress.unlocked({ bosses_defeated: 9 }).includes('all_bosses'), false);
+  assert.ok(Progress.unlocked({ bosses_defeated: 10 }).includes('all_bosses'));
+  assert.ok(Progress.unlocked({ simple_gifts_wins: 1 }).length === 0);
   assert.equal(Progress.unlocked({ fights_played: 9 }).includes('fights_10'), false);
   assert.ok(Progress.unlocked({ fights_played: 10 }).includes('fights_10'));
 });
@@ -340,8 +345,8 @@ test('la app rellena al cargar, anota el cierre y vuelca al salir', () => {
   assert.match(app, /pagehide/);
   assert.match(app, /visibilitychange/);
   assert.match(app, /visibilityState === 'hidden'/);
-  assert.match(html, /js\/meta\.js\?v=0\.1\.49/);
-  assert.match(html, /js\/progress\.js\?v=0\.1\.49/);
+  assert.match(html, /js\/meta\.js\?v=0\.1\.50/);
+  assert.match(html, /js\/progress\.js\?v=0\.1\.50/);
   const metaAt = html.indexOf('js/meta.js');
   const progressAt = html.indexOf('js/progress.js');
   const appAt = html.indexOf('js/app.js');

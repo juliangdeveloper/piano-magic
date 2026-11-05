@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.49';
+  var VERSION = '0.1.50';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -30,6 +30,10 @@
   var tape = null;
   var hud = null;
   var bossSprite = null;
+  var BOSS_STACCATO_SEC = 0.16;
+  var BOSS_LEVEL_FLOOR = 0.4;
+  var BOSS_RESOLVE_MS = 700;
+  var bossResolveTimer = 0;
   var bossPreviewOn = false;
   var bossPreviewRaf = 0;
   var tutorial = null;
@@ -515,13 +519,39 @@
         bossHeard[id] = true;
         playPitch(note.pitch, {
           role: 'boss',
-          gain: 0.236,
+          gain: 0.236 * noteLevel(note),
           type: 'sine',
-          dur: 0.48,
+          dur: note.staccato ? BOSS_STACCATO_SEC : 0.48,
           overtone: false
         });
+        bossMood(note);
       }
     }
+  }
+
+  function noteLevel(note) {
+    var lv = note && typeof note.level === 'number' ? note.level : Chart.DEFAULT_LEVEL;
+    return Math.max(BOSS_LEVEL_FLOOR, Math.min(1, lv));
+  }
+
+  function bossMood(note) {
+    var body = document.body;
+    body.style.setProperty('--boss-level', String(noteLevel(note)));
+    if (note.sus) body.classList.add('boss-sus');
+    if (note.resolves && body.classList.contains('boss-sus')) {
+      body.classList.remove('boss-sus');
+      body.classList.remove('boss-resolve');
+      void body.offsetWidth;
+      body.classList.add('boss-resolve');
+      clearTimeout(bossResolveTimer);
+      bossResolveTimer = setTimeout(function () { body.classList.remove('boss-resolve'); }, BOSS_RESOLVE_MS);
+    }
+  }
+
+  function clearBossMood() {
+    document.body.style.removeProperty('--boss-level');
+    document.body.classList.remove('boss-sus');
+    document.body.classList.remove('boss-resolve');
   }
 
   function pitchForKey(key) {
@@ -1390,6 +1420,7 @@
   }
 
   function setBossVisual(opt) {
+    clearBossMood();
     if (typeof opt === 'string') opt = Rivals.find(opt);
     opt = opt || {};
     var sheet = (!opt.free && opt.sprite) || null;
@@ -1760,10 +1791,10 @@
       n = notes[i];
       if (n.onset <= from || n.onset > to + 1e-4) continue;
       durBeats = (typeof n.dur === 'number' && n.dur > 0) ? n.dur : 1;
-      secs = Math.max(0.12, durBeats * 60 / sheetClock.bpm * 0.92);
+      secs = n.staccato ? BOSS_STACCATO_SEC : Math.max(0.12, durBeats * 60 / sheetClock.bpm * 0.92);
       playPitch(n.pitch, {
         role: 'boss',
-        gain: 0.236,
+        gain: 0.236 * noteLevel(n),
         type: 'sine',
         dur: secs,
         overtone: false,

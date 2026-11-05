@@ -69,12 +69,22 @@
       if (!running || ended) return snapshot(t);
       var beat = translator.beatsAt(t);
       var bpb = Chart.beatsPerBar(chart);
-      var barIndex = Math.floor(beat / bpb + 1e-10);
-      while (resolvedBar < barIndex - 1) {
+      while (!ended && beat >= (resolvedBar + 2) * bpb + lateTail(resolvedBar + 1, bpb) - 1e-10) {
         resolveBar(resolvedBar + 1);
-        if (ended) break;
       }
       return snapshot(t);
+    }
+
+    function lateTail(barIndex, bpb) {
+      if (barIndex < 0) return 0;
+      var meta = Chart.barAt(chart, barIndex);
+      if (!meta || meta.kind !== 'defend') return 0;
+      var tail = 0;
+      for (var i = 0; i < meta.notes.length; i++) {
+        if (meta.notes[i].tie) continue;
+        tail = Math.max(tail, Chart.hitOnset(meta.notes[i].beat) + Spell.HIT_WINDOW_BEATS - bpb);
+      }
+      return tail;
     }
 
     function resolveBar(barIndex) {
@@ -375,29 +385,38 @@
     }
 
     function judgeDefend(ev) {
-      var meta = Chart.barAt(chart, ev.barIndex);
-      if (!meta || meta.kind !== 'defend') return null;
-      var notes = meta.notes || [];
-      var best = -1;
-      var bestDist = Infinity;
+      var bpb = Chart.beatsPerBar(chart);
+      var best = null;
+      var b;
       var i;
-      for (i = 0; i < notes.length; i++) {
-        if (notes[i].tie || claimedTargets[ev.barIndex + ':' + i]) continue;
-        if (!samePitch(ev.pitch, notes[i].pitch)) continue;
-        var onset = Chart.hitOnset(notes[i].beat);
-        var d = Math.abs(ev.beatInBar - onset);
-        if (d <= Spell.HIT_WINDOW_BEATS && d < bestDist) {
-          bestDist = d;
-          best = i;
+      for (b = ev.barIndex; b >= ev.barIndex - 1 && b >= 0; b--) {
+        if (b < ev.barIndex && b <= resolvedBar) break;
+        var meta = Chart.barAt(chart, b);
+        if (!meta || meta.kind !== 'defend') continue;
+        var local = ev.beatInBar + (ev.barIndex - b) * bpb;
+        var notes = meta.notes || [];
+        for (i = 0; i < notes.length; i++) {
+          if (notes[i].tie || claimedTargets[b + ':' + i]) continue;
+          if (!samePitch(ev.pitch, notes[i].pitch)) continue;
+          var d = Math.abs(local - Chart.hitOnset(notes[i].beat));
+          if (d <= Spell.HIT_WINDOW_BEATS && (!best || d < best.d)) {
+            best = { d: d, bar: b, i: i, meta: meta, note: notes[i], local: local };
+          }
         }
       }
-      if (best < 0) return { sync: 'fail', targetBeat: null, error: null, hand: null };
-      claimedTargets[ev.barIndex + ':' + best] = true;
+      if (!best) {
+        var here = Chart.barAt(chart, ev.barIndex);
+        if (!here || here.kind !== 'defend') return null;
+        return { sync: 'fail', targetBeat: null, error: null, hand: null };
+      }
+      claimedTargets[best.bar + ':' + best.i] = true;
       return {
-        sync: Spell.judgeNoteSync(bestDist),
-        targetBeat: meta.startBeat + Chart.hitOnset(notes[best].beat),
-        error: bestDist,
-        hand: notes[best].hand === 'L' ? 'L' : 'R'
+        sync: Spell.judgeNoteSync(best.d),
+        targetBeat: best.meta.startBeat + Chart.hitOnset(best.note.beat),
+        error: best.d,
+        hand: best.note.hand === 'L' ? 'L' : 'R',
+        barIndex: best.bar,
+        beatInBar: best.local
       };
     }
 
@@ -455,6 +474,10 @@
         row.targetBeat = judged.targetBeat;
         row.error = judged.error;
         if (judged.hand) row.hand = judged.hand;
+        if (judged.barIndex != null && judged.barIndex !== row.barIndex) {
+          row.barIndex = judged.barIndex;
+          row.beatInBar = judged.beatInBar;
+        }
       }
       collected.push(row);
       return ev;

@@ -35,6 +35,52 @@
   var F_CLEF_W = 2.75;
   var REST_INK = 'rgba(28, 20, 12, 0.62)';
   var HANDS = ['R', 'L'];
+  var EIGHTH_BEATS = 0.5;
+  var BEAM_THICK = 0.42;
+  var STACCATO_OFF = 0.95;
+  var STACCATO_R = 0.16;
+  var DYNAMIC_SIZE = 1.35;
+  var DYNAMIC_SHIFT = 1.25;
+  var WEDGE_OPEN = 0.42;
+  var WEDGE_INK = 'rgba(28, 20, 12, 0.78)';
+  var BAR_LINE_NUDGE = 0.25;
+
+  function beamPlan(notes) {
+    var groups = {};
+    var plan = [];
+    var i;
+    for (i = 0; i < (notes || []).length; i++) {
+      var n = notes[i];
+      plan.push(null);
+      if (!n || Math.abs(n.dur - EIGHTH_BEATS) > BEAT_EPS) continue;
+      var placed = placeNote(n.pitch, n.hand);
+      if (!placed) continue;
+      var key = (n.hand === 'L' ? 'L' : 'R') + ':' + Math.floor(n.beat + BEAT_EPS);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push({ i: i, step: placed.step });
+    }
+    Object.keys(groups).forEach(function (key) {
+      var g = groups[key];
+      var sum = 0;
+      g.forEach(function (it) { sum += it.step; });
+      var up = sum / g.length < STAFF_MIDDLE_STEP;
+      g.forEach(function (it) { plan[it.i] = { key: key, up: up, size: g.length }; });
+    });
+    return plan;
+  }
+
+  function tailNote(bar, bpb) {
+    var notes = (bar && bar.notes) || [];
+    for (var i = 0; i < notes.length; i++) {
+      if (notes[i].beat + BEAT_CENTER >= bpb - BEAT_EPS) return true;
+    }
+    return false;
+  }
+
+  function barLineBeat(prev, bar, bpb) {
+    var start = bar.startBeat || 0;
+    return prev && prev.kind !== 'hole' && tailNote(prev, bpb) ? start + BAR_LINE_NUDGE : start;
+  }
 
   function loadImage(src) {
     if (typeof Image === 'undefined' || !src) return null;
@@ -452,6 +498,14 @@
         c.arc(x + rx * 1.75, y - (step % 2 === 0 ? lineGap * 0.28 : 0), Math.max(1.5, lineGap * 0.13), 0, Math.PI * 2);
         c.fill();
       }
+      if (showStem && style.flag) {
+        var fx = up ? x + rx * 0.82 : x - rx * 0.82;
+        var fd = up ? 1 : -1;
+        c.beginPath();
+        c.moveTo(fx, y2);
+        c.bezierCurveTo(fx + lineGap * 0.2, y2 + fd * lineGap * 0.9, fx + lineGap * 1.1, y2 + fd * lineGap * 1.1, fx + lineGap * 0.7, y2 + fd * lineGap * 2.1);
+        c.stroke();
+      }
       c.save();
       c.translate(x, y);
       c.rotate(-0.42);
@@ -469,6 +523,75 @@
       }
       c.restore();
       c.restore();
+      return { x: up ? x + rx * 0.82 : x - rx * 0.82, y: y2, up: up, headY: y };
+    }
+
+    function drawBeams(c, tips, lineGap) {
+      Object.keys(tips).forEach(function (key) {
+        var g = tips[key].sort(function (a, b) { return a.x - b.x; });
+        if (g.length < 2) return;
+        var a = g[0];
+        var b = g[g.length - 1];
+        var thick = lineGap * BEAM_THICK * (a.up ? 1 : -1);
+        c.save();
+        c.fillStyle = a.color;
+        c.beginPath();
+        c.moveTo(a.x, a.y);
+        c.lineTo(b.x, b.y);
+        c.lineTo(b.x, b.y + thick);
+        c.lineTo(a.x, a.y + thick);
+        c.closePath();
+        c.fill();
+        c.restore();
+      });
+    }
+
+    function drawStaccato(c, x, y, below, lineGap, color) {
+      c.save();
+      c.fillStyle = color || INK;
+      c.beginPath();
+      c.arc(x, y + (below ? 1 : -1) * lineGap * STACCATO_OFF, Math.max(1.4, lineGap * STACCATO_R), 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    }
+
+    function drawDynamic(c, x, y, mark, lineGap) {
+      c.save();
+      c.fillStyle = INK;
+      c.font = 'italic 700 ' + Math.round(Math.max(10, lineGap * DYNAMIC_SIZE)) + 'px Georgia, serif';
+      c.textAlign = 'right';
+      c.textBaseline = 'middle';
+      c.fillText(mark, x - lineGap * DYNAMIC_SHIFT, y);
+      c.restore();
+    }
+
+    function drawWedge(c, x0, x1, y, wedge, lineGap) {
+      if (!wedge || !(x1 > x0)) return;
+      var open = lineGap * WEDGE_OPEN;
+      var a = wedge.kind === 'cresc' ? wedge.from : 1 - wedge.from;
+      var b = wedge.kind === 'cresc' ? wedge.to : 1 - wedge.to;
+      c.save();
+      c.strokeStyle = WEDGE_INK;
+      c.lineWidth = Math.max(1, lineGap * 0.1);
+      c.beginPath();
+      c.moveTo(x0, y - open * a);
+      c.lineTo(x1, y - open * b);
+      c.moveTo(x0, y + open * a);
+      c.lineTo(x1, y + open * b);
+      c.stroke();
+      c.restore();
+    }
+
+    function drawMarks(c, bar, notes, xOf, geo, marked) {
+      for (var j = 0; j < notes.length; j++) {
+        var n = notes[j];
+        var xs = xOf(n.beat);
+        if (n.wedge) drawWedge(c, xs, xOf(n.beat + n.dur), geo.midY, n.wedge, geo.lineGap);
+        if (n.dynamic && !marked[n.beat + n.dynamic]) {
+          marked[n.beat + n.dynamic] = true;
+          drawDynamic(c, xs, geo.midY, n.dynamic, geo.lineGap);
+        }
+      }
     }
 
     function drawRhythm(c, improv, xAt, bottomLine, lineGap, clefRight, w, place) {
@@ -932,9 +1055,10 @@
 
         ctx.strokeStyle = 'rgba(90, 68, 40, 0.55)';
         ctx.lineWidth = 1;
+        var xl = xAt(barLineBeat(bars[i - 1], bar.startBeat != null ? bar : { startBeat: i * bpb }, bpb));
         ctx.beginPath();
-        ctx.moveTo(x0, topLine);
-        ctx.lineTo(x0, bassBottom);
+        ctx.moveTo(xl, topLine);
+        ctx.lineTo(xl, bassBottom);
         ctx.stroke();
 
         var midY = Math.max(lineGap * 0.6, topLine - lineGap * 2.15);
@@ -957,6 +1081,8 @@
 
         if (bar.kind === 'hole') continue;
         var notes = bar.notes || [];
+        var plan = beamPlan(notes);
+        var tips = {};
         for (j = 0; j < notes.length; j++) {
           note = notes[j];
           var placed = placeNote(note.pitch, note.hand);
@@ -973,12 +1099,14 @@
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
           var chord = chordInfo(notes, note);
           var stemUp = chord ? chord.up : placed.step < STAFF_MIDDLE_STEP;
+          if (plan[j]) stemUp = plan[j].up;
           if (note.tie && note.tieBack > 0) {
             var tieBelow = chord ? placed.step === chord.lo && placed.step !== chord.hi : stemUp;
             drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink, tieBounds(placed.staff, topLine, bottomLine, bassTop, bassBottom, lineGap));
           }
-          drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
+          var tip = drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
             color: ink, low: placed.low, high: placed.high, stemUp: stemUp,
+            flag: plan[j] && plan[j].size === 1 ? 1 : 0,
             hollow: shape.hollow, stem: shape.stem, dot: shape.dot,
             stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
             stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
@@ -986,9 +1114,13 @@
             ledgerMax: placed.staff === 'bass' ? null : bassTop - lineGap * 0.45
           });
           var mark = fingerMark(note);
-          if (note.accent) drawAccent(ctx, nx, ny, stemUp && shape.stem, lineGap, ink);
+          if (plan[j] && plan[j].size > 1) (tips[plan[j].key] = tips[plan[j].key] || []).push({ x: tip.x, y: tip.y, up: tip.up, color: ink });
+          if (note.staccato) drawStaccato(ctx, nx, ny, stemUp && shape.stem, lineGap, ink);
+          if (note.accent) drawAccent(ctx, nx, note.staccato ? ny + (stemUp && shape.stem ? 1 : -1) * lineGap * STACCATO_OFF : ny, stemUp && shape.stem, lineGap, ink);
           if (mark) drawFingerNum(ctx, nx, ny, placed.step, mark, lineGap, ink, h, chord ? chordFingerY(notes, note, chord, !!mark.below, bottomLine, bassBottom, lineGap, shape.stem) : null);
         }
+        drawBeams(ctx, tips, lineGap);
+        drawMarks(ctx, bar, notes, function (b) { return xAt(chartNoteBeat(bar.startBeat, b)); }, { midY: (bottomLine + bassTop) / 2, lineGap: lineGap }, {});
         drawBarRests(ctx, bar, bpb, xAt, bar.startBeat, bottomLine, bassBottom, lineGap, clefRight + 4, w - 4);
       }
 
@@ -1160,9 +1292,10 @@
         ctx.fillRect(x0, topLine - 1, Math.max(1, x1 - x0), bassBottom - topLine + 2);
         ctx.strokeStyle = 'rgba(90, 68, 40, 0.55)';
         ctx.lineWidth = 1;
+        var xl = xAt(barLineBeat(bars[i - 1], bar.startBeat != null ? bar : { startBeat: i * bpb }, bpb));
         ctx.beginPath();
-        ctx.moveTo(x0, topLine);
-        ctx.lineTo(x0, bassBottom);
+        ctx.moveTo(xl, topLine);
+        ctx.lineTo(xl, bassBottom);
         ctx.stroke();
         var midY = Math.max(lineGap * 0.6, topLine - lineGap * 2.15);
         var markX = x0 + lineGap * 0.6;
@@ -1175,6 +1308,8 @@
         ctx.textBaseline = 'alphabetic';
         if (zone === 'hole') continue;
         var notes = bar.notes || [];
+        var plan = beamPlan(notes);
+        var tips = {};
         for (j = 0; j < notes.length; j++) {
           note = notes[j];
           var placed = placeNote(note.pitch, note.hand);
@@ -1189,12 +1324,14 @@
           else if (placed.parts.acc === 'b') drawFlat(ctx, nx - lineGap * 0.7, ny, lineGap, ink);
           var chord = chordInfo(notes, note);
           var stemUp = chord ? chord.up : placed.step < STAFF_MIDDLE_STEP;
+          if (plan[j]) stemUp = plan[j].up;
           if (note.tie && note.tieBack > 0) {
             var tieBelow = chord ? placed.step === chord.lo && placed.step !== chord.hi : stemUp;
             drawTie(ctx, xAt(chartNoteBeat(barBeat0, note.beat - note.tieBack)), nx, ny, tieBelow, lineGap, ink, tieBounds(placed.staff, topLine, bottomLine, bassTop, bassBottom, lineGap));
           }
-          drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
+          var tip = drawNote(ctx, nx, placed.step, staffBottom, lineGap, {
             color: ink, low: placed.low, high: placed.high, stemUp: stemUp,
+            flag: plan[j] && plan[j].size === 1 ? 1 : 0,
             hollow: shape.hollow, stem: shape.stem, dot: shape.dot,
             stemFloor: placed.staff === 'bass' ? null : bassTop - lineGap * 0.35,
             stemCeil: placed.staff === 'bass' ? bottomLine + lineGap * 0.35 : null,
@@ -1202,9 +1339,13 @@
             ledgerMax: placed.staff === 'bass' ? null : bassTop - lineGap * 0.45
           });
           var finger = fingerMark(note);
-          if (note.accent) drawAccent(ctx, nx, ny, stemUp && shape.stem, lineGap, ink);
+          if (plan[j] && plan[j].size > 1) (tips[plan[j].key] = tips[plan[j].key] || []).push({ x: tip.x, y: tip.y, up: tip.up, color: ink });
+          if (note.staccato) drawStaccato(ctx, nx, ny, stemUp && shape.stem, lineGap, ink);
+          if (note.accent) drawAccent(ctx, nx, note.staccato ? ny + (stemUp && shape.stem ? 1 : -1) * lineGap * STACCATO_OFF : ny, stemUp && shape.stem, lineGap, ink);
           if (finger) drawFingerNum(ctx, nx, ny, placed.step, finger, lineGap, ink, h, chord ? chordFingerY(notes, note, chord, !!finger.below, bottomLine, bassBottom, lineGap, shape.stem) : null);
         }
+        drawBeams(ctx, tips, lineGap);
+        drawMarks(ctx, bar, notes, function (b) { return xAt(chartNoteBeat(bar.startBeat || i * bpb, b)); }, { midY: (bottomLine + bassTop) / 2, lineGap: lineGap }, {});
         drawBarRests(ctx, bar, bpb, xAt, bar.startBeat || i * bpb, bottomLine, bassBottom, lineGap, 0, w);
       }
       var gLine = yFor(2, bottomLine, lineGap);
@@ -1280,6 +1421,8 @@
     staffGapFor: staffGapFor,
     handRests: handRests,
     chordInfo: chordInfo,
+    beamPlan: beamPlan,
+    barLineBeat: barLineBeat,
     tiePlan: tiePlan,
     tieBounds: tieBounds,
     BEAT_CENTER: BEAT_CENTER,

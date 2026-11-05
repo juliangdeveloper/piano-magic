@@ -238,3 +238,61 @@ test('C15: una nota del jefe suena del centro del tiempo hasta el final de su du
   assert.deepStrictEqual(Chart.activePitches(hole, 9.5), ['A3']);
   assert.deepStrictEqual(Chart.activePitches([{ kind: 'hole', startBeat: 0, notes: [] }], 0.5), []);
 });
+
+function notesOf(c) {
+  const out = [];
+  c.loop.forEach((b, bi) => (b.notes || []).forEach((x) => out.push(Object.assign({ bar: bi }, x))));
+  return out;
+}
+
+test('C20: dinámicas impresas fijan el nivel y los reguladores lo mueven nota a nota', () => {
+  const c = load('peer-gynt-morning');
+  const all = notesOf(c);
+  assert.strictEqual(c.timeSig[0], 3);
+  assert.strictEqual(all[0].hand, 'L');
+  assert.strictEqual(all[0].level, Chart.DYNAMIC_LEVEL.mp);
+  const cresc = all.filter((x) => x.wedge && x.wedge.kind === 'cresc');
+  const dim = all.filter((x) => x.wedge && x.wedge.kind === 'dim');
+  assert.ok(cresc.length > 0 && dim.length > 0);
+  for (const x of all) assert.ok(x.level > 0 && x.level <= 1, x.pitch);
+  const firstRun = all.filter((x) => x.wedge && x.wedge.kind === 'cresc' && x.bar <= 7);
+  for (let i = 1; i < firstRun.length; i++) assert.ok(firstRun[i].level >= firstRun[i - 1].level);
+  assert.ok(firstRun[firstRun.length - 1].level > firstRun[0].level);
+  const plain = load('parade-feather');
+  for (const x of notesOf(plain)) assert.strictEqual(x.level, undefined);
+});
+
+test('C21: Surprise Symphony: piano con staccato y acorde final forte con acento', () => {
+  const c = load('surprise-symphony');
+  const all = notesOf(c);
+  assert.strictEqual(all[0].level, Chart.DYNAMIC_LEVEL.p);
+  assert.ok(all.filter((x) => x.staccato).length > all.length / 2);
+  const last = c.loop[c.loop.length - 1].notes;
+  const top = last.filter((x) => x.hand === 'R').pop();
+  assert.strictEqual(top.pitch, 'C4');
+  assert.ok(top.accent);
+  assert.strictEqual(top.level, Chart.DYNAMIC_LEVEL.f);
+  assert.deepStrictEqual(last.filter((x) => x.hand === 'L' && x.beat === top.beat).map((x) => x.pitch).sort(), ['C3', 'E3', 'G3']);
+  assert.ok(all.filter((x) => x.bar < c.loop.length - 1).every((x) => x.level === Chart.DYNAMIC_LEVEL.p));
+});
+
+test('C22: Simple Gifts: anacrusa de dos corcheas y Csus4 que se queda colgado hasta resolver', () => {
+  const c = load('simple-gifts');
+  const first = c.loop.find((b) => b.kind === 'defend').notes;
+  assert.deepStrictEqual(first.map((x) => [x.pitch, x.beat, x.dur, x.hand]), [['G3', 3, 0.5, 'L'], ['G3', 3.5, 0.5, 'L']]);
+  const all = notesOf(c);
+  const sus = all.filter((x) => x.sus);
+  assert.ok(sus.length >= 6);
+  for (const x of sus) assert.ok(['C3', 'F3', 'G3'].includes(x.pitch));
+  assert.ok(all.some((x) => x.resolves));
+  for (const x of all) assert.ok(!(x.sus && x.resolves));
+});
+
+test('C23: Jingle Bells: estribillo y repetición a la octava, la izquierda nunca baja de C3', () => {
+  const c = load('jingle-bells');
+  const all = notesOf(c);
+  const right = all.filter((x) => x.hand === 'R');
+  assert.deepStrictEqual(right.slice(0, 3).map((x) => [x.pitch, x.dur]), [['E4', 1], ['E4', 1], ['E4', 2]]);
+  assert.ok(right.some((x) => x.pitch === 'G5'));
+  for (const x of all.filter((y) => y.hand === 'L')) assert.ok(['C3', 'E3', 'G3'].includes(x.pitch), x.pitch);
+});
