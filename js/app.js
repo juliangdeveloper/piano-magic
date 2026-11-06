@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.51';
+  var VERSION = '0.1.52';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -11,6 +11,11 @@
   var KB_KEY = 'onscreenKeyboard';
   var KEYBOARD_ALWAYS = true;
   var DETECT_FADE_MS = 280;
+  var VOL_PIANO_KEY = 'pmVolPiano';
+  var VOL_METRO_KEY = 'pmVolMetro';
+  var VOL_DEFAULT = 1;
+  var MASTER_GAIN = 0.92;
+  var VOL_SLIDER_MAX = 100;
 
   var director = null;
   var fightChart = null;
@@ -39,6 +44,11 @@
   var tutorial = null;
   var audioCtx = null;
   var masterGain = null;
+  var pianoBus = null;
+  var metroBus = null;
+  var volPiano = VOL_DEFAULT;
+  var volMetro = VOL_DEFAULT;
+  var soundPanelOpen = false;
   var analyser = null;
   var peakBuf = null;
   var audioUnlocked = false;
@@ -315,6 +325,69 @@
     } catch (e) {}
   }
 
+
+  function clampVol(v) {
+    v = Number(v);
+    if (!(v >= 0)) return VOL_DEFAULT;
+    if (v > 1) return 1;
+    return v;
+  }
+
+  function readVol(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null || raw === '') return VOL_DEFAULT;
+      return clampVol(raw);
+    } catch (e) {
+      return VOL_DEFAULT;
+    }
+  }
+
+  function writeVol(key, value) {
+    try { localStorage.setItem(key, String(clampVol(value))); } catch (e) {}
+  }
+
+  function applyVolumes() {
+    if (pianoBus) pianoBus.gain.value = volPiano;
+    if (metroBus) metroBus.gain.value = volMetro;
+  }
+
+  function setVolume(kind, value) {
+    var v = clampVol(value);
+    if (kind === 'metro') {
+      volMetro = v;
+      writeVol(VOL_METRO_KEY, v);
+    } else {
+      volPiano = v;
+      writeVol(VOL_PIANO_KEY, v);
+    }
+    applyVolumes();
+    syncVolumeUi();
+  }
+
+  function syncVolumeUi() {
+    var p = $('volPiano');
+    var m = $('volMetro');
+    if (p) p.value = String(Math.round(volPiano * VOL_SLIDER_MAX));
+    if (m) m.value = String(Math.round(volMetro * VOL_SLIDER_MAX));
+  }
+
+  function setSoundPanel(open) {
+    var panel = $('soundPanel');
+    var btn = $('btnSound');
+    soundPanelOpen = !!open;
+    if (panel) panel.hidden = !soundPanelOpen;
+    if (btn) {
+      btn.setAttribute('aria-pressed', soundPanelOpen ? 'true' : 'false');
+      btn.setAttribute('aria-expanded', soundPanelOpen ? 'true' : 'false');
+      btn.classList.toggle('on', soundPanelOpen);
+    }
+  }
+
+  function toggleSoundPanel() {
+    setSoundPanel(!soundPanelOpen);
+  }
+
   function getAudio() {
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
@@ -327,8 +400,14 @@
       }
       routeSpeakers(audioCtx);
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.92;
+      masterGain.gain.value = MASTER_GAIN;
       masterGain.connect(audioCtx.destination);
+      pianoBus = audioCtx.createGain();
+      pianoBus.gain.value = volPiano;
+      pianoBus.connect(masterGain);
+      metroBus = audioCtx.createGain();
+      metroBus.gain.value = volMetro;
+      metroBus.connect(masterGain);
     }
     return audioCtx;
   }
@@ -420,7 +499,8 @@
     amp.gain.linearRampToValueAtTime(peak, t0 + 0.005);
     amp.gain.linearRampToValueAtTime(peak * 0.5, t0 + Math.max(0.04, dur * 0.4));
     amp.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-    amp.connect(masterGain || ctx.destination);
+    var bus = opts.role === 'metro' ? metroBus : pianoBus;
+    amp.connect(bus || masterGain || ctx.destination);
     var osc = ctx.createOscillator();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, t0);
@@ -805,7 +885,7 @@
   }
 
   function unmuteMaster() {
-    if (masterGain) masterGain.gain.value = 0.92;
+    if (masterGain) masterGain.gain.value = MASTER_GAIN;
   }
 
   function resumeFight() {
@@ -1582,7 +1662,7 @@
     if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
       try { ctx.resume(); } catch (e) {}
     }
-    if (masterGain) masterGain.gain.value = 0.92;
+    if (masterGain) masterGain.gain.value = MASTER_GAIN;
     if (!audioUnlocked || ctx.state !== 'running') {
       try { audiblePrime(ctx); } catch (e2) {}
       playSpeakerEl();
@@ -2057,7 +2137,12 @@
       tonesPlayed: function () { return tonesPlayed; },
       playerTones: function () { return playerTones; },
       bossTones: function () { return bossTones; },
-      samplePeak: samplePeak
+      samplePeak: samplePeak,
+      setVolume: setVolume,
+      getVolumes: function () { return { piano: volPiano, metro: volMetro }; },
+      pianoGain: function () { return pianoBus ? pianoBus.gain.value : volPiano; },
+      metroGain: function () { return metroBus ? metroBus.gain.value : volMetro; },
+      masterGain: function () { return masterGain ? masterGain.gain.value : MASTER_GAIN; }
     };
     maybeTutorial();
   }
@@ -2090,6 +2175,10 @@
         } catch (eVis) {}
       });
     } catch (ePh) {}
+    volPiano = readVol(VOL_PIANO_KEY);
+    volMetro = readVol(VOL_METRO_KEY);
+    syncVolumeUi();
+    setSoundPanel(false);
     buildPiano();
     bindOnscreenKeys();
     applyKeyboard(KEYBOARD_ALWAYS || readKeyboardPref(), false);
@@ -2140,8 +2229,35 @@
       }
     });
     $('btnHelp').addEventListener('click', function () {
+      setSoundPanel(false);
       tutorial.replay();
     });
+    if ($('btnSound')) {
+      $('btnSound').addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (tutorialOpen()) return;
+        toggleSoundPanel();
+        if (soundPanelOpen) primeAudio();
+      });
+    }
+    if ($('volPiano')) {
+      $('volPiano').addEventListener('input', function () {
+        setVolume('piano', Number($('volPiano').value) / VOL_SLIDER_MAX);
+        primeAudio();
+      });
+    }
+    if ($('volMetro')) {
+      $('volMetro').addEventListener('input', function () {
+        setVolume('metro', Number($('volMetro').value) / VOL_SLIDER_MAX);
+        primeAudio();
+      });
+    }
+    document.addEventListener('pointerdown', function (ev) {
+      if (!soundPanelOpen) return;
+      var t = ev.target;
+      if (t && t.closest && (t.closest('#soundPanel') || t.closest('#btnSound'))) return;
+      setSoundPanel(false);
+    }, true);
 
     if (window.PianoMagic) window.PianoMagic.tutorial = tutorial;
 
