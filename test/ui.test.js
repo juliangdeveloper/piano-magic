@@ -38,14 +38,14 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.51, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.51');
+test('U3: versión 0.1.52, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.52');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.51');
+  assert.strictEqual(pkg.version, '0.1.52');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.51/);
-  assert.match(app, /VERSION = '0\.1\.51'/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.52/);
+  assert.match(app, /VERSION = '0\.1\.52'/);
   assert.equal(html.includes('0.1.41'), false);
   assert.equal(html.includes('0.1.40'), false);
   assert.equal(html.includes('boss-cloud.png'), false);
@@ -189,4 +189,26 @@ test('U8: el teclado no muestra letras, sigue visible y enciende jefe y jugador'
   assert.match(css, /\.lit-enemy\.lit-player \.glow\.player \{ left: 50%; \}/);
   assert.equal(css.includes('#1e4d8c'), false);
   assert.equal(css.includes('#c2410c'), false);
+});
+
+test('U9: volumen de piano y metrónomo con buses separados', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'css', 'ui.css'), 'utf8');
+  assert.match(html, /id="btnSound"/);
+  assert.match(html, /id="soundPanel"/);
+  assert.match(html, /id="volPiano"/);
+  assert.match(html, /id="volMetro"/);
+  assert.match(html, />Piano</);
+  assert.match(html, />Metrónomo</);
+  assert.match(app, /VOL_PIANO_KEY = 'pmVolPiano'/);
+  assert.match(app, /VOL_METRO_KEY = 'pmVolMetro'/);
+  assert.match(app, /VOL_DEFAULT = 1/);
+  assert.match(app, /MASTER_GAIN = 0\.92/);
+  assert.match(app, /pianoBus = audioCtx\.createGain\(\)/);
+  assert.match(app, /metroBus = audioCtx\.createGain\(\)/);
+  assert.match(app, /opts\.role === 'metro' \? metroBus : pianoBus/);
+  assert.match(app, /setVolume/);
+  assert.match(css, /#soundPanel/);
+  assert.match(css, /\.vol-row/);
 });
