@@ -975,7 +975,17 @@ body.picking.kb-on #bossSprite { max-height: clamp(110px, 20dvh, 200px); }
   body.picking.kb-on #bossPortrait,
   body.picking.kb-on #bossSprite { max-height: clamp(108px, 20dvh, 160px); }
   footer { padding-top: 2px; padding-bottom: 4px; }
-  .piano { height: clamp(72px, 13dvh, 108px); }
+  #keys {
+    padding-left: 2px;
+    padding-right: 2px;
+    padding-top: 4px;
+    padding-bottom: calc(4px + var(--safe-bottom));
+  }
+  .piano {
+    max-width: none;
+    width: 100%;
+    height: clamp(84px, 16dvh, 128px);
+  }
   #tapeFrame { min-height: 112px; }
 }
 
