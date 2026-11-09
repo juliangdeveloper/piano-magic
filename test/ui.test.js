@@ -44,8 +44,8 @@ test('U3: versión 0.1.53, un retrato y pentagrama sin ficha de letras', () => {
   assert.strictEqual(pkg.version, '0.1.53');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.52/);
-  assert.match(app, /VERSION = '0\.1\.52'/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.53/);
+  assert.match(app, /VERSION = '0\.1\.53'/);
   assert.equal(html.includes('0.1.41'), false);
   assert.equal(html.includes('0.1.40'), false);
   assert.equal(html.includes('boss-cloud.png'), false);

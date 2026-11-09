@@ -151,7 +151,7 @@ test('S6: pausa abre la partitura y el toque del rival tiene dos salidas', () =>
   assert.match(html, /id="btnPractice"/);
   assert.match(html, /Practicar/);
   assert.match(html, /id="btnSheetLoop"/);
-  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.52/);
+  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.53/);
   assert.match(app, /duringSheet/);
 });
 
