@@ -215,7 +215,6 @@
       setStart: function (t) { startTimeMs = t; },
       setBpm: function (b) { if (typeof b === 'number' && b > 0) bpm = b; },
       setTimeSig: function (ts) { if (ts) timeSig = ts; },
-      getBpm: function () { return bpm; },
       getStart: function () { return startTimeMs; }
     };
   }
