@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.54';
+  var VERSION = '0.1.55';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -81,6 +81,14 @@
   var micSilentTicks = 0;
   var micRewires = 0;
   var micGateState = null;
+  var fightAudioOrigin = null;
+  var pauseAudibleAt = null;
+  var lastVisualBeat = 0;
+  var lastMetroBeat = -1e9;
+  var prevEnemyLit = {};
+  var syncEvents = [];
+  var AUDIO_LOOKAHEAD = 0.16;
+  var SYNC_CAP = 240;
   var engine = null;
   var session = null;
   var engineState = 'loading';
@@ -412,6 +420,52 @@
     return audioCtx;
   }
 
+  function audioLatencySec(ctx) {
+    ctx = ctx || audioCtx;
+    if (!ctx) return 0;
+    if (typeof ctx.outputLatency === 'number' && isFinite(ctx.outputLatency) && ctx.outputLatency > 0) {
+      return ctx.outputLatency;
+    }
+    if (typeof ctx.baseLatency === 'number' && isFinite(ctx.baseLatency) && ctx.baseLatency > 0) {
+      return ctx.baseLatency;
+    }
+    return 0;
+  }
+
+  function contextNowSec(ctx) {
+    ctx = ctx || audioCtx;
+    if (!ctx) return performance.now() / 1000;
+    return ctx.currentTime;
+  }
+
+  function audibleNowSec(ctx) {
+    ctx = ctx || audioCtx;
+    if (!ctx) return performance.now() / 1000;
+    return ctx.currentTime - audioLatencySec(ctx);
+  }
+
+  function clockMs(ctx) {
+    return audibleNowSec(ctx) * 1000;
+  }
+
+  function aheadBeats(bpm, ctx) {
+    if (!(bpm > 0)) return 0;
+    return (AUDIO_LOOKAHEAD + audioLatencySec(ctx)) * (bpm / 60);
+  }
+
+  function pushSync(rec) {
+    rec.ctx = contextNowSec();
+    rec.audible = audibleNowSec();
+    rec.perf = performance.now();
+    rec.latency = audioLatencySec();
+    syncEvents.push(rec);
+    if (syncEvents.length > SYNC_CAP) syncEvents.splice(0, syncEvents.length - SYNC_CAP);
+  }
+
+  function micStatusText() {
+    return 'Micrófono activo · una nota a la vez. Ruido y acordes pueden fallar.';
+  }
+
   function ensureAnalyser() {
     if (analyser || !audioCtx || !masterGain) return analyser;
     try {
@@ -493,7 +547,9 @@
     var peak = opts.gain == null ? 0.32 : opts.gain;
     var dur = opts.dur == null ? 0.42 : opts.dur;
     var type = opts.type || 'triangle';
-    var t0 = ctx.currentTime;
+    var now = ctx.currentTime;
+    var t0 = (opts.when != null && typeof opts.when === 'number' && isFinite(opts.when)) ? opts.when : now;
+    if (t0 < now) t0 = now;
     var amp = ctx.createGain();
     amp.gain.setValueAtTime(peak * 0.7, t0);
     amp.gain.linearRampToValueAtTime(peak, t0 + 0.005);
@@ -518,7 +574,19 @@
       over.start(t0);
       over.stop(t0 + dur + 0.02);
     }
-    blockSynth(freq, dur);
+    var remain = t0 + dur - ctx.currentTime;
+    if (remain < 0) remain = 0;
+    blockSynth(freq, remain);
+    if (opts.role === 'boss' || opts.role === 'metro') {
+      pushSync({
+        kind: 'audio',
+        role: opts.role,
+        pitch: opts.pitch || null,
+        freq: freq,
+        when: t0,
+        beat: opts.beat
+      });
+    }
     tonesPlayed += 1;
     if (opts.role === 'boss') bossTones += 1;
     else if (opts.role !== 'metro') playerTones += 1;
@@ -544,6 +612,7 @@
 
   function playPitch(pitch, opts) {
     opts = opts || {};
+    opts.pitch = pitch;
     var freq = hz(pitch);
     if (opts.role !== 'boss' && opts.role !== 'metro') lastHz = freq;
     playFreq(freq, opts);
@@ -558,24 +627,21 @@
       overtone: false,
       role: 'metro',
       duringSheet: !!opts.duringSheet,
-      immediate: true
+      when: opts.when,
+      beat: opts.beat
     });
   }
 
   function playChartMelody(state) {
     if (!state || state.paused || !state.running || state.ended) return;
-    if (micStream) {
-      lastAudioBeat = state.beat;
-      return;
-    }
-    if (state.phase !== 'defend' && state.phase !== 'setup') {
-      lastAudioBeat = state.beat;
-      return;
-    }
+    if (state.phase !== 'defend' && state.phase !== 'setup') return;
+    var ctx = audioCtx || getAudio();
+    if (!ctx || fightAudioOrigin == null || !(state.bpm > 0)) return;
     var from = lastAudioBeat;
-    var to = state.beat;
+    var to = state.beat + aheadBeats(state.bpm, ctx);
+    if (!(to > from)) return;
+    if ((to - from) > 8) from = to - aheadBeats(state.bpm, ctx) - 0.05;
     lastAudioBeat = to;
-    if (!(to > from) || (to - from) > 2) return;
     var bars = state.ribbon || [];
     var i;
     var j;
@@ -584,6 +650,7 @@
     var note;
     var abs;
     var id;
+    var when;
     for (i = 0; i < bars.length; i++) {
       bar = bars[i];
       if (!bar || bar.kind === 'hole') continue;
@@ -592,19 +659,68 @@
       for (j = 0; j < notes.length; j++) {
         note = notes[j];
         if (note.tie) continue;
-        abs = Chart.hitOnset(bar.startBeat + note.beat);
+        abs = Chart.hitOnset((bar.startBeat || 0) + note.beat);
         if (abs <= from || abs > to + 1e-4) continue;
         id = bar.globalBar + ':' + note.beat + ':' + note.pitch;
         if (bossHeard[id]) continue;
         bossHeard[id] = true;
+        when = fightAudioOrigin + abs * 60 / state.bpm;
         playPitch(note.pitch, {
           role: 'boss',
           gain: 0.236 * noteLevel(note),
           type: 'sine',
           dur: note.staccato ? BOSS_STACCATO_SEC : 0.48,
-          overtone: false
+          overtone: false,
+          when: when,
+          beat: abs
         });
         bossMood(note);
+      }
+    }
+  }
+
+  function scheduleMetronome(state) {
+    if (!state || state.paused || !state.running || state.ended) return;
+    var ctx = audioCtx || getAudio();
+    if (!ctx || fightAudioOrigin == null || !(state.bpm > 0)) return;
+    var bpb = state.beatsPerBar || 4;
+    var to = state.beat + aheadBeats(state.bpm, ctx);
+    var clickAt = lastMetroBeat;
+    var slot;
+    if (!(clickAt > -1e8)) clickAt = Math.floor(state.beat - Chart.BEAT_CENTER + 1e-9) + Chart.BEAT_CENTER;
+    if (clickAt < Chart.BEAT_CENTER - 1e-9) clickAt = Chart.BEAT_CENTER;
+    while (clickAt <= to + 1e-6) {
+      if (clickAt > lastMetroBeat + 1e-9) {
+        slot = Math.round(clickAt - Chart.BEAT_CENTER);
+        metronomeClick(slot % bpb === 0, {
+          when: fightAudioOrigin + clickAt * 60 / state.bpm,
+          beat: clickAt
+        });
+        lastMetroBeat = clickAt;
+        lastClickBeat = slot;
+      }
+      clickAt += 1;
+    }
+  }
+
+  function emitBeatCrossings(ribbon, from, to, where) {
+    var i;
+    var j;
+    var bar;
+    var notes;
+    var note;
+    var abs;
+    if (!ribbon || !(to > from)) return;
+    for (i = 0; i < ribbon.length; i++) {
+      bar = ribbon[i];
+      if (!bar) continue;
+      notes = bar.notes || [];
+      for (j = 0; j < notes.length; j++) {
+        note = notes[j];
+        if (!note || note.tie || !note.pitch) continue;
+        abs = Chart.hitOnset((bar.startBeat || 0) + (note.beat || 0));
+        if (abs <= from || abs > to + 1e-4) continue;
+        pushSync({ kind: 'playhead', where: where, pitch: note.pitch, beat: abs });
       }
     }
   }
@@ -673,7 +789,7 @@
         if (!ev || !ev.pitch || seen[ev.pitch]) continue;
         seen[ev.pitch] = true;
         markKey(ev.pitch, false);
-        if (director) director.noteOff(ev.pitch, performance.now());
+        if (director) director.noteOff(ev.pitch, clockMs());
       }
     }
     var names = Object.keys(localHeld);
@@ -681,7 +797,7 @@
       name = names[i];
       if (seen[name]) continue;
       markKey(name, false);
-      if (director) director.noteOff(name, performance.now());
+      if (director) director.noteOff(name, clockMs());
     }
     localHeld = {};
   }
@@ -689,23 +805,20 @@
   function render() {
     if (!director || !runningLoop) return;
     lastPaintMs = performance.now();
-    var state = director.tick(lastPaintMs);
+    var state = director.tick(clockMs());
     if (tape) tape.render(state);
     if (hud) hud.render(state);
     if (bossSprite && document.body.classList.contains('sprite-boss')) {
       bossSprite.paint(state.beat, window.BossAnim.attackHits(state.ribbon), state.beatsPerBar);
     }
     if (state.free) showDamagePop(state.damage);
-    playChartMelody(state);
-    paintKeyLights(state);
-
     if (state.running && !state.paused) {
-      var slot = Chart.centerReached(state.beat);
-      if (slot !== lastClickBeat && slot >= 0) {
-        lastClickBeat = slot;
-        if (!micStream) metronomeClick((slot % (state.beatsPerBar || 4)) === 0);
-      }
+      emitBeatCrossings(state.ribbon, lastVisualBeat, state.beat, 'tape');
+      lastVisualBeat = state.beat;
     }
+    playChartMelody(state);
+    scheduleMetronome(state);
+    paintKeyLights(state);
 
     if (state.ended) {
       showOutcome(state);
@@ -773,7 +886,7 @@
     }
     if (!tape || !director) return;
     tape.resize();
-    tape.render(director.snapshot(performance.now()));
+    tape.render(director.snapshot(clockMs()));
   }
 
   function startFight() {
@@ -791,11 +904,18 @@
     }
     hideOutcome();
     lastClickBeat = -1;
+    lastMetroBeat = -1e9;
+    lastVisualBeat = -1e-9;
     bossHeard = {};
-    lastAudioBeat = 0;
+    lastAudioBeat = -1e-9;
     releaseHeld();
     stopLoop();
-    director.start(performance.now());
+    if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
+      try { audioCtx.resume(); } catch (eStart) {}
+    }
+    fightAudioOrigin = contextNowSec();
+    pauseAudibleAt = null;
+    director.start(fightAudioOrigin * 1000);
     runningLoop = true;
     stopBossPreview();
     setPauseUi(false, true);
@@ -866,10 +986,11 @@
 
   function pauseFight() {
     if (!director || !runningLoop || paused) return;
-    var state = director.snapshot(performance.now());
+    var state = director.snapshot(clockMs());
     if (state.ended) return;
     releaseHeld();
-    director.pause(performance.now());
+    pauseAudibleAt = audibleNowSec();
+    director.pause(clockMs());
     paused = true;
     if (audioCtx && micStream) {
       audioHeldForPause = true;
@@ -879,8 +1000,8 @@
       try { audioCtx.suspend(); } catch (e) {}
     }
     setPauseUi(true, true);
-    if (tape) tape.render(director.snapshot(performance.now()));
-    if (hud) hud.render(director.snapshot(performance.now()));
+    if (tape) tape.render(director.snapshot(clockMs()));
+    if (hud) hud.render(director.snapshot(clockMs()));
     openSheet(true);
   }
 
@@ -903,12 +1024,21 @@
       try { audioCtx.resume(); } catch (e) {}
       playSpeakerEl();
     }
-    director.resume(performance.now());
+    var resumeAt = audibleNowSec();
+    director.resume(resumeAt * 1000);
+    if (pauseAudibleAt != null && fightAudioOrigin != null) {
+      fightAudioOrigin += (resumeAt - pauseAudibleAt);
+    }
+    pauseAudibleAt = null;
+    lastAudioBeat = director.snapshot(resumeAt * 1000).beat - 1e-6;
+    lastVisualBeat = lastAudioBeat;
+    lastMetroBeat = Math.floor(lastVisualBeat - Chart.BEAT_CENTER + 1e-9) + Chart.BEAT_CENTER;
+    if (!(lastMetroBeat > -1e8)) lastMetroBeat = -1e9;
     paused = false;
     setPauseUi(false, true);
     syncIdleActions();
-    if (tape) tape.render(director.snapshot(performance.now()));
-    if (hud) hud.render(director.snapshot(performance.now()));
+    if (tape) tape.render(director.snapshot(clockMs()));
+    if (hud) hud.render(director.snapshot(clockMs()));
   }
 
   function togglePause() {
@@ -933,7 +1063,7 @@
     markKey(name, true, source);
     if (!merged.fresh) return;
     if (tutorialOpen()) return;
-    if (merged.combat && director) director.noteOn(name, performance.now(), merged.voices);
+    if (merged.combat && director) director.noteOn(name, clockMs(), merged.voices);
   }
 
   function noteOff(pitch, source, precomputed) {
@@ -949,7 +1079,7 @@
     if (!merged.released) return;
     var name = merged.pitch || pitch;
     markKey(name, false, source);
-    if (director) director.noteOff(name, performance.now());
+    if (director) director.noteOff(name, clockMs());
   }
 
   function keyButton(pitch) {
@@ -979,22 +1109,61 @@
     btn.classList.remove('lit-player', 'lit-fade');
   }
 
+  function enemyPitchesAt(notes, pos) {
+    var on = {};
+    var i;
+    var n;
+    var dur;
+    var name;
+    notes = notes || [];
+    for (i = 0; i < notes.length; i++) {
+      n = notes[i];
+      if (!n || !n.pitch) continue;
+      dur = (typeof n.dur === 'number' && n.dur > 0) ? n.dur : 1;
+      if (pos + 1e-6 < n.onset || pos >= n.onset + dur - 1e-9) continue;
+      name = canonicalPitch(n.pitch);
+      if (name) on[name] = true;
+    }
+    return on;
+  }
+
+  function paintEnemyLights(on) {
+    var keys = document.querySelectorAll('#piano .key');
+    var i;
+    var pitch;
+    var lit;
+    var next = {};
+    on = on || {};
+    for (i = 0; i < keys.length; i++) {
+      pitch = keys[i].getAttribute('data-pitch');
+      lit = !!on[pitch];
+      if (lit && pitch && !prevEnemyLit[pitch]) {
+        pushSync({ kind: 'key', pitch: pitch });
+      }
+      keys[i].classList.toggle('lit-enemy', lit);
+      if (lit && pitch) next[pitch] = true;
+    }
+    prevEnemyLit = next;
+  }
+
   function paintKeyLights(state) {
     var on = {};
     var list = (window.Chart && state) ? Chart.activePitches(state.ribbon, state.beat) : [];
     var i;
     var name;
-    var keys;
-    var pitch;
     for (i = 0; i < list.length; i++) {
       name = canonicalPitch(list[i]);
       if (name) on[name] = true;
     }
-    keys = document.querySelectorAll('#piano .key');
-    for (i = 0; i < keys.length; i++) {
-      pitch = keys[i].getAttribute('data-pitch');
-      keys[i].classList.toggle('lit-enemy', !!on[pitch]);
+    paintEnemyLights(on);
+  }
+
+  function paintSheetKeys(pos) {
+    if (!sheetClock) {
+      paintEnemyLights({});
+      return;
     }
+    paintEnemyLights(enemyPitchesAt(sheetClock.notes, pos));
   }
 
   function onKeyDown(ev) {
@@ -1309,7 +1478,7 @@
     if (micTimer) clearInterval(micTimer);
     micTimer = setInterval(micTick, engine.HOP_MS);
     setMicButton(true);
-    setMicStatus(engine.statusLine({ ios: iosLike() }));
+    setMicStatus(micStatusText());
     var errBox = $('error');
     if (errBox && errBox.textContent !== ENGINE_FAIL) {
       errBox.textContent = '';
@@ -1425,7 +1594,7 @@
     director = CombatDirector.create({
       chart: chart,
       free: !!(opt && opt.free),
-      now: function () { return performance.now(); }
+      now: function () { return clockMs(); }
     });
     if (window.PianoMagic) window.PianoMagic.director = director;
     document.body.setAttribute('data-rival', (opt && opt.id) || chart.id || '');
@@ -1568,7 +1737,7 @@
 
   function selectRival(id) {
     if (tutorialOpen()) return Promise.resolve();
-    if (runningLoop && director && !director.snapshot(performance.now()).ended) return Promise.resolve();
+    if (runningLoop && director && !director.snapshot(clockMs()).ended) return Promise.resolve();
     var opt = Rivals.find(id);
     rivalId = opt.id;
     try { localStorage.setItem(RIVAL_KEY, rivalId); } catch (e) {}
@@ -1690,9 +1859,10 @@
       sheetRaf = 0;
     }
     setLoopButton(false);
+    if (was) paintEnemyLights({});
     if (was) hushPausedAudio();
     if (was && sheetOpen) paintSheet();
-    if (was && director && hud) hud.render(director.snapshot(paused ? performance.now() : 0));
+    if (was && director && hud) hud.render(director.snapshot(paused ? clockMs() : 0));
   }
 
   function closeSheet() {
@@ -1705,7 +1875,7 @@
     if (sheet) sheet.hidden = true;
     syncIdleActions();
     if (holdPause) setPauseUi(true, !!runningLoop);
-    else if (director && hud) hud.render(director.snapshot(paused ? performance.now() : 0));
+    else if (director && hud) hud.render(director.snapshot(paused ? clockMs() : 0));
   }
 
   function paintSheetControls() {
@@ -1843,10 +2013,26 @@
     bpm = selectedBpm();
     showBpm(bpm);
     if (!sheetPlaying || !sheetClock) return;
-    pos = sheetClock.pos;
+    pos = Math.max(0, sheetClock.abs);
     sheetClock.bpm = bpm;
-    sheetClock.origin = performance.now() - (pos * 60 / bpm) * 1000;
-    sheetClock.abs = pos;
+    sheetClock.audioOrigin = audibleNowSec() - pos * 60 / bpm;
+  }
+
+  function sheetWhen(beat) {
+    return sheetClock.audioOrigin + beat * 60 / sheetClock.bpm;
+  }
+
+  function emitSheetCrossings(from, to) {
+    var notes;
+    var i;
+    var n;
+    if (!sheetClock || !(to > from)) return;
+    notes = sheetClock.notes || [];
+    for (i = 0; i < notes.length; i++) {
+      n = notes[i];
+      if (!n || n.onset <= from || n.onset > to + 1e-4) continue;
+      pushSync({ kind: 'playhead', where: 'sheet', pitch: n.pitch, beat: n.onset });
+    }
   }
 
   function fireSheetSpan(from, to) {
@@ -1855,16 +2041,23 @@
     var notes;
     var durBeats;
     var secs;
-    var b0;
-    var b1;
+    var first;
+    var last;
+    var clickAt;
+    var slot;
     if (!sheetClock) return;
-    if (!micStream) {
-      b0 = Math.floor(from) + 1;
-      b1 = Math.floor(to + 1e-6);
-      for (i = b0; i <= b1; i++) {
-        if (i <= 0) continue;
-        metronomeClick(i % sheetClock.bpb === 0, { duringSheet: true });
-      }
+    first = Math.ceil(from - Chart.BEAT_CENTER - 1e-9);
+    last = Math.floor(to - Chart.BEAT_CENTER + 1e-6);
+    for (i = first; i <= last; i++) {
+      if (i < 0) continue;
+      clickAt = i + Chart.BEAT_CENTER;
+      if (clickAt <= from || clickAt > to + 1e-9) continue;
+      slot = i;
+      metronomeClick(slot % sheetClock.bpb === 0, {
+        duringSheet: true,
+        when: sheetWhen(clickAt),
+        beat: clickAt
+      });
     }
     notes = sheetClock.notes || [];
     for (i = 0; i < notes.length; i++) {
@@ -1878,39 +2071,80 @@
         type: 'sine',
         dur: secs,
         overtone: false,
-        duringSheet: true
+        duringSheet: true,
+        when: sheetWhen(n.onset),
+        beat: n.onset
       });
     }
   }
 
+  function scheduleSheetAbs(fromAbs, toAbs) {
+    var len;
+    var from;
+    var to;
+    var span;
+    if (!sheetClock || !(toAbs > fromAbs)) return;
+    if (toAbs <= 0) return;
+    if (fromAbs < 0) fromAbs = -1e-9;
+    len = sheetClock.beats;
+    if (!(len > 0)) return;
+    span = toAbs - fromAbs;
+    if (fromAbs < 0) {
+      fireSheetSpan(-1e-9, toAbs);
+      return;
+    }
+    from = ((fromAbs % len) + len) % len;
+    to = ((toAbs % len) + len) % len;
+    if (span >= len) {
+      fireSheetSpan(0, len);
+      return;
+    }
+    if (to + 1e-6 < from) {
+      fireSheetSpan(from, len);
+      fireSheetSpan(0, to);
+    } else fireSheetSpan(from, to);
+  }
+
   function sheetFrame(token) {
-    var elapsed;
     var abs;
     var len;
     var prev;
-    var from;
-    var to;
+    var schedTo;
+    var prevSched;
+    var pos;
+    var wrapFrom;
+    var wrapTo;
     if (token !== sheetToken || !sheetPlaying || !sheetClock) return;
-    elapsed = (performance.now() - sheetClock.origin) / 1000;
-    abs = elapsed * (sheetClock.bpm / 60);
+    abs = (audibleNowSec() - sheetClock.audioOrigin) * (sheetClock.bpm / 60);
     len = sheetClock.beats;
     prev = sheetClock.abs;
     if (!(abs >= prev)) prev = abs;
-    if (abs - prev > len) {
-      sheetClock.abs = abs;
-      sheetClock.pos = abs % len;
-    } else {
-      from = prev % len;
-      to = abs % len;
-      if (to + 1e-6 < from) {
-        fireSheetSpan(from, len);
-        fireSheetSpan(0, to);
-      } else fireSheetSpan(from, to);
-      sheetClock.abs = abs;
-      sheetClock.pos = to;
+    schedTo = abs + aheadBeats(sheetClock.bpm);
+    prevSched = (sheetClock.sched != null) ? sheetClock.sched : -1e-9;
+    scheduleSheetAbs(prevSched, schedTo);
+    sheetClock.sched = Math.max(prevSched, schedTo);
+    if (abs >= 0 && prev < 0) wrapFrom = 0;
+    else wrapFrom = prev;
+    wrapTo = abs;
+    if (wrapTo > wrapFrom && len > 0) {
+      var a = wrapFrom;
+      var b = wrapTo;
+      if (b - a >= len) emitSheetCrossings(0, len);
+      else {
+        var from = ((a % len) + len) % len;
+        var to = ((b % len) + len) % len;
+        if (to + 1e-6 < from) {
+          emitSheetCrossings(from, len);
+          emitSheetCrossings(0, to);
+        } else emitSheetCrossings(from, to);
+      }
     }
-    paintSheetPulse(sheetClock.pos, sheetClock.bpb);
+    sheetClock.abs = abs;
+    pos = abs < 0 ? 0 : (abs % len);
+    sheetClock.pos = pos;
+    paintSheetPulse(pos, sheetClock.bpb);
     paintSheet();
+    paintSheetKeys(pos);
     sheetRaf = requestAnimationFrame(function () { sheetFrame(token); });
   }
 
@@ -1936,20 +2170,21 @@
     sheetToken += 1;
     token = sheetToken;
     sheetClock = {
-      origin: performance.now(),
+      audioOrigin: contextNowSec(),
       bpm: bpm,
       beats: pack.beats,
       bpb: pack.bpb,
       notes: pack.notes,
       from: section.from,
       abs: 0,
-      pos: 0
+      pos: 0,
+      sched: -1e-9
     };
     sheetPlaying = true;
     setLoopButton(true);
     showBpm(bpm);
-    if (!micStream) metronomeClick(true, { duringSheet: true });
     paintSheet();
+    paintSheetKeys(0);
     revealSection();
     sheetRaf = requestAnimationFrame(function () { sheetFrame(token); });
   }
@@ -2142,7 +2377,26 @@
       getVolumes: function () { return { piano: volPiano, metro: volMetro }; },
       pianoGain: function () { return pianoBus ? pianoBus.gain.value : volPiano; },
       metroGain: function () { return metroBus ? metroBus.gain.value : volMetro; },
-      masterGain: function () { return masterGain ? masterGain.gain.value : MASTER_GAIN; }
+      masterGain: function () { return masterGain ? masterGain.gain.value : MASTER_GAIN; },
+      openSheet: function (fromPause) { openSheet(!!fromPause); },
+      startSheet: startSheetPlayback,
+      stopSheet: stopSheetPlayback,
+      sheetPlaying: function () { return sheetPlaying; },
+      sheetNotes: function () { return (sheetClock && sheetClock.notes) || []; },
+      playheadBeat: function () {
+        if (sheetPlaying && sheetClock) return sheetClock.abs;
+        if (director && runningLoop) return director.snapshot(clockMs()).beat;
+        return null;
+      },
+      audibleNow: audibleNowSec,
+      audioLatency: audioLatencySec,
+      audioOrigin: function () {
+        if (sheetPlaying && sheetClock) return sheetClock.audioOrigin;
+        return fightAudioOrigin;
+      },
+      clockMs: clockMs,
+      syncEvents: function () { return syncEvents.slice(); },
+      clearSyncEvents: function () { syncEvents = []; }
     };
     maybeTutorial();
   }

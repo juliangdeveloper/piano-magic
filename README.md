@@ -11,8 +11,8 @@
 - El combate alterna compases de **Ataque** y **Defiende** sobre una partitura que avanza al ritmo del metrónomo.
 - En **Ataque** improvisas: escalas mayores atacan, menores te mejoran y pentatónicas te curan.
 - En **Defiende** copias las dos manos: la derecha en clave de sol y la izquierda en clave de fa. Un par a la vez es perfecto si suenan las dos notas, y parcial si solo entra una.
-- Toca con el teclado QWERTY (baja hasta el Do3: `Q M , .`), el teclado en pantalla, un teclado MIDI o el micrófono. Cada mano tiene su color.
-- El teclado en pantalla siempre está a la vista: la nota del jefe se enciende en morado y la tuya en verde.
+- Toca con el teclado QWERTY (baja hasta el Do3: `Q M , .`), el teclado en pantalla, un teclado MIDI o el micrófono. Cada mano tiene su color. El juego sigue sonando si enciendes el micrófono.
+- El teclado en pantalla siempre está a la vista: la nota del jefe se enciende en morado y la tuya en verde, al mismo tiempo que el indicador pasa por la nota y suena.
 - Los números junto a las notas indican el dedo (1–5): arriba para la mano derecha, abajo para la izquierda.
 - Las notas ligadas se tocan una sola vez.
 - El jefe toca con las dinámicas de la partitura: *p*, *f*, reguladores y staccato cambian su volumen y su duración.
