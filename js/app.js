@@ -1,8 +1,9 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.55';
+  var VERSION = '0.1.56';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
+  var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
   var chartCache = {};
@@ -76,6 +77,8 @@
   var micAnalyser = null;
   var micMute = null;
   var micHp = null;
+  var micInGain = null;
+  var micInLevel = 1;
   var micBuf = null;
   var micTimer = null;
   var micSilentTicks = 0;
@@ -104,6 +107,25 @@
     box.className = 'visible';
   }
 
+  function cmpEngineVersion(a, b) {
+    var pa = String(a || '').split('.');
+    var pb = String(b || '').split('.');
+    var i;
+    for (i = 0; i < 3; i++) {
+      var na = parseInt(pa[i], 10) || 0;
+      var nb = parseInt(pb[i], 10) || 0;
+      if (na < nb) return -1;
+      if (na > nb) return 1;
+    }
+    return 0;
+  }
+
+  function pinEngineVersion(text) {
+    var version = String(text || '').trim();
+    if (!version || cmpEngineVersion(version, ENGINE_VERSION) < 0) return ENGINE_VERSION;
+    return version;
+  }
+
   function loadPianoEngine(root) {
     return fetch(root + 'version.txt?t=' + Date.now(), { cache: 'no-store' })
       .then(function (res) {
@@ -111,14 +133,15 @@
         return res.text();
       })
       .then(function (text) {
-        var version = text.trim();
+        var version = pinEngineVersion(text);
         try { localStorage.setItem('piano-transcribe.engine', version); } catch (e) {}
         return import(root + 'capture.js?v=' + encodeURIComponent(version));
       })
       .catch(function () {
         var version = '';
         try { version = localStorage.getItem('piano-transcribe.engine') || ''; } catch (e) {}
-        return import(root + 'capture.js' + (version ? ('?v=' + encodeURIComponent(version)) : ''));
+        version = pinEngineVersion(version);
+        return import(root + 'capture.js?v=' + encodeURIComponent(version));
       })
       .then(function (mod) {
         if (!mod || mod.INTERFACE !== 1 || typeof mod.createCapture !== 'function') {
@@ -529,12 +552,14 @@
     return peak;
   }
 
-  function blockSynth(freq, dur) {
+  function blockSynth(freq, fromMs, untilMs) {
     if (!engine || !freq) return;
     var note = engine.noteFromFreq(freq, 440);
     if (!note) return;
     var now = performance.now();
-    synthBlocks.push({ midi: note.midi, until: now + (dur || 0.2) * 1000 + 110 });
+    var from = typeof fromMs === 'number' ? fromMs : now;
+    var until = typeof untilMs === 'number' ? untilMs : from + 90;
+    synthBlocks.push({ midi: note.midi, from: from, until: until });
     var i = 0;
     while (i < synthBlocks.length) {
       if (synthBlocks[i].until < now) synthBlocks.splice(i, 1);
@@ -574,9 +599,9 @@
       over.start(t0);
       over.stop(t0 + dur + 0.02);
     }
-    var remain = t0 + dur - ctx.currentTime;
-    if (remain < 0) remain = 0;
-    blockSynth(freq, remain);
+    var delayMs = Math.max(0, (t0 - ctx.currentTime) * 1000);
+    var startAt = performance.now() + delayMs;
+    blockSynth(freq, startAt, startAt + 90);
     if (opts.role === 'boss' || opts.role === 'metro') {
       pushSync({
         kind: 'audio',
@@ -1211,10 +1236,10 @@
         btn.style.width = blackW + '%';
         btn.style.left = ((whiteIndexBelow(item) + 1) * 100 / W - blackW / 2) + '%';
       }
-      btn.setAttribute('data-key', item.key.toLowerCase());
-      var pitch = pitchForKey(item.key);
+      var pitch = InstrumentTranslator.normalizeName(item.pitch) || item.pitch;
+      if (item.key) btn.setAttribute('data-key', String(item.key).toLowerCase());
       if (pitch) btn.setAttribute('data-pitch', pitch);
-      btn.setAttribute('aria-label', pitch || item.pitch);
+      btn.setAttribute('aria-label', pitch);
       var enemy = document.createElement('span');
       enemy.className = 'glow enemy';
       enemy.setAttribute('aria-hidden', 'true');
@@ -1233,7 +1258,7 @@
       var pointers = {};
       btn.addEventListener('pointerdown', function (e) {
         if (paused) return;
-        var pitch = pitchForKey(btn.getAttribute('data-key'));
+        var pitch = btn.getAttribute('data-pitch') || pitchForKey(btn.getAttribute('data-key'));
         if (!pitch) return;
         pointers[e.pointerId] = pitch;
         noteOn(pitch, 'osk');
@@ -1390,10 +1415,13 @@
     }
     try { if (micSource) micSource.disconnect(); } catch (e) {}
     try { if (micHp) micHp.disconnect(); } catch (e2) {}
+    try { if (micInGain) micInGain.disconnect(); } catch (e2b) {}
     try { if (micAnalyser) micAnalyser.disconnect(); } catch (e3) {}
     try { if (micMute) micMute.disconnect(); } catch (e4) {}
     micSource = null;
     micHp = null;
+    micInGain = null;
+    micInLevel = 1;
     micAnalyser = null;
     micMute = null;
     micBuf = null;
@@ -1412,6 +1440,22 @@
       try { audioCtx.resume(); } catch (e0) {}
     }
     try { micAnalyser.getFloatTimeDomainData(micBuf); } catch (e) { return; }
+    if (micInGain && audioCtx) {
+      var peak = 0;
+      var pi;
+      var av;
+      for (pi = 0; pi < micBuf.length; pi += 4) {
+        av = micBuf[pi] < 0 ? -micBuf[pi] : micBuf[pi];
+        if (av > peak) peak = av;
+      }
+      if (peak > 0.35 && micInLevel > 1) {
+        micInLevel = Math.max(1, micInLevel * 0.9);
+        try { micInGain.gain.setTargetAtTime(micInLevel, audioCtx.currentTime, 0.05); } catch (eg) {}
+      } else if (peak > 0 && peak < 0.06 && micInLevel < 5) {
+        micInLevel = Math.min(5, micInLevel * 1.03);
+        try { micInGain.gain.setTargetAtTime(micInLevel, audioCtx.currentTime, 0.08); } catch (eg2) {}
+      }
+    }
     var allZero = true;
     for (var zi = 0; zi < micBuf.length; zi += 16) { if (micBuf[zi] !== 0) { allZero = false; break; } }
     if (allZero && audioCtx.state === 'running') {
@@ -1461,8 +1505,11 @@
     playSpeakerEl();
     micHp = ctx.createBiquadFilter();
     micHp.type = 'highpass';
-    micHp.frequency.value = 90;
+    micHp.frequency.value = 50;
     micHp.Q.value = 0.707;
+    micInGain = ctx.createGain();
+    micInLevel = 1;
+    micInGain.gain.value = 1;
     micSource = ctx.createMediaStreamSource(stream);
     micAnalyser = ctx.createAnalyser();
     micAnalyser.fftSize = 2048;
@@ -1471,7 +1518,8 @@
     micMute = ctx.createGain();
     micMute.gain.value = 0;
     micSource.connect(micHp);
-    micHp.connect(micAnalyser);
+    micHp.connect(micInGain);
+    micInGain.connect(micAnalyser);
     micAnalyser.connect(micMute);
     micMute.connect(ctx.destination);
     micStream = stream;
@@ -2527,7 +2575,7 @@
 
   loadPianoEngine(ENGINE_ROOT).then(function (mod) {
     engine = mod;
-    session = mod.createCapture({ profile: 'combat', maxVoices: 2 });
+    session = mod.createCapture({ profile: 'combat', maxVoices: 2, minMidi: 36, maxMidi: 96, maxLagMode: 'full' });
     engineState = 'ready';
     adoptLocalHeld();
     if (micWanted && !micStream && !micPending) enableMic();

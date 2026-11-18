@@ -38,14 +38,14 @@ test('U2: staffStep coloca C4 bajo el pentagrama y sube por la escala', () => {
   assert.strictEqual(sharp.step, Tape.staffStep('F4'));
 });
 
-test('U3: versión 0.1.55, un retrato y pentagrama sin ficha de letras', () => {
-  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.55');
+test('U3: versión 0.1.56, un retrato y pentagrama sin ficha de letras', () => {
+  assert.strictEqual(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim(), '0.1.56');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '0.1.55');
+  assert.strictEqual(pkg.version, '0.1.56');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
-  assert.match(html, /boss-portrait\.png\?v=0\.1\.55/);
-  assert.match(app, /VERSION = '0\.1\.55'/);
+  assert.match(html, /boss-portrait\.png\?v=0\.1\.56/);
+  assert.match(app, /VERSION = '0\.1\.56'/);
   assert.equal(html.includes('0.1.41'), false);
   assert.equal(html.includes('0.1.40'), false);
   assert.equal(html.includes('boss-cloud.png'), false);
@@ -137,7 +137,7 @@ test('U6: micrófono opcional, guía de pulso y audio de altavoz sin CDN', () =>
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
   assert.match(app, /loadPianoEngine/);
   assert.match(app, /https:\/\/juliangdeveloper\.github\.io\/piano-transcribe\/engine\/v1\//);
-  assert.match(app, /createCapture\(\{ profile: 'combat', maxVoices: 2 \}\)/);
+  assert.match(app, /createCapture\(\{ profile: 'combat', maxVoices: 2, minMidi: 36, maxMidi: 96, maxLagMode: 'full' \}\)/);
   assert.match(app, /No se pudo cargar el motor de notas/);
   assert.match(app, /latencyHint/);
   assert.match(app, /play-and-record/);

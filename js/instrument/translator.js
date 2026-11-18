@@ -24,41 +24,25 @@
     "'": 'F5', z: 'F#5', x: 'G5', c: 'A5'
   };
 
-  var KEY_LABELS = [
-    { key: 'Q', pitch: 'C3' },
-    { key: 'M', pitch: 'D3' },
-    { key: ',', pitch: 'E3' },
-    { key: '.', pitch: 'F3' },
-    { key: 'V', pitch: 'G3' },
-    { key: 'B', pitch: 'A3' },
-    { key: 'N', pitch: 'B3' },
-    { key: 'R', pitch: 'G#3' },
-    { key: 'I', pitch: 'Bb3' },
-    { key: 'A', pitch: 'C4' },
-    { key: 'S', pitch: 'D4' },
-    { key: 'D', pitch: 'E4' },
-    { key: 'F', pitch: 'F4' },
-    { key: 'G', pitch: 'G4' },
-    { key: 'H', pitch: 'A4' },
-    { key: 'J', pitch: 'B4' },
-    { key: 'K', pitch: 'C5' },
-    { key: 'L', pitch: 'D5' },
-    { key: 'Ñ', pitch: 'E5' },
-    { key: "'", pitch: 'F5' },
-    { key: 'X', pitch: 'G5' },
-    { key: 'C', pitch: 'A5' },
-    { key: 'W', pitch: 'C#4' },
-    { key: 'E', pitch: 'Eb4' },
-    { key: 'T', pitch: 'F#4' },
-    { key: 'Y', pitch: 'Ab4' },
-    { key: 'U', pitch: 'Bb4' },
-    { key: 'O', pitch: 'C#5' },
-    { key: 'P', pitch: 'Eb5' },
-    { key: 'Z', pitch: 'F#5' },
-    { key: '2', pitch: 'C#3' },
-    { key: '3', pitch: 'Eb3' },
-    { key: '4', pitch: 'F#3' }
-  ];
+  var KEY_LABELS = (function () {
+    var labels = [];
+    var keyByPitch = {};
+    var k;
+    for (k in KEY_MAP) {
+      if (Object.prototype.hasOwnProperty.call(KEY_MAP, k) && !keyByPitch[KEY_MAP[k]]) {
+        keyByPitch[KEY_MAP[k]] = k;
+      }
+    }
+    var pc = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    var midi;
+    for (midi = 36; midi <= 96; midi++) {
+      var name = pc[midi % 12] + (Math.floor(midi / 12) - 1);
+      var key = keyByPitch[name] || '';
+      labels.push({ key: key, pitch: name });
+    }
+    return labels;
+  })();
+
 
   function normalizeName(raw) {
     if (typeof raw === 'number' && isFinite(raw)) return midiToName(raw);
@@ -224,7 +208,8 @@
       level: prev && typeof prev.level === 'number' ? prev.level : null,
       floorDb: prev && typeof prev.floorDb === 'number' ? prev.floorDb : null,
       lowAt: prev && typeof prev.lowAt === 'number' ? prev.lowAt : 0,
-      lowMidi: prev && typeof prev.lowMidi === 'number' ? prev.lowMidi : null
+      lowMidi: prev && typeof prev.lowMidi === 'number' ? prev.lowMidi : null,
+      attackUntil: prev && typeof prev.attackUntil === 'number' ? prev.attackUntil : 0
     };
     var db = sample && typeof sample.db === 'number' && isFinite(sample.db) ? sample.db : -120;
     var now = sample && typeof sample.now === 'number' && isFinite(sample.now) ? sample.now : 0;
@@ -237,7 +222,10 @@
       var steady = Math.abs(db - prevLevel) < 5;
       state.level = prevLevel * 0.8 + db * 0.2;
       if (steady || db < state.floorDb) state.floorDb = state.floorDb * 0.75 + db * 0.25;
-      musical = !steady && db >= state.floorDb + 12 && db >= -50;
+      var rise = db - state.floorDb;
+      var attack = !steady && rise >= 8 && db >= -58;
+      if (attack) state.attackUntil = now + 240;
+      musical = (attack || now <= state.attackUntil || rise >= 8) && db >= -58;
     }
     var list = events || [];
     var bestLow = -1;
