@@ -38,7 +38,10 @@ sh ios/sync-web.sh && cd ios && xtool dev build   # local, Linux o macOS
 
 `.github/workflows/ios.yml` (runner `macos-26`):
 - Cada push a `main` o `ios-testflight` genera el proyecto con XcodeGen, corre los tests de Swift y hace un archive sin firmar.
-- **Run workflow** con *Subir a TestFlight* firma con una API key de App Store Connect y sube el build.
+- Un tag `ios-v<VERSION>` (por ejemplo `ios-v0.1.57`) hace lo mismo, firma con una API key de App Store Connect y sube el build a TestFlight. Falla si el tag no coincide con `VERSION`.
+  ```
+  git tag ios-v0.1.57 && git push origin ios-v0.1.57
+  ```
   - Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (contenido del `.p8`).
   - Variables: `IOS_TEAM_ID`, y `IOS_BUNDLE_ID` si cambia el bundle ID.
 
