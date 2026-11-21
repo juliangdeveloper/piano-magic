@@ -1,0 +1,190 @@
+name: iOS
+
+on:
+  push:
+    branches: [main, ios-testflight]
+    tags: ['ios-v*']
+    paths:
+      - 'ios/**'
+      - 'index.html'
+      - 'VERSION'
+      - 'assets/**'
+      - 'charts/**'
+      - 'css/**'
+      - 'js/**'
+      - '.github/workflows/ios.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tag version
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          want="ios-v$(tr -d '[:space:]' < VERSION)"
+          if [ "$TAG" != "$want" ]; then
+            echo "::error::Tag $TAG does not match $want"
+            exit 1
+          fi
+
+      - name: Tools
+        run: |
+          xcodebuild -version
+          command -v xcodegen || brew install xcodegen
+
+      - name: Web files
+        run: sh ios/sync-web.sh
+
+      - name: Core tests
+        working-directory: ios
+        run: swift test
+
+      - name: Project
+        env:
+          BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+        run: sh ios/project.sh "$BUNDLE_ID" "" "${{ github.run_number }}"
+
+      - name: Unsigned archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project ios/PianoMagic.xcodeproj \
+            -scheme PianoMagicApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PianoMagic.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Check bundle
+        run: |
+          app="$RUNNER_TEMP/PianoMagic.xcarchive/Products/Applications/PianoMagicApp.app"
+          ls "$app"
+          test -f "$app/Assets.car"
+          test -f "$app/PrivacyInfo.xcprivacy"
+          test -f "$app/PianoMagic_PianoMagic.bundle/web/index.html"
+          test -f "$app/PianoMagic_PianoMagic.bundle/web/engine/v1/capture.js"
+          plutil -extract CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName raw "$app/Info.plist"
+          plutil -extract CFBundleIdentifier raw "$app/Info.plist"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")" = "$(cat VERSION)"
+          plutil -extract CFBundleVersion raw "$app/Info.plist"
+          plutil -lint "$app/PrivacyInfo.xcprivacy"
+
+  testflight:
+    needs: build
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'ios-v')
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tag version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          want="ios-v$(tr -d '[:space:]' < VERSION)"
+          if [ "$TAG" != "$want" ]; then
+            echo "::error::Tag $TAG does not match $want"
+            exit 1
+          fi
+
+      - name: Signing settings
+        env:
+          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=""
+          [ -n "$TEAM_ID" ] || missing="$missing IOS_TEAM_ID"
+          [ -n "$KEY_ID" ] || missing="$missing ASC_KEY_ID"
+          [ -n "$ISSUER_ID" ] || missing="$missing ASC_ISSUER_ID"
+          [ -n "$KEY_P8" ] || missing="$missing ASC_KEY_P8"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing:$missing"
+            exit 1
+          fi
+
+      - name: Tools
+        run: |
+          xcodebuild -version
+          command -v xcodegen || brew install xcodegen
+
+      - name: Web files
+        run: sh ios/sync-web.sh
+
+      - name: Project
+        env:
+          BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+        run: sh ios/project.sh "$BUNDLE_ID" "$TEAM_ID" "${{ github.run_number }}"
+
+      - name: Archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -quiet \
+            -project ios/PianoMagic.xcodeproj \
+            -scheme PianoMagicApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PianoMagic.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: API key
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          printf '%s\n' "$KEY_P8" > "$RUNNER_TEMP/private_keys/AuthKey_$KEY_ID.p8"
+          chmod 600 "$RUNNER_TEMP/private_keys/AuthKey_$KEY_ID.p8"
+
+      - name: Export and upload
+        env:
+          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -quiet \
+            -archivePath "$RUNNER_TEMP/PianoMagic.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/private_keys/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/private_keys" "$RUNNER_TEMP/export.plist" "$RUNNER_TEMP/export"
