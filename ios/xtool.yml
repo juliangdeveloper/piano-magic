@@ -1,0 +1,7 @@
+version: 1
+bundleID: click.gamificator.pianomagic
+product: PianoMagic
+infoPath: Info.plist
+iconPath: Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+resources:
+  - Resources/PrivacyInfo.xcprivacy

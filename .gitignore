@@ -1,3 +1,9 @@
 node_modules/
 *.log
 .DS_Store
+ios/.build/
+ios/.bsp/
+ios/.gen/
+ios/xtool/
+ios/*.xcodeproj/
+ios/Sources/PianoMagic/web/

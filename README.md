@@ -21,13 +21,26 @@
 - La nota musical abre el volumen de **Piano** (teclas y partitura) y **Metrónomo**; se guarda en el dispositivo.
 
 ## Stack
-JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia local del detector.
+JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia del detector en el repo.
 Al abrirse guarda el progreso en `localStorage` (`meta.v1.piano-magic`), que lee el [portafolio](https://juliangdeveloper.github.io/).
 
 ```
 python3 -m http.server 8000   # abrir http://localhost:8000 (file:// no carga los charts)
 npm test                      # tests en Node, sin npm install
 ```
+
+## App iOS
+`ios/` envuelve el juego en una app SwiftUI con `WKWebView` y lee teclados MIDI por CoreMIDI. Al compilar, `ios/sync-web.sh` copia los archivos web y el motor `engine/v1` fijado, así que la app funciona sin conexión. La versión de la app es la de `VERSION` y el build es el número de ejecución del workflow. El bundle ID está en `ios/xtool.yml`.
+
+```
+sh ios/sync-web.sh && cd ios && xtool dev build   # local, Linux o macOS
+```
+
+`.github/workflows/ios.yml` (runner `macos-26`):
+- Cada push a `main` o `ios-testflight` genera el proyecto con XcodeGen, corre los tests de Swift y hace un archive sin firmar.
+- **Run workflow** con *Subir a TestFlight* firma con una API key de App Store Connect y sube el build.
+  - Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (contenido del `.p8`).
+  - Variables: `IOS_TEAM_ID`, y `IOS_BUNDLE_ID` si cambia el bundle ID.
 
 ## Relacionado
 🎼 [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe): motor de notas y partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-transcribe/)

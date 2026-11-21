@@ -1,8 +1,9 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.56';
-  var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
+  var VERSION = '0.1.57';
+  var ENGINE_REMOTE = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
+  var ENGINE_ROOT = window.__pianoEngineRoot || ENGINE_REMOTE;
   var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
@@ -2573,7 +2574,10 @@
 
   try { primeWavUrl(); } catch (e) {}
 
-  loadPianoEngine(ENGINE_ROOT).then(function (mod) {
+  loadPianoEngine(ENGINE_ROOT).catch(function (err) {
+    if (ENGINE_ROOT === ENGINE_REMOTE) throw err;
+    return loadPianoEngine(ENGINE_REMOTE);
+  }).then(function (mod) {
     engine = mod;
     session = mod.createCapture({ profile: 'combat', maxVoices: 2, minMidi: 36, maxMidi: 96, maxLagMode: 'full' });
     engineState = 'ready';
