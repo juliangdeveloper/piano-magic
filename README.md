@@ -22,7 +22,7 @@
 
 ## Stack
 JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia local del detector.
-Al abrirse guarda el progreso en `localStorage` (`meta.v1.piano-magic`), que lee el [portafolio](https://juliangdeveloper.github.io/).
+Al abrirse guarda el progreso en `localStorage` (`meta.v1.piano-magic`), que lee el [portafolio](https://juliangdeveloper.github.io/). La app para iPhone y iPad está en prueba en TestFlight.
 
 ```
 python3 -m http.server 8000   # abrir http://localhost:8000 (file:// no carga los charts)

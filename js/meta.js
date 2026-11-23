@@ -15,11 +15,10 @@
 
   var PROYECTO = {
     objetivo: 'Juego de combate musical publicado en la App Store: vencer a cada jefe tocando su partitura en un piano real.',
-    fase: FASE.DISENO,
+    fase: FASE.VALIDACION,
     fase_estado: ESTADO_FASE.EN_CURSO,
-    fases_completadas: 2,
+    fases_completadas: 4,
     tipo: TIPO_PROYECTO.PROYECTO,
-    bloqueada: true,
     aportes: [
       { stat: 'Programación', exp: 64, fuente: 'creacion' },
       { stat: 'Diseño', exp: 12, fuente: 'creacion' },
