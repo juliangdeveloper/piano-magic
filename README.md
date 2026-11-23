@@ -42,8 +42,8 @@ sh ios/sync-web.sh && cd ios && xtool dev build   # local, Linux o macOS
   ```
   git tag ios-v0.1.57 && git push origin ios-v0.1.57
   ```
-  - Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (contenido del `.p8`).
-  - Variables: `IOS_TEAM_ID`, y `IOS_BUNDLE_ID` si cambia el bundle ID.
+  - Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (contenido del `.p8`) e `IOS_TEAM_ID`.
+  - Variable opcional: `IOS_BUNDLE_ID` si cambia el bundle ID.
 
 ## Relacionado
 🎼 [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe): motor de notas y partitura en vivo. [Probar](https://juliangdeveloper.github.io/piano-transcribe/)

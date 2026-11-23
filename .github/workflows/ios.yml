@@ -102,7 +102,7 @@ jobs:
 
       - name: Signing settings
         env:
-          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -128,7 +128,7 @@ jobs:
       - name: Project
         env:
           BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
-          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
         run: sh ios/project.sh "$BUNDLE_ID" "$TEAM_ID" "${{ github.run_number }}"
 
       - name: Archive
@@ -156,7 +156,7 @@ jobs:
 
       - name: Export and upload
         env:
-          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
