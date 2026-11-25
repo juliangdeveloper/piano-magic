@@ -19,6 +19,7 @@
 - Para practicar, abre la partitura del rival (o pausa el combate), elige una sección y escúchala en loop a tempo real, ×0.75 o ×0.5. **Practicar** inicia un combate con ese loop, y no cuenta como pelea real.
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
 - La nota musical abre el volumen de **Piano** (teclas y partitura) y **Metrónomo**; se guarda en el dispositivo.
+- En la app para iPhone y iPad, conecta un teclado MIDI Bluetooth desde el panel de sonido (Ajustes).
 
 ## Stack
 JavaScript vanilla, Web Audio y Web MIDI. La detección de notas se carga en vivo desde el motor de [piano-transcribe](https://github.com/juliangdeveloper/piano-transcribe) (`engine/v1`). El juego solo lee las notas y dibuja su combate. Sin dependencias de npm y sin copia local del detector.

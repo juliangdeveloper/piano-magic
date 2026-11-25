@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.60';
+  var VERSION = '0.1.61';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
@@ -409,6 +409,44 @@
 
   function toggleSoundPanel() {
     setSoundPanel(!soundPanelOpen);
+  }
+
+  function nativeMidi() {
+    return !!(window.__nativeMidi && typeof window.__nativeMidi.bluetooth === 'function');
+  }
+
+  function ensureBtRow() {
+    var panel = $('soundPanel');
+    if (!panel || $('btnBtMidi')) return;
+    var row = document.createElement('div');
+    row.className = 'bt-row';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'btnBtMidi';
+    btn.textContent = 'Conectar MIDI Bluetooth';
+    btn.addEventListener('click', function () { window.__nativeMidi.bluetooth(); });
+    var status = document.createElement('p');
+    status.id = 'btMidiStatus';
+    status.setAttribute('aria-live', 'polite');
+    status.textContent = 'Ningún teclado conectado';
+    row.appendChild(btn);
+    row.appendChild(status);
+    panel.appendChild(row);
+    var sound = $('btnSound');
+    if (sound) {
+      sound.setAttribute('aria-label', 'Ajustes');
+      sound.title = 'Ajustes';
+    }
+  }
+
+  function paintBtStatus(access) {
+    var line = $('btMidiStatus');
+    if (!line) return;
+    var names = [];
+    if (access && access.inputs) {
+      access.inputs.forEach(function (input) { if (input.name) names.push(input.name); });
+    }
+    line.textContent = names.length ? names.join(', ') : 'Ningún teclado conectado';
   }
 
   function getAudio() {
@@ -1330,6 +1368,7 @@
         });
         midiStatus = n ? ('MIDI · ' + n + ' dispositivo' + (n > 1 ? 's' : '')) : 'MIDI: sin dispositivo · usa el teclado';
         if (status) status.textContent = midiStatus;
+        paintBtStatus(access);
       }
       hook();
       access.onstatechange = hook;
@@ -2470,6 +2509,11 @@
     volMetro = readVol(VOL_METRO_KEY);
     syncVolumeUi();
     setSoundPanel(false);
+    if (nativeMidi()) {
+      ensureBtRow();
+      midiReady = true;
+      setupMidi();
+    }
     buildPiano();
     bindOnscreenKeys();
     applyKeyboard(KEYBOARD_ALWAYS || readKeyboardPref(), false);
