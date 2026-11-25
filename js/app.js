@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.58';
+  var VERSION = '0.1.59';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
@@ -269,14 +269,6 @@
 
   function hz(pitch) {
     return InstrumentTranslator.hzForPitch(pitch, 440) || 261.63;
-  }
-
-  function iosLike() {
-    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
-    if (/iPad|iPhone|iPod/.test(ua)) return true;
-    var platform = (typeof navigator !== 'undefined' && navigator.platform) || '';
-    var touches = (typeof navigator !== 'undefined' && navigator.maxTouchPoints) || 0;
-    return platform === 'MacIntel' && touches > 1;
   }
 
   function preferSpeaker(micOn) {
