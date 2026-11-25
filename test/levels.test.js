@@ -298,7 +298,8 @@ test('L1: el jefe suena más fuerte que el clic, con la sonoridad de 0.1.27 inte
   assert.match(app, /masterGain\.gain\.value = MASTER_GAIN/);
   assert.match(app, /pianoBus = audioCtx\.createGain\(\)/);
   assert.match(app, /metroBus = audioCtx\.createGain\(\)/);
-  assert.match(app, /opts\.role === 'metro' \? metroBus : pianoBus/);
+  assert.match(app, /opts\.role === 'metro' \? metroBus : \(opts\.role === 'boss' \? npcBus : pianoBus\)/);
+  assert.match(app, /npcBus = audioCtx\.createGain\(\)/);
   assert.match(app, /if \(merged\.sound && !opts\.silent\) playPitch\(name\)/);
   assert.ok(Math.abs((METRO_STRONG / METRO_WEAK) - ACCENT) < 1e-12);
 

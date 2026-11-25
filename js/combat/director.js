@@ -33,6 +33,11 @@
 
     var playerHpMax = chart.hp.player;
     var bossHpMax = chart.hp.boss;
+    var eMax = Chart.energyMax(chart);
+    var playerEnergyMax = eMax.player;
+    var bossEnergyMax = eMax.boss;
+    var playerEnergy = playerEnergyMax;
+    var bossEnergy = bossEnergyMax;
     var playerHp = playerHpMax;
     var bossHp = bossHpMax;
     var buffs = [];
@@ -105,6 +110,7 @@
       }
 
       applyResult(result);
+      applyEnergy(meta.kind, result);
       lastResolve = Object.assign({ barIndex: barIndex, kind: result.kind, phase: meta.kind }, result);
       lastFeedback = feedbackText(lastResolve);
       if (meta.kind === 'hole' && notes.length) {
@@ -164,6 +170,18 @@
       if (result.bossDamage) bossHp = clamp(bossHp - result.bossDamage, 0, bossHpMax);
       if (result.heal) playerHp = clamp(playerHp + result.heal, 0, playerHpMax);
       if (result.playerDamage) playerHp = clamp(playerHp - result.playerDamage, 0, playerHpMax);
+    }
+
+    function applyEnergy(kind, result) {
+      if (!result) return;
+      if (kind === 'hole') {
+        playerEnergy = clamp(playerEnergy - (result.bossDamage || 0), 0, playerEnergyMax);
+        bossEnergy = clamp(bossEnergy + bossEnergyMax / Chart.DEFEND_RECOVER_BARS, 0, bossEnergyMax);
+      } else if (kind === 'defend') {
+        bossEnergy = clamp(bossEnergy - (result.playerDamage || 0), 0, bossEnergyMax);
+        var acc = typeof result.accuracy === 'number' ? result.accuracy : 0;
+        playerEnergy = clamp(playerEnergy + (playerEnergyMax / Chart.DEFEND_RECOVER_BARS) * acc, 0, playerEnergyMax);
+      }
     }
 
     function finish(out, beat) {
@@ -299,6 +317,11 @@
         defendNotes: defendNotes,
         playerHp: playerHp,
         bossHp: bossHp,
+        playerEnergy: playerEnergy,
+        playerEnergyMax: playerEnergyMax,
+        bossEnergy: bossEnergy,
+        bossEnergyMax: bossEnergyMax,
+        longestPhraseBars: eMax.longestPhraseBars,
         playerHpMax: playerHpMax,
         bossHpMax: bossHpMax,
         roomKey: chart.roomKey,
@@ -318,6 +341,8 @@
       var t = (typeof startTimeMs === 'number') ? startTimeMs : nowFn();
       playerHp = playerHpMax;
       bossHp = bossHpMax;
+      playerEnergy = playerEnergyMax;
+      bossEnergy = bossEnergyMax;
       buffs = [];
       collected = [];
       resolvedBar = -1;
@@ -343,6 +368,8 @@
       outcome = null;
       playerHp = playerHpMax;
       bossHp = bossHpMax;
+      playerEnergy = playerEnergyMax;
+      bossEnergy = bossEnergyMax;
       buffs = [];
       collected = [];
       resolvedBar = -1;

@@ -50,8 +50,12 @@
 
       setText(title, state.title || '');
       if (title && state.title) title.setAttribute('aria-label', state.title);
-      var pPct = state.playerHpMax ? (100 * state.playerHp / state.playerHpMax) : 0;
-      var bPct = state.bossHpMax ? (100 * state.bossHp / state.bossHpMax) : 0;
+      var pNow = typeof state.playerEnergy === 'number' ? state.playerEnergy : state.playerHp;
+      var pMax = typeof state.playerEnergyMax === 'number' ? state.playerEnergyMax : state.playerHpMax;
+      var bNow = typeof state.bossEnergy === 'number' ? state.bossEnergy : state.bossHp;
+      var bMax = typeof state.bossEnergyMax === 'number' ? state.bossEnergyMax : state.bossHpMax;
+      var pPct = pMax ? (100 * pNow / pMax) : 0;
+      var bPct = bMax ? (100 * bNow / bMax) : 0;
       if (playerMask) {
         var pMiss = Math.max(0, Math.min(1, 1 - (pPct / 100)));
         playerMask.style.width = (pMiss * 70) + '%';
@@ -60,15 +64,15 @@
         var miss = Math.max(0, Math.min(1, 1 - (bPct / 100)));
         bossMask.style.width = (miss * 70) + '%';
       }
-      setText(playerVal, state.playerHp + ' / ' + state.playerHpMax);
-      if (playerVal) playerVal.setAttribute('aria-label', 'HP ' + state.playerHp + ' / ' + state.playerHpMax);
+      setText(playerVal, Math.round(pNow) + ' / ' + pMax);
+      if (playerVal) playerVal.setAttribute('aria-label', 'Energ\u00eda ' + Math.round(pNow) + ' / ' + pMax);
       if (state.free) {
         var dealt = (state.damage && state.damage.total) || 0;
         setText(bossVal, String(dealt));
         if (bossVal) bossVal.setAttribute('aria-label', 'Daño ' + dealt);
       } else {
-        setText(bossVal, state.bossHp + ' / ' + state.bossHpMax);
-        if (bossVal) bossVal.setAttribute('aria-label', 'HP ' + state.bossHp + ' / ' + state.bossHpMax);
+        setText(bossVal, Math.round(bNow) + ' / ' + bMax);
+        if (bossVal) bossVal.setAttribute('aria-label', 'Energ\u00eda ' + Math.round(bNow) + ' / ' + bMax);
       }
       if (bossMask && state.free) bossMask.style.width = '0%';
       var stats = el(ids.dmgStats || 'dmgStats');

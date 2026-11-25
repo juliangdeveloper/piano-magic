@@ -56,37 +56,61 @@
     return { from: from, to: to };
   }
 
+  function joinSections(sections) {
+    var out = [];
+    var i;
+    var seen = {};
+    if (!Array.isArray(sections)) return sections ? [sections] : out;
+    for (i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      if (!s || typeof s.from !== 'number' || typeof s.to !== 'number') continue;
+      var k = s.from + ':' + s.to;
+      if (seen[k]) continue;
+      seen[k] = true;
+      out.push({ from: s.from, to: s.to });
+    }
+    out.sort(function (a, z) { return a.from - z.from || a.to - z.to; });
+    return out;
+  }
+
   function loopNotes(raw, section) {
     var chart = Chart.parse(raw);
-    var sec = clampSection(chart.loop, section);
-    var bpb = Chart.beatsPerBar(chart);
+    var secs = Array.isArray(section) ? joinSections(section) : [clampSection(chart.loop, section)];
+    var bpb;
     var notes = [];
+    var beats = 0;
     var i;
     var j;
     var bar;
     var n;
-    for (i = sec.from; i < sec.to; i++) {
-      bar = chart.loop[i];
-      for (j = 0; j < bar.notes.length; j++) {
-        n = bar.notes[j];
-        if (n.tie) continue;
-        notes.push({
-          pitch: n.pitch,
-          hand: n.hand,
-          dur: n.hold || n.dur,
-          onset: (i - sec.from) * bpb + n.beat + Chart.BEAT_CENTER,
-          level: typeof n.level === 'number' ? n.level : Chart.DEFAULT_LEVEL,
-          staccato: !!n.staccato
-        });
+    if (!secs.length) secs = [clampSection(chart.loop, null)];
+    bpb = Chart.beatsPerBar(chart);
+    for (i = 0; i < secs.length; i++) {
+      var sec = clampSection(chart.loop, secs[i]);
+      for (var k = sec.from; k < sec.to; k++) {
+        bar = chart.loop[k];
+        for (j = 0; j < bar.notes.length; j++) {
+          n = bar.notes[j];
+          if (n.tie) continue;
+          notes.push({
+            pitch: n.pitch,
+            hand: n.hand,
+            dur: n.hold || n.dur,
+            onset: beats + (k - sec.from) * bpb + n.beat + Chart.BEAT_CENTER,
+            level: typeof n.level === 'number' ? n.level : Chart.DEFAULT_LEVEL,
+            staccato: !!n.staccato
+          });
+        }
       }
+      beats += (sec.to - sec.from) * bpb;
     }
     return {
       notes: notes,
-      beats: (sec.to - sec.from) * bpb,
+      beats: beats,
       bpb: bpb,
       bpm: chart.bpm,
-      from: sec.from,
-      to: sec.to
+      from: secs[0].from,
+      to: secs[secs.length - 1].to
     };
   }
 
@@ -116,17 +140,28 @@
 
   function practiceChart(raw, section, tempoId) {
     var chart = Chart.parse(raw);
-    var sec = clampSection(chart.loop, section);
     var tempo = tempoById(tempoId);
     var copy = JSON.parse(JSON.stringify(raw));
-    copy.loop = copy.loop.slice(sec.from, sec.to).map(function (bar, i) {
-      bar.i = i;
+    var secs = Array.isArray(section) ? joinSections(section) : [clampSection(chart.loop, section)];
+    var sliced = [];
+    var i;
+    if (!secs.length) secs = [clampSection(chart.loop, null)];
+    for (i = 0; i < secs.length; i++) {
+      var sec = clampSection(chart.loop, secs[i]);
+      sliced = sliced.concat(copy.loop.slice(sec.from, sec.to));
+    }
+    copy.loop = sliced.map(function (bar, idx) {
+      bar.i = idx;
       return bar;
     });
     if (!copy.loop.length) copy.loop = [{ i: 0, kind: 'hole', notes: [] }];
     copy.bpm = bpmFor(chart.bpm, tempo.factor);
     copy.setup = { listenOnly: true, bars: 0 };
     return copy;
+  }
+
+  function practiceSections(raw, sections, tempoId) {
+    return practiceChart(raw, sections, tempoId);
   }
 
   return {
@@ -136,6 +171,8 @@
     sections: sections,
     loopNotes: loopNotes,
     sheetModel: sheetModel,
-    practiceChart: practiceChart
+    practiceChart: practiceChart,
+    practiceSections: practiceSections,
+    joinSections: joinSections
   };
 });

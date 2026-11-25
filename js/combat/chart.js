@@ -95,6 +95,8 @@
   }
 
   var PLAYER_HP = 1000;
+  var PLAYER_ENERGY_BARS = 1;
+  var DEFEND_RECOVER_BARS = 4;
   var TIE_EPS = 1e-6;
 
   function tieSource(loop, b, note, bpb) {
@@ -391,6 +393,38 @@
     return out;
   }
 
+  function phraseBars(loop) {
+    var out = [];
+    var start = 0;
+    var i;
+    if (!loop || !loop.length) return out;
+    for (i = 1; i < loop.length; i++) {
+      if (loop[i] && loop[i].kind === 'hole') {
+        out.push(i - start);
+        start = i;
+      }
+    }
+    out.push(loop.length - start);
+    return out;
+  }
+
+  function longestPhraseBars(loop) {
+    var bars = phraseBars(loop);
+    var best = 0;
+    for (var i = 0; i < bars.length; i++) if (bars[i] > best) best = bars[i];
+    return best;
+  }
+
+  function energyMax(chart) {
+    var bpb = beatsPerBar(chart);
+    var longest = longestPhraseBars(chart.loop);
+    return {
+      player: bpb * PLAYER_ENERGY_BARS,
+      boss: longest * bpb,
+      longestPhraseBars: longest
+    };
+  }
+
   var BEAT_CENTER = 0.5;
 
   function hitOnset(beat) {
@@ -405,6 +439,11 @@
 
   return {
     PLAYER_HP: PLAYER_HP,
+    PLAYER_ENERGY_BARS: PLAYER_ENERGY_BARS,
+    DEFEND_RECOVER_BARS: DEFEND_RECOVER_BARS,
+    phraseBars: phraseBars,
+    longestPhraseBars: longestPhraseBars,
+    energyMax: energyMax,
     DYNAMIC_LEVEL: DYNAMIC_LEVEL,
     DEFAULT_LEVEL: DEFAULT_LEVEL,
     parse: parse,

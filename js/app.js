@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.61';
+  var VERSION = '0.1.62';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
@@ -13,6 +13,7 @@
   var KEYBOARD_ALWAYS = true;
   var DETECT_FADE_MS = 280;
   var VOL_PIANO_KEY = 'pmVolPiano';
+  var VOL_NPC_KEY = 'pmVolNpc';
   var VOL_METRO_KEY = 'pmVolMetro';
   var VOL_DEFAULT = 1;
   var MASTER_GAIN = 0.92;
@@ -28,6 +29,7 @@
   var sheetFromPause = false;
   var gateOpen = false;
   var sheetSection = 0;
+  var sheetSelected = { 0: true };
   var sheetTempoId = 'real';
   var sheetPlaying = false;
   var sheetRaf = 0;
@@ -46,8 +48,10 @@
   var audioCtx = null;
   var masterGain = null;
   var pianoBus = null;
+  var npcBus = null;
   var metroBus = null;
   var volPiano = VOL_DEFAULT;
+  var volNpc = VOL_DEFAULT;
   var volMetro = VOL_DEFAULT;
   var soundPanelOpen = false;
   var analyser = null;
@@ -372,6 +376,7 @@
 
   function applyVolumes() {
     if (pianoBus) pianoBus.gain.value = volPiano;
+    if (npcBus) npcBus.gain.value = volNpc;
     if (metroBus) metroBus.gain.value = volMetro;
   }
 
@@ -380,6 +385,9 @@
     if (kind === 'metro') {
       volMetro = v;
       writeVol(VOL_METRO_KEY, v);
+    } else if (kind === 'npc') {
+      volNpc = v;
+      writeVol(VOL_NPC_KEY, v);
     } else {
       volPiano = v;
       writeVol(VOL_PIANO_KEY, v);
@@ -390,8 +398,10 @@
 
   function syncVolumeUi() {
     var p = $('volPiano');
+    var n = $('volNpc');
     var m = $('volMetro');
     if (p) p.value = String(Math.round(volPiano * VOL_SLIDER_MAX));
+    if (n) n.value = String(Math.round(volNpc * VOL_SLIDER_MAX));
     if (m) m.value = String(Math.round(volMetro * VOL_SLIDER_MAX));
   }
 
@@ -466,6 +476,9 @@
       pianoBus = audioCtx.createGain();
       pianoBus.gain.value = volPiano;
       pianoBus.connect(masterGain);
+      npcBus = audioCtx.createGain();
+      npcBus.gain.value = volNpc;
+      npcBus.connect(masterGain);
       metroBus = audioCtx.createGain();
       metroBus.gain.value = volMetro;
       metroBus.connect(masterGain);
@@ -610,7 +623,7 @@
     amp.gain.linearRampToValueAtTime(peak, t0 + 0.005);
     amp.gain.linearRampToValueAtTime(peak * 0.5, t0 + Math.max(0.04, dur * 0.4));
     amp.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-    var bus = opts.role === 'metro' ? metroBus : pianoBus;
+    var bus = opts.role === 'metro' ? metroBus : (opts.role === 'boss' ? npcBus : pianoBus);
     amp.connect(bus || masterGain || ctx.destination);
     var osc = ctx.createOscillator();
     osc.type = type;
@@ -1957,6 +1970,23 @@
     else if (director && hud) hud.render(director.snapshot(paused ? clockMs() : 0));
   }
 
+  function selectedSections() {
+    if (!scoreChart || !window.Score || !window.Chart) return [];
+    var list = Score.sections(Chart.parse(scoreChart).loop);
+    var out = [];
+    var i;
+    if (!list.length) return out;
+    for (i = 0; i < list.length; i++) {
+      if (sheetSelected[i]) out.push(list[i]);
+    }
+    if (!out.length) {
+      if (sheetSection >= list.length) sheetSection = 0;
+      sheetSelected[sheetSection] = true;
+      out.push(list[sheetSection]);
+    }
+    return out;
+  }
+
   function paintSheetControls() {
     if (!scoreChart || !window.Score || !window.Chart) return;
     var parsed = Chart.parse(scoreChart);
@@ -1975,7 +2005,8 @@
         b.type = 'button';
         b.className = 'sheet-sec';
         b.setAttribute('role', 'radio');
-        b.setAttribute('aria-checked', i === sheetSection ? 'true' : 'false');
+        b.setAttribute('aria-checked', sheetSelected[i] ? 'true' : 'false');
+        b.classList.toggle('on', !!sheetSelected[i]);
         b.setAttribute('aria-label', 'Sección ' + (i + 1) + ', compases ' + (sec.from + 1) + ' a ' + sec.to);
         b.textContent = (sec.from + 1) + '–' + sec.to;
         b.addEventListener('click', sectionClick(i));
@@ -2017,7 +2048,8 @@
     var h;
     if (!list.length) return;
     if (sheetSection >= list.length) sheetSection = 0;
-    section = list[sheetSection];
+    var picked = selectedSections();
+    section = { from: picked[0].from, to: picked[picked.length - 1].to };
     if (sheetPlaying && sheetClock) beat = section.from * sheetClock.bpb + sheetClock.pos;
     model = Score.sheetModel(scoreChart, section, beat);
     canvas = $('sheetStaff');
@@ -2073,7 +2105,15 @@
     if (!scoreChart || !window.Score || !window.Chart) return;
     list = Score.sections(Chart.parse(scoreChart).loop);
     if (index < 0 || index >= list.length) return;
-    changed = index !== sheetSection;
+    var count = 0;
+    var k;
+    for (k in sheetSelected) {
+      if (Object.prototype.hasOwnProperty.call(sheetSelected, k) && sheetSelected[k]) count += 1;
+    }
+    if (sheetSelected[index] && count <= 1) return;
+    if (sheetSelected[index]) delete sheetSelected[index];
+    else sheetSelected[index] = true;
+    changed = true;
     sheetSection = index;
     paintSheetControls();
     if (sheetPlaying && changed) startSheetPlayback();
@@ -2240,8 +2280,9 @@
     list = Score.sections(parsed.loop);
     if (!list.length) return;
     if (sheetSection < 0 || sheetSection >= list.length) sheetSection = 0;
-    section = list[sheetSection];
-    pack = Score.loopNotes(scoreChart, section);
+    var picked = selectedSections();
+    section = { from: picked[0].from, to: picked[picked.length - 1].to };
+    pack = Score.loopNotes(scoreChart, picked);
     if (!(pack.beats > 0)) return;
     tempo = Score.tempoById(sheetTempoId);
     bpm = Score.bpmFor(parsed.bpm, tempo.factor);
@@ -2298,6 +2339,13 @@
     if (bar < 0) return;
     idx = sectionIndexAt(bar);
     if (idx < 0 || idx === sheetSection) return;
+    if (sheetSelected[idx]) {
+      sheetSection = idx;
+      paintSheetControls();
+      paintSheet();
+      revealSection();
+      return;
+    }
     chooseSection(idx);
   }
 
@@ -2337,6 +2385,7 @@
       return;
     }
     sheetSection = 0;
+    sheetSelected = { 0: true };
     stopSheetPlayback();
     closeSheet();
     selectRival(id).then(function () {
@@ -2357,7 +2406,7 @@
     list = Score.sections(parsed.loop);
     if (!list.length) return;
     if (sheetSection < 0 || sheetSection >= list.length) sheetSection = 0;
-    sliced = Score.practiceChart(scoreChart, list[sheetSection], sheetTempoId);
+    sliced = Score.practiceChart(scoreChart, selectedSections(), sheetTempoId);
     opt = Rivals.find(rivalId);
     stopSheetPlayback();
     releaseHeld();
@@ -2452,6 +2501,7 @@
       samplePeak: samplePeak,
       setVolume: setVolume,
       pianoGain: function () { return pianoBus ? pianoBus.gain.value : volPiano; },
+      npcGain: function () { return npcBus ? npcBus.gain.value : volNpc; },
       metroGain: function () { return metroBus ? metroBus.gain.value : volMetro; },
       masterGain: function () { return masterGain ? masterGain.gain.value : MASTER_GAIN; },
       openSheet: function (fromPause) { openSheet(!!fromPause); },
@@ -2506,6 +2556,7 @@
       });
     } catch (ePh) {}
     volPiano = readVol(VOL_PIANO_KEY);
+    volNpc = readVol(VOL_NPC_KEY);
     volMetro = readVol(VOL_METRO_KEY);
     syncVolumeUi();
     setSoundPanel(false);
@@ -2578,6 +2629,12 @@
     if ($('volPiano')) {
       $('volPiano').addEventListener('input', function () {
         setVolume('piano', Number($('volPiano').value) / VOL_SLIDER_MAX);
+        primeAudio();
+      });
+    }
+    if ($('volNpc')) {
+      $('volNpc').addEventListener('input', function () {
+        setVolume('npc', Number($('volNpc').value) / VOL_SLIDER_MAX);
         primeAudio();
       });
     }

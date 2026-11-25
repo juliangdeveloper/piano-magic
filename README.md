@@ -16,9 +16,10 @@
 - Los números junto a las notas indican el dedo (1–5): arriba para la mano derecha, abajo para la izquierda.
 - Las notas ligadas se tocan una sola vez.
 - El jefe toca con las dinámicas de la partitura: *p*, *f*, reguladores y staccato cambian su volumen y su duración.
-- Para practicar, abre la partitura del rival (o pausa el combate), elige una sección y escúchala en loop a tempo real, ×0.75 o ×0.5. **Practicar** inicia un combate con ese loop, y no cuenta como pelea real.
+- Para practicar, abre la partitura del rival (o pausa el combate), elige una o varias secciones y escúchalas en loop a tempo real, ×0.75 o ×0.5. **Practicar** inicia un combate con ese loop, y no cuenta como pelea real. Cada sección suena entera, sin cortarse.
 - La primera vez hay un tutorial; **?** lo vuelve a abrir y **P** pausa.
-- La nota musical abre el volumen de **Piano** (teclas y partitura) y **Metrónomo**; se guarda en el dispositivo.
+- La nota musical abre el volumen de **Piano** (tu teclado), **Rival** (el jefe y la partitura) y **Metrónomo**; se guarda en el dispositivo.
+- La energía del jugador dura un compás al atacar y se recupera en cuatro compases al defender; la del rival dura su frase más larga.
 - En la app para iPhone y iPad, conecta un teclado MIDI Bluetooth desde el panel de sonido (Ajustes).
 
 ## Stack
