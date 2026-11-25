@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.59';
+  var VERSION = '0.1.60';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
@@ -2395,13 +2395,11 @@
       pause: pauseFight,
       resume: resumeFight,
       togglePause: togglePause,
-      isPaused: function () { return paused; },
       noteOn: noteOn,
       noteOff: noteOff,
       tutorial: tutorial,
       setKeyboard: function (on) { applyKeyboard(!!on, true); },
       keyboardOn: function () { return !$('keys').hidden; },
-      bossFrame: function () { return bossSprite && bossSprite.current ? bossSprite.current() : null; },
       setMic: function (on) { if (on) enableMic(); else disableMic(); },
       micOn: function () { return !!micStream; },
       audioSessionType: function () {
@@ -2414,7 +2412,6 @@
       bossTones: function () { return bossTones; },
       samplePeak: samplePeak,
       setVolume: setVolume,
-      getVolumes: function () { return { piano: volPiano, metro: volMetro }; },
       pianoGain: function () { return pianoBus ? pianoBus.gain.value : volPiano; },
       metroGain: function () { return metroBus ? metroBus.gain.value : volMetro; },
       masterGain: function () { return masterGain ? masterGain.gain.value : MASTER_GAIN; },

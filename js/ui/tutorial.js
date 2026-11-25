@@ -192,7 +192,6 @@
       next: next,
       skip: skip,
       isOpen: function () { return open; },
-      stepIndex: function () { return index; },
       steps: STEPS
     };
   }
