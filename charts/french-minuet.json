@@ -1,0 +1,411 @@
+{
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
+  "id": "french-minuet",
+  "title": "French Minuet",
+  "tune": "",
+  "bpm": 100,
+  "timeSig": [
+    4,
+    4
+  ],
+  "roomKey": "C",
+  "roomScale": [
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "A",
+    "B"
+  ],
+  "loop": [
+    {
+      "i": 0,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 1,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R",
+          "finger": 5
+        },
+        {
+          "pitch": "C5",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 2,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E5",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R",
+          "finger": 4
+        },
+        {
+          "pitch": "D5",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C5",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 3,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 4,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 5,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C5",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R",
+          "finger": 3
+        },
+        {
+          "pitch": "B4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 6,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "A4",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "E4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "D4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "C4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R",
+          "finger": 1
+        }
+      ]
+    },
+    {
+      "i": 7,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 8,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 9,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E4",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 10,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 11,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 12,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R",
+          "finger": 4
+        },
+        {
+          "pitch": "C5",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 13,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C5",
+          "beat": 0,
+          "dur": 0.5,
+          "hand": "R",
+          "finger": 3
+        },
+        {
+          "pitch": "B4",
+          "beat": 0.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 1,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G4",
+          "beat": 1.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "F4",
+          "beat": 2,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "A4",
+          "beat": 2.5,
+          "dur": 0.5,
+          "hand": "R"
+        },
+        {
+          "pitch": "G2",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L",
+          "finger": 3
+        },
+        {
+          "pitch": "C3",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L",
+          "finger": 1
+        }
+      ]
+    },
+    {
+      "i": 14,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 15,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 16,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C5",
+          "beat": 0,
+          "dur": 3,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 17,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 18,
+      "kind": "hole",
+      "notes": []
+    }
+  ]
+}

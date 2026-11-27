@@ -1,0 +1,265 @@
+{
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
+  "id": "greensleeves",
+  "title": "Greensleeves",
+  "tune": "",
+  "bpm": 100,
+  "timeSig": [
+    4,
+    4
+  ],
+  "roomKey": "C",
+  "roomScale": [
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "A",
+    "B"
+  ],
+  "loop": [
+    {
+      "i": 0,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 1,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "A2",
+          "beat": 0,
+          "dur": 1,
+          "hand": "L",
+          "finger": 2
+        }
+      ]
+    },
+    {
+      "i": 2,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C5",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 3,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E5",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "F5",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R",
+          "finger": 4
+        },
+        {
+          "pitch": "E5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R",
+          "finger": 3
+        }
+      ]
+    },
+    {
+      "i": 4,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "D3",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L",
+          "finger": 1
+        }
+      ]
+    },
+    {
+      "i": 5,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E3",
+          "beat": 0,
+          "dur": 1,
+          "hand": "L"
+        },
+        {
+          "pitch": "F3",
+          "beat": 1,
+          "dur": 1,
+          "hand": "L"
+        },
+        {
+          "pitch": "G3",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L"
+        }
+      ]
+    },
+    {
+      "i": 6,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 7,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 8,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "A4",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 9,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E3",
+          "beat": 0,
+          "dur": 1,
+          "hand": "L",
+          "finger": 2
+        },
+        {
+          "pitch": "F#3",
+          "beat": 1,
+          "dur": 1,
+          "hand": "L"
+        },
+        {
+          "pitch": "G3",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L"
+        }
+      ]
+    },
+    {
+      "i": 10,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "A3",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "G#3",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L",
+          "finger": 3
+        }
+      ]
+    },
+    {
+      "i": 11,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "A2",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L",
+          "finger": 5
+        },
+        {
+          "pitch": "B2",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L"
+        }
+      ]
+    },
+    {
+      "i": 12,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 13,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 14,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "A4",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "A2",
+          "beat": 0,
+          "dur": 2,
+          "hand": "L"
+        },
+        {
+          "pitch": "B2",
+          "beat": 2,
+          "dur": 1,
+          "hand": "L"
+        }
+      ]
+    },
+    {
+      "i": 15,
+      "kind": "defend",
+      "notes": []
+    }
+  ]
+}

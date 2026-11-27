@@ -1,0 +1,215 @@
+{
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
+  "id": "clock-tower-bells",
+  "title": "Clock Tower Bells",
+  "tune": "",
+  "bpm": 100,
+  "timeSig": [
+    4,
+    4
+  ],
+  "roomKey": "C",
+  "roomScale": [
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "A",
+    "B"
+  ],
+  "loop": [
+    {
+      "i": 0,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 1,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R",
+          "finger": 3
+        },
+        {
+          "pitch": "C4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R",
+          "finger": 1
+        },
+        {
+          "pitch": "D4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R",
+          "finger": 2
+        }
+      ]
+    },
+    {
+      "i": 2,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 3,
+          "hand": "L",
+          "finger": 3
+        }
+      ]
+    },
+    {
+      "i": 3,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 1,
+          "hand": "L",
+          "finger": 3
+        },
+        {
+          "pitch": "D4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R",
+          "finger": 2
+        },
+        {
+          "pitch": "E4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R",
+          "finger": 3
+        }
+      ]
+    },
+    {
+      "i": 4,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C4",
+          "beat": 0,
+          "dur": 3,
+          "hand": "R",
+          "finger": 1
+        }
+      ]
+    },
+    {
+      "i": 5,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 6,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 7,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "E4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R",
+          "finger": 3
+        },
+        {
+          "pitch": "D4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R",
+          "finger": 2
+        },
+        {
+          "pitch": "C4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R",
+          "finger": 1
+        }
+      ]
+    },
+    {
+      "i": 8,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 3,
+          "hand": "L",
+          "finger": 3
+        }
+      ]
+    },
+    {
+      "i": 9,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G3",
+          "beat": 0,
+          "dur": 1,
+          "hand": "L",
+          "finger": 3
+        },
+        {
+          "pitch": "D4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R",
+          "finger": 2
+        },
+        {
+          "pitch": "E4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R",
+          "finger": 3
+        }
+      ]
+    },
+    {
+      "i": 10,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "C4",
+          "beat": 0,
+          "dur": 3,
+          "hand": "R",
+          "finger": 1
+        }
+      ]
+    },
+    {
+      "i": 11,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 12,
+      "kind": "hole",
+      "notes": []
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "setup": {
+    "listenOnly": true,
+    "bars": 1
+  },
+  "hp": {
+    "player": 15,
+    "boss": 20
+  },
+  "id": "for-hes-a-jolly-good-fellow",
+  "title": "For Hes a Jolly Good Fellow",
+  "tune": "",
+  "bpm": 100,
+  "timeSig": [
+    4,
+    4
+  ],
+  "roomKey": "C",
+  "roomScale": [
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "A",
+    "B"
+  ],
+  "loop": [
+    {
+      "i": 0,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 1,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 2,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "G4",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 3,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "B4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 4,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 3,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 5,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "B4",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 6,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 7,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 8,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 9,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "B4",
+          "beat": 0,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 1,
+          "dur": 1,
+          "hand": "R"
+        },
+        {
+          "pitch": "B4",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 10,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "D5",
+          "beat": 0,
+          "dur": 3,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 11,
+      "kind": "defend",
+      "notes": [
+        {
+          "pitch": "B4",
+          "beat": 0,
+          "dur": 2,
+          "hand": "R"
+        },
+        {
+          "pitch": "D5",
+          "beat": 2,
+          "dur": 1,
+          "hand": "R"
+        }
+      ]
+    },
+    {
+      "i": 12,
+      "kind": "hole",
+      "notes": []
+    },
+    {
+      "i": 13,
+      "kind": "hole",
+      "notes": []
+    }
+  ]
+}
