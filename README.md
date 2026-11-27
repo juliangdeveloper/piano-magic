@@ -4,12 +4,12 @@
 
 **[▶ Jugar ahora](https://juliangdeveloper.github.io/piano-magic/)** · gratis, en el navegador, sin instalar
 
-<img src="assets/screenshot.png" alt="Partitura de Jingle Bells en piano-magic, en gran pentagrama con las secciones de práctica" width="720">
+<img src="assets/screenshot.png" alt="Pantalla de combate de piano-magic: partitura en curso con cursor, barras de HP y maná, BPM y teclado" width="720">
 
 ## Cómo se juega
-- Elige un rival (*Parade Feather*; *The Veil Boat*; *Tower Chime*; *New World Largo*; *Camptown Races*; *Eine Kleine Nachtmusik*; *Jingle Bells*; *Surprise Symphony*; *Morning*; *Simple Gifts*) o el **Modo libre**.
+- Elige un rival en el modal: una tarjeta por canción, con su retrato, el tempo, la escala, la dificultad y tus victorias contra ese rival (y el **Modo libre**, sin rival).
 - El combate alterna compases de **Ataque** y **Defiende** sobre una partitura que avanza al ritmo del metrónomo.
-- En **Ataque** improvisas: escalas mayores atacan, menores te mejoran y pentatónicas te curan.
+- En **Ataque** improvisas: cualquier nota de la escala ataca, y la tríada mayor pega doble.
 - En **Defiende** copias las dos manos: la derecha en clave de sol y la izquierda en clave de fa. Un par a la vez es perfecto si suenan las dos notas, y parcial si solo entra una.
 - Toca con el teclado QWERTY (baja hasta el Do3: `Q M , .`), el teclado en pantalla (Do2 a Do7, 61 teclas), un teclado MIDI o el micrófono. El micrófono cubre esas 61 teclas. Cada mano tiene su color. El juego sigue sonando si enciendes el micrófono.
 - El teclado en pantalla siempre está a la vista: la nota del jefe se enciende en morado y la tuya en verde, al mismo tiempo que el indicador pasa por la nota y suena.

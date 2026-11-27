@@ -18,8 +18,6 @@
     lose: 'Derrota'
   };
 
-  var CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M6 14.5 12 7l6 7.5"/></svg>';
-
   function el(id) {
     return (typeof document === 'undefined') ? null : document.getElementById(id);
   }
@@ -34,47 +32,54 @@
     function render(state) {
       if (!state) return;
       var title = el(ids.songTitle || 'songTitle');
-      var playerMask = el(ids.playerHpMask || 'playerHpMask');
-      var bossMask = el(ids.bossHpMask || 'bossHpMask');
-      var playerVal = el(ids.playerHpVal || 'playerHpVal');
-      var bossVal = el(ids.bossHpVal || 'bossHpVal');
+      var playerHpMask = el(ids.playerHpMask || 'playerHpMask');
+      var playerHpVal = el(ids.playerHpVal || 'playerHpVal');
+      var playerManaMask = el(ids.playerManaMask || 'playerManaMask');
+      var playerManaVal = el(ids.playerManaVal || 'playerManaVal');
+      var bossHpMask = el(ids.bossHpMask || 'bossHpMask');
+      var bossHpVal = el(ids.bossHpVal || 'bossHpVal');
+      var bossManaMask = el(ids.bossManaMask || 'bossManaMask');
+      var bossManaVal = el(ids.bossManaVal || 'bossManaVal');
       var roomName = el(ids.roomName || 'roomName');
       var roomCard = el(ids.roomCard || 'roomCard');
       var roomKey = el(ids.roomKeyTag || 'roomKeyTag');
-      var roomIcon = el(ids.roomIcon || 'roomIcon');
-      var roomEmoji = el(ids.roomEmoji || 'roomEmoji');
       var bpm = el(ids.bpmVal || 'bpmVal');
       var orb = el(ids.bpmOrb || 'bpmOrb');
       var beats = el(ids.beats || 'beats');
-      var buffs = el(ids.buffs || 'buffs');
 
       setText(title, state.title || '');
       if (title && state.title) title.setAttribute('aria-label', state.title);
-      var pNow = typeof state.playerEnergy === 'number' ? state.playerEnergy : state.playerHp;
-      var pMax = typeof state.playerEnergyMax === 'number' ? state.playerEnergyMax : state.playerHpMax;
-      var bNow = typeof state.bossEnergy === 'number' ? state.bossEnergy : state.bossHp;
-      var bMax = typeof state.bossEnergyMax === 'number' ? state.bossEnergyMax : state.bossHpMax;
-      var pPct = pMax ? (100 * pNow / pMax) : 0;
-      var bPct = bMax ? (100 * bNow / bMax) : 0;
-      if (playerMask) {
-        var pMiss = Math.max(0, Math.min(1, 1 - (pPct / 100)));
-        playerMask.style.width = (pMiss * 70) + '%';
+      var pHp = typeof state.playerHp === 'number' ? state.playerHp : 0;
+      var pHpMax = state.playerHpMax;
+      var pMana = typeof state.playerEnergy === 'number' ? state.playerEnergy : 0;
+      var pManaMax = typeof state.playerEnergyMax === 'number' ? state.playerEnergyMax : 0;
+      var bHp = typeof state.bossHp === 'number' ? state.bossHp : 0;
+      var bHpMax = state.bossHpMax;
+      var bMana = typeof state.bossEnergy === 'number' ? state.bossEnergy : 0;
+      var bManaMax = typeof state.bossEnergyMax === 'number' ? state.bossEnergyMax : 0;
+
+      function paint(mask, val, now, max, label) {
+        var pct = max ? (100 * now / max) : 0;
+        if (mask) {
+          var miss = Math.max(0, Math.min(1, 1 - (pct / 100)));
+          mask.style.width = (miss * 70) + '%';
+        }
+        setText(val, Math.round(now) + ' / ' + max);
+        if (val) val.setAttribute('aria-label', label + ' ' + Math.round(now) + ' / ' + max);
       }
-      if (bossMask) {
-        var miss = Math.max(0, Math.min(1, 1 - (bPct / 100)));
-        bossMask.style.width = (miss * 70) + '%';
-      }
-      setText(playerVal, Math.round(pNow) + ' / ' + pMax);
-      if (playerVal) playerVal.setAttribute('aria-label', 'Energ\u00eda ' + Math.round(pNow) + ' / ' + pMax);
+
+      paint(playerHpMask, playerHpVal, pHp, pHpMax, 'HP');
+      paint(playerManaMask, playerManaVal, pMana, pManaMax, 'Mana');
       if (state.free) {
+        paint(bossHpMask, bossHpVal, 0, 1, 'HP');
+        if (bossHpMask) bossHpMask.style.width = '0%';
         var dealt = (state.damage && state.damage.total) || 0;
-        setText(bossVal, String(dealt));
-        if (bossVal) bossVal.setAttribute('aria-label', 'Daño ' + dealt);
+        setText(bossHpVal, String(dealt));
+        if (bossHpVal) bossHpVal.setAttribute('aria-label', 'Daño ' + dealt);
       } else {
-        setText(bossVal, Math.round(bNow) + ' / ' + bMax);
-        if (bossVal) bossVal.setAttribute('aria-label', 'Energ\u00eda ' + Math.round(bNow) + ' / ' + bMax);
+        paint(bossHpMask, bossHpVal, bHp, bHpMax, 'HP');
       }
-      if (bossMask && state.free) bossMask.style.width = '0%';
+      paint(bossManaMask, bossManaVal, bMana, bManaMax, 'Mana');
       var stats = el(ids.dmgStats || 'dmgStats');
       if (stats) {
         stats.hidden = !state.free;
@@ -90,12 +95,6 @@
       setText(roomName, re.label || '');
       if (roomCard) roomCard.setAttribute('aria-label', re.label || '');
       setText(roomKey, state.roomKey || 'C');
-      var agua = (re.id || 'agua') === 'agua';
-      if (roomIcon) roomIcon.hidden = !agua;
-      if (roomEmoji) {
-        roomEmoji.hidden = agua;
-        if (!agua) roomEmoji.textContent = re.icon || '';
-      }
 
       setText(bpm, String(state.bpm));
       if (orb) {
@@ -120,26 +119,6 @@
           if (state.running && i === beatIn) dots[i].className = pulse ? 'on pulse' : 'on';
         }
       }
-
-      if (buffs) {
-        var list = state.buffs || [];
-        var sig = list.map(function (b) {
-          return (b.id || '') + ':' + b.remaining;
-        }).join('|');
-        if (buffs.getAttribute('data-sig') !== sig) {
-          buffs.setAttribute('data-sig', sig);
-          buffs.textContent = '';
-          for (var bi = 0; bi < list.length; bi++) {
-            var b = list[bi];
-            var chip = document.createElement('div');
-            chip.className = 'chip live minor';
-            chip.setAttribute('aria-label', (b.label || 'Mejora') + ' ' + b.remaining);
-            chip.innerHTML = CHEVRON + '<span class="n">' + b.remaining + '</span>';
-            buffs.appendChild(chip);
-          }
-        }
-      }
-
     }
 
     return { render: render, PHASE_LABEL: PHASE_LABEL };

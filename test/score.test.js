@@ -119,7 +119,7 @@ test('S5: la partitura dibuja el chart completo y el compás cae en su sección'
     style: {},
     getContext: function () { return ctx; }
   };
-  const tape = Tape.create(canvas, { version: '0.1.63' });
+  const tape = Tape.create(canvas, { version: '0.1.64' });
   tape.renderSheet(model);
   assert.ok(calls.includes('fillRect'));
   const early = tape.barIndexAt(70);
@@ -129,29 +129,28 @@ test('S5: la partitura dibuja el chart completo y el compás cae en su sección'
   assert.strictEqual(tape.barIndexAt(2), -1);
 });
 
-test('S6: pausa abre la partitura y el toque del rival tiene dos salidas', () => {
+test('S6: pausa abre la partitura y el modal tiene dos salidas', () => {
   const app = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(app, /openSheet\(true\)/);
   assert.match(app, /function pauseFight\(\) \{[\s\S]*openSheet\(true\)/);
-  assert.match(app, /function onRivalTap\(id\)/);
+  assert.match(app, /function playCard\(id\)/);
+  assert.match(app, /function practiceCard\(id\)/);
   assert.match(app, /startRealFight/);
   assert.match(app, /startPractice/);
   assert.match(app, /practiceMode/);
   assert.match(app, /Score\.practiceChart\(scoreChart/);
   assert.match(app, /Score\.sections\(/);
   assert.match(app, /!practiceMode/);
-  assert.match(html, /id="rivalGate"/);
-  assert.match(html, /id="btnGateScore"/);
-  assert.match(html, /id="btnGateFight"/);
-  assert.match(html, /Ver partitura/);
-  assert.match(html, /Jugar/);
+  assert.match(html, /id="rivalModal"/);
+  assert.match(html, /id="rivalList"/);
+  assert.match(app, /'Jugar'/);
+  assert.match(app, /'Practicar'/);
   assert.match(html, /id="sheet"/);
   assert.match(html, /id="sheetStaff"/);
   assert.match(html, /id="btnPractice"/);
-  assert.match(html, /Practicar/);
   assert.match(html, /id="btnSheetLoop"/);
-  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.63/);
+  assert.match(html, /js\/combat\/score\.js\?v=0\.1\.64/);
   assert.match(app, /duringSheet/);
 });
 
@@ -202,7 +201,7 @@ test('S7: cada mano queda en su pentagrama y solo las barras de compás cruzan e
   for (const id of IDS) {
     const model = Score.sheetModel(raw(id), null, null);
     const canvas = sheetCanvas(960, 240);
-    Tape.create(canvas, { version: '0.1.63' }).renderSheet(model);
+    Tape.create(canvas, { version: '0.1.64' }).renderSheet(model);
     const staff = canvas.segs.filter((s) => Math.abs(s.y1 - s.y0) < 0.6 && Math.abs(s.x1 - s.x0) > canvas.clientWidth * 0.7);
     const ys = staff.map((s) => s.y0).sort((a, b) => a - b);
     assert.strictEqual(ys.length, 10, id);

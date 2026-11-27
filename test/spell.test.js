@@ -131,23 +131,21 @@ test('S10: agujero silencio = idle sin daño; tocar no pune al jugador', () => {
   assert.strictEqual(one.bossDamage, 2, 'v0.1.11: una nota de la escala = ataque base');
 });
 
-test('S11: hole pentatónica cura (no daña jefe, no daña jugador)', () => {
+test('S11: hole pentatónica = ataque (no cura)', () => {
   const r = Spell.resolveHole(played(['C4', 'D4', 'E4', 'G4', 'A4']), 'C');
   assert.strictEqual(r.ok, true);
   assert.strictEqual(r.kind, 'hole-spell');
-  assert.strictEqual(r.spell.action, 'heal');
-  assert.strictEqual(r.heal, Spell.BASE_HEAL);
-  assert.strictEqual(r.bossDamage, 0);
+  assert.strictEqual(r.spell.action, 'attack');
+  assert.strictEqual(r.bossDamage, 4);
+  assert.strictEqual(r.heal, 0);
   assert.strictEqual(r.playerDamage, 0);
 });
 
-test('S12: hole menor C Eb G → buff ATQ+, 0 daño jugador', () => {
+test('S12: hole menor C Eb G → ataque base (la Eb sale de la escala), 0 daño jugador', () => {
   const r = Spell.resolveHole(played(['C4', 'Eb4', 'G4']), 'C');
-  assert.strictEqual(r.spell.action, 'buff');
-  assert.ok(r.buff);
-  assert.strictEqual(r.buff.id, 'atk');
-  assert.strictEqual(r.buff.remaining, 2);
-  assert.strictEqual(r.bossDamage, 0);
+  assert.strictEqual(r.spell.action, 'attack');
+  assert.strictEqual(r.bossDamage, 2);
+  assert.strictEqual(r.buff, null);
   assert.strictEqual(r.playerDamage, 0);
 });
 
@@ -158,7 +156,7 @@ test('S13: setup no hace daño', () => {
   assert.strictEqual(r.bossDamage, 0);
 });
 
-test('S14: hole mayor C D E en C → 2 daño jefe (2×1.0); buff ATQ+ lo sube a 3', () => {
+test('S14: hole mayor C D E en C → 2 daño jefe (2×1.0); sin multiplicadores de buff', () => {
   const r = Spell.resolveHole(played(['C4', 'D4', 'E4']), 'C');
   assert.strictEqual(r.kind, 'hole-spell');
   assert.strictEqual(r.spell.action, 'attack');
@@ -170,7 +168,7 @@ test('S14: hole mayor C D E en C → 2 daño jefe (2×1.0); buff ATQ+ lo sube a 
     'C',
     { buffs: [{ id: 'atk', amount: 0.5, remaining: 2 }] }
   );
-  assert.strictEqual(buffed.bossDamage, 3);
+  assert.strictEqual(buffed.bossDamage, 2);
 });
 
 test('S15: defend C D E E (gesto mayor) no aplica SpellEngine: 0 jefe / 0 buff / 0 cura', () => {

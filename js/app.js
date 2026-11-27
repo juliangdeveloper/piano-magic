@@ -1,11 +1,12 @@
 'use strict';
 
 (function () {
-  var VERSION = '0.1.63';
+  var VERSION = '0.1.64';
   var ENGINE_ROOT = 'https://juliangdeveloper.github.io/piano-transcribe/engine/v1/';
   var ENGINE_VERSION = '1.14.2';
   var ENGINE_FAIL = 'No se pudo cargar el motor de notas. El teclado y el MIDI siguen disponibles.';
   var RIVAL_KEY = 'pmRival';
+  var WINS_KEY = 'pmWins';
   var chartCache = {};
   var rivalId = null;
   var lastPopSeq = 0;
@@ -495,6 +496,15 @@
     if (typeof ctx.baseLatency === 'number' && isFinite(ctx.baseLatency) && ctx.baseLatency > 0) {
       return ctx.baseLatency;
     }
+    try {
+      if (typeof ctx.getOutputTimestamp === 'function') {
+        var ts = ctx.getOutputTimestamp();
+        if (ts && isFinite(ts.outputTimestamp) && isFinite(ts.performanceTime)) {
+          var est = (ts.outputTimestamp - ts.performanceTime) / 1000;
+          if (est > 0 && est < 1) return est;
+        }
+      }
+    } catch (e) {}
     return 0;
   }
 
@@ -916,6 +926,7 @@
     setPauseUi(false, false);
     if (state && !state.free && !progressCommitted && !practiceMode) {
       progressCommitted = true;
+      if (state.outcome === 'win') recordWin(rivalId);
       try {
         if (window.Progress) Progress.recordFight(fightChart, state, VERSION);
       } catch (eProg) {}
@@ -1667,6 +1678,63 @@
     try { return localStorage.getItem(RIVAL_KEY); } catch (e) { return null; }
   }
 
+  function readWins() {
+    var out = {};
+    try {
+      var raw = localStorage.getItem(WINS_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') out = parsed;
+      }
+    } catch (e) {}
+    try {
+      var metaRaw = localStorage.getItem('meta.v1.piano-magic');
+      if (!localStorage.getItem(WINS_KEY) && metaRaw) {
+        var meta = JSON.parse(metaRaw);
+        var stats = meta && meta.stats;
+        if (stats && typeof stats === 'object') {
+          Rivals.options().forEach(function (o) {
+            var k = String(o.id).replace(/-/g, '_') + '_wins';
+            if (typeof stats[k] === 'number' && stats[k] > 0) out[o.id] = stats[k];
+          });
+        }
+      }
+    } catch (e2) {}
+    return out;
+  }
+
+  function recordWin(id) {
+    if (!id || id === 'libre') return;
+    var wins = readWins();
+    wins[id] = (wins[id] || 0) + 1;
+    try { localStorage.setItem(WINS_KEY, JSON.stringify(wins)); } catch (e) {}
+  }
+
+  function rivalDifficulty(chart) {
+    var notes = 0;
+    var bars = 0;
+    try {
+      var loop = chart && chart.loop;
+      if (loop) {
+        bars = loop.length;
+        for (var i = 0; i < loop.length; i++) notes += (loop[i].notes || []).length;
+      }
+    } catch (e) {}
+    var dens = bars ? (notes / bars) : 0;
+    var lvl = 0;
+    if (dens >= 1.6) lvl = 1;
+    if (dens >= 2.4) lvl = 2;
+    if (dens >= 3.4) lvl = 3;
+    if (chart && chart.bpm >= 104 && lvl < 3) lvl += 1;
+    return ['Fácil', 'Normal', 'Difícil', 'Extrema'][lvl];
+  }
+
+  function rivalMetaText(chart, opt) {
+    if (!chart || opt.free) return '— · — · —';
+    var key = chart.roomKey || 'C';
+    return String(chart.bpm || '') + ' BPM · ' + key + ' · ' + rivalDifficulty(chart);
+  }
+
   function loadChart(url) {
     if (chartCache[url]) return Promise.resolve(chartCache[url]);
     return fetch(url + '?v=' + VERSION).then(function (res) {
@@ -1776,48 +1844,107 @@
   }
 
   function setPickerVisible(on) {
-    var pk = $('rivalPicker');
-    if (pk) pk.hidden = !on;
+    var modal = $('rivalModal');
+    if (modal) modal.hidden = !on;
     document.body.classList.toggle('picking', !!on);
+    gateOpen = !!on;
+    if (on) refreshWinCounts();
   }
 
-  function buildPicker() {
-    var pk = $('rivalPicker');
-    if (!pk) return;
-    pk.textContent = '';
-    Rivals.options().forEach(function (o) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'rival-opt' + (o.free ? ' free' : '');
-      b.setAttribute('role', 'radio');
-      b.setAttribute('data-rival', o.id);
-      b.setAttribute('aria-checked', o.id === rivalId ? 'true' : 'false');
-      b.setAttribute('aria-label', o.label);
-      b.title = o.label;
-      if (o.free) {
-        b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-      } else {
-        var img = document.createElement('img');
-        img.alt = '';
-        if (o.portrait) {
-          img.className = 'portrait';
-          img.src = o.portrait + '?v=' + VERSION;
-        } else {
-          img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
-          if (o.hue) img.style.filter = o.hue;
-        }
-        b.appendChild(img);
-      }
-      b.addEventListener('click', function () { onRivalTap(o.id); });
-      pk.appendChild(b);
+  function refreshWinCounts() {
+    var wins = readWins();
+    var cards = document.querySelectorAll('.rival-card');
+    for (var i = 0; i < cards.length; i++) {
+      var el2 = cards[i].querySelector('.rc-wins');
+      if (el2) el2.textContent = String(wins[cards[i].getAttribute('data-rival')] || 0);
+    }
+  }
+
+  function playCard(id) {
+    if (tutorialOpen() || runningLoop) return;
+    if (id !== rivalId) resetSheetSelection();
+    closeSheet();
+    selectRival(id).then(function () {
+      if (rivalId !== id) return;
+      setPickerVisible(false);
+      startRealFight();
     });
   }
 
-  function markPicker() {
-    var bs = document.querySelectorAll('#rivalPicker .rival-opt');
-    for (var i = 0; i < bs.length; i++) {
-      bs[i].setAttribute('aria-checked', bs[i].getAttribute('data-rival') === rivalId ? 'true' : 'false');
-    }
+  function practiceCard(id) {
+    if (tutorialOpen() || runningLoop) return;
+    if (id !== rivalId) resetSheetSelection();
+    selectRival(id).then(function () {
+      if (rivalId !== id) return;
+      setPickerVisible(false);
+      openSheet(false);
+    });
+  }
+
+  function resetSheetSelection() {
+    sheetSection = 0;
+    sheetSelected = { 0: true };
+    stopSheetPlayback();
+  }
+
+  function buildPicker() {
+    var list = $('rivalList');
+    if (!list) return;
+    list.textContent = '';
+    var wins = readWins();
+    Rivals.options().forEach(function (o) {
+      var card = document.createElement('article');
+      card.className = 'rival-card';
+      card.setAttribute('data-rival', o.id);
+      var img = document.createElement('img');
+      img.className = 'rc-avatar';
+      img.alt = '';
+      if (o.portrait) {
+        img.src = o.portrait + '?v=' + VERSION;
+      } else {
+        img.src = 'assets/ui/boss-portrait.png?v=' + VERSION;
+        if (o.hue) img.style.filter = o.hue;
+      }
+      card.appendChild(img);
+      var meta = document.createElement('div');
+      meta.className = 'rc-meta';
+      var name = document.createElement('span');
+      name.className = 'rc-name';
+      name.textContent = o.label;
+      meta.appendChild(name);
+      var sub = document.createElement('span');
+      sub.className = 'rc-sub';
+      sub.textContent = '— · — · —';
+      meta.appendChild(sub);
+      card.appendChild(meta);
+      var acts = document.createElement('div');
+      acts.className = 'rc-actions';
+      var bPlay = document.createElement('button');
+      bPlay.type = 'button';
+      bPlay.textContent = 'Jugar';
+      bPlay.setAttribute('aria-label', 'Jugar contra ' + o.label);
+      bPlay.addEventListener('click', function () { playCard(o.id); });
+      acts.appendChild(bPlay);
+      var bPrac = document.createElement('button');
+      bPrac.type = 'button';
+      bPrac.textContent = 'Practicar';
+      bPrac.setAttribute('aria-label', 'Practicar contra ' + o.label);
+      bPrac.addEventListener('click', function () { practiceCard(o.id); });
+      acts.appendChild(bPrac);
+      card.appendChild(acts);
+      var w = document.createElement('span');
+      w.className = 'rc-wins';
+      w.textContent = String(wins[o.id] || 0);
+      w.title = 'Victorias';
+      card.appendChild(w);
+      list.appendChild(card);
+      if (!o.free) {
+        chartForRival(o).then(function (chart) {
+          var s = card.querySelector('.rc-sub');
+          if (s) s.textContent = rivalMetaText(chart, o);
+        }).catch(function () {});
+      }
+    });
   }
 
   function renderIdle() {
@@ -1833,7 +1960,6 @@
     var opt = Rivals.find(id);
     rivalId = opt.id;
     try { localStorage.setItem(RIVAL_KEY, rivalId); } catch (e) {}
-    markPicker();
     return chartForRival(opt).then(function (chart) {
       if (opt.id !== rivalId) return;
       scoreChart = chart;
@@ -1863,8 +1989,8 @@
     hideOutcome();
     setPauseUi(false, false);
     clearPops();
-    $('btnStart').className = '';
     setPickerVisible(true);
+    syncIdleActions();
     renderIdle();
     if (document.body.classList.contains('sprite-boss')) startBossPreview();
     ensureMic();
@@ -1889,11 +2015,7 @@
 
   function syncIdleActions() {
     var start = $('btnStart');
-    var gate = $('rivalGate');
-    var showGate = gateOpen && !runningLoop && !sheetOpen;
     var showStart = !runningLoop && !gateOpen && !sheetOpen;
-    document.body.classList.toggle('gate-open', !!showGate);
-    if (gate) gate.hidden = !showGate;
     if (start) start.className = showStart ? '' : 'hidden';
   }
 
@@ -2376,26 +2498,6 @@
     });
   }
 
-  function onRivalTap(id) {
-    if (tutorialOpen()) return;
-    if (runningLoop) return;
-    if (gateOpen && id === rivalId && !sheetOpen) {
-      gateOpen = false;
-      syncIdleActions();
-      return;
-    }
-    sheetSection = 0;
-    sheetSelected = { 0: true };
-    stopSheetPlayback();
-    closeSheet();
-    selectRival(id).then(function () {
-      if (rivalId !== id) return;
-      if (runningLoop) return;
-      gateOpen = true;
-      syncIdleActions();
-    });
-  }
-
   function startPractice() {
     var parsed;
     var list;
@@ -2465,6 +2567,7 @@
     hud = Hud.create();
     buildPicker();
     setPickerVisible(true);
+    syncIdleActions();
     var idle = director.snapshot(0);
     hud.render(idle);
     requestAnimationFrame(function () {
@@ -2574,8 +2677,7 @@
     document.addEventListener('touchend', onGestureUnlock, true);
     document.addEventListener('keydown', onGestureUnlock, true);
     $('btnStart').addEventListener('click', startRealFight);
-    if ($('btnGateScore')) $('btnGateScore').addEventListener('click', function () { openSheet(false); });
-    if ($('btnGateFight')) $('btnGateFight').addEventListener('click', startRealFight);
+    if ($('rivalBackdrop')) $('rivalBackdrop').addEventListener('click', function () { setPickerVisible(false); });
     if ($('btnPractice')) $('btnPractice').addEventListener('click', startPractice);
     if ($('btnSheetLoop')) $('btnSheetLoop').addEventListener('click', toggleSheetPlayback);
     if ($('btnSheetClose')) $('btnSheetClose').addEventListener('click', function () {

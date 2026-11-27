@@ -284,15 +284,6 @@
     };
   }
 
-  function buffMultiplier(buffs) {
-    var m = 1;
-    var list = buffs || [];
-    for (var i = 0; i < list.length; i++) {
-      if (list[i] && list[i].id === 'atk') m += list[i].amount || 0;
-    }
-    return m;
-  }
-
   function gradeDefend(matched) {
     var expectedCount = matched.expectedCount;
     var hitCount = matched.hitCount;
@@ -456,10 +447,7 @@
     var has = function (iv) { return rel.indexOf(iv) >= 0; };
     var inScale = pcs.filter(function (pc) { return scalePcs.indexOf(pc) >= 0; });
     var mode = null, action = null;
-    if (has(0) && has(3) && has(7)) { mode = 'minor'; action = 'buff'; }
-    else if (inScale.length >= 4 && inScale.every(function (pc) { return PENTA.indexOf(((pc - tonic) % 12 + 12) % 12) >= 0; })
-      && inScale.some(function (pc) { var r = ((pc - tonic) % 12 + 12) % 12; return r === 2 || r === 9; })) { mode = 'pentatonic'; action = 'heal'; }
-    else if (has(0) && has(4) && has(7)) { mode = 'major'; action = 'attack'; }
+    if (has(0) && has(4) && has(7)) { mode = 'major'; action = 'attack'; }
     else if (inScale.length >= 1) { mode = 'base'; action = 'attack'; }
     return {
       mode: mode, action: action, tonic: scale[0], roomScale: scale,
@@ -481,12 +469,10 @@
       return { ok: true, kind: 'hole-idle', grade: null, accuracy: n ? 0 : 1, spell: spell, hits: 0, expected: 0,
         extras: n, missed: 0, bossDamage: 0, heal: 0, buff: null, playerDamage: 0, rhythm: rhythm, offGrid: n - onTime.length };
     }
-    var buffMult = buffMultiplier(opts.buffs);
-    var bossDamage = 0, heal = 0, buff = null;
-    if (spell.mode === 'major') bossDamage = Math.round(BASE_ATTACK * TRIAD_MULT * buffMult);
-    else if (spell.mode === 'base') bossDamage = Math.round(BASE_ATTACK * buffMult);
-    else if (spell.mode === 'pentatonic') heal = BASE_HEAL;
-    else if (spell.mode === 'minor') buff = { id: 'atk', label: 'ATQ+', amount: 0.5, remaining: 2 };
+    var bossDamage = 0;
+    if (spell.mode === 'major') bossDamage = Math.round(BASE_ATTACK * TRIAD_MULT);
+    else if (spell.mode === 'base') bossDamage = BASE_ATTACK;
+    var heal = 0, buff = null;
     return { ok: true, kind: 'hole-spell', grade: null, accuracy: 1, spell: spell, hits: n, expected: 0,
       extras: n, missed: 0, bossDamage: bossDamage, heal: heal, buff: buff, playerDamage: 0, strength: 1, rhythm: rhythm, offGrid: n - onTime.length };
   }

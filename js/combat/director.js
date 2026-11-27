@@ -40,7 +40,6 @@
     var bossEnergy = bossEnergyMax;
     var playerHp = playerHpMax;
     var bossHp = bossHpMax;
-    var buffs = [];
     var running = false;
     var ended = false;
     var outcome = null;
@@ -101,12 +100,12 @@
       if (meta.kind === 'setup' || meta.listenOnly) {
         result = Spell.resolveSetup();
       } else if (meta.kind === 'hole') {
-        result = Spell.resolveHole(notes, chart.roomScale || chart.roomKey, { buffs: buffs });
+        result = Spell.resolveHole(notes, chart.roomScale || chart.roomKey, {});
       } else {
         var expected = Chart.attacks(meta.notes).map(function (n) {
           return { pitch: n.pitch, beat: Chart.hitOnset(n.beat), dur: n.dur };
         });
-        result = Spell.resolveDefend(notes, expected, chart.roomKey, { buffs: buffs });
+        result = Spell.resolveDefend(notes, expected, chart.roomKey, {});
       }
 
       applyResult(result);
@@ -125,16 +124,6 @@
       }
       resolvedBar = barIndex;
 
-      decayBuffs(meta.kind);
-      if (!ended && result.buff) {
-        buffs.push({
-          id: result.buff.id,
-          label: result.buff.label,
-          amount: result.buff.amount,
-          remaining: result.buff.remaining
-        });
-      }
-
       if (free) {
         bossHp = bossHpMax;
         playerHp = playerHpMax;
@@ -145,17 +134,6 @@
         playerHp = 0;
         finish('lose', translator.beatsAt(nowFn()));
       }
-    }
-
-    function decayBuffs(kind) {
-      if (kind !== 'hole') return;
-      var next = [];
-      for (var i = 0; i < buffs.length; i++) {
-        var b = buffs[i];
-        b.remaining -= 1;
-        if (b.remaining > 0) next.push(b);
-      }
-      buffs = next;
     }
 
     function applyResult(result) {
@@ -204,8 +182,6 @@
       if (r.kind === 'hole-spell' && r.spell) {
         var el = r.spell.element ? r.spell.element.icon : '';
         if (r.spell.action === 'attack') return (r.spell.mode === 'major' ? 'Tríada ' : 'Ataque ') + el + ' · −' + r.bossDamage + (free ? ' daño' : ' jefe');
-        if (r.spell.action === 'heal') return 'Cura · +' + r.heal + ' HP';
-        if (r.spell.action === 'buff') return 'Mejora ATQ+';
       }
       return '';
     }
@@ -326,7 +302,6 @@
         bossHpMax: bossHpMax,
         roomKey: chart.roomKey,
         roomElement: roomElement(),
-        buffs: buffs.slice(),
         lastResolve: lastResolve,
         feedback: lastFeedback,
         metronomeBeat: Math.floor(beat + 1e-8),
@@ -343,7 +318,6 @@
       bossHp = bossHpMax;
       playerEnergy = playerEnergyMax;
       bossEnergy = bossEnergyMax;
-      buffs = [];
       collected = [];
       resolvedBar = -1;
       lastResolve = null;
@@ -370,7 +344,6 @@
       bossHp = bossHpMax;
       playerEnergy = playerEnergyMax;
       bossEnergy = bossEnergyMax;
-      buffs = [];
       collected = [];
       resolvedBar = -1;
       lastResolve = null;

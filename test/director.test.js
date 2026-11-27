@@ -222,15 +222,16 @@ test('D11: defend parcial (2/4) daña al jugador, no al jefe', () => {
   assert.strictEqual(s.playerHp, FULL_HP - 2);
 });
 
-test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
+test('D12: hole menor = ataque base; el siguiente hole mayor pega su tríada', () => {
   const ctx = make();
   ctx.dir.start(0);
   ctx.dir.tick(4000);
   playBar(ctx, 4000, ['C4', 'Eb4', 'G4']);
   let s = ctx.dir.tick(8000);
-  assert.strictEqual(s.lastResolve.spell.action, 'buff');
-  assert.strictEqual(s.bossHp, 20);
-  assert.ok(s.buffs.length >= 1);
+  assert.strictEqual(s.lastResolve.spell.action, 'attack');
+  assert.strictEqual(s.lastResolve.bossDamage, 2);
+  assert.strictEqual(s.bossHp, 18);
+  assert.strictEqual(s.buffs, undefined);
 
   for (let i = 0; i < 4; i++) {
     playBar(ctx, 8000 + i * 4000, DEFEND_NOTES[i], true);
@@ -239,8 +240,8 @@ test('D12: hole menor aplica buff; el siguiente hole mayor pega más', () => {
   playBar(ctx, 24000, ['C4', 'D4', 'E4']);
   s = ctx.dir.tick(28000);
   assert.strictEqual(s.lastResolve.spell.action, 'attack');
-  assert.strictEqual(s.lastResolve.bossDamage, 3);
-  assert.strictEqual(s.bossHp, 17);
+  assert.strictEqual(s.lastResolve.bossDamage, 2);
+  assert.strictEqual(s.bossHp, 16);
   assert.strictEqual(s.playerHp, FULL_HP);
 });
 

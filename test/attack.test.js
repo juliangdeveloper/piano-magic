@@ -19,26 +19,21 @@ test('A1: base = 2 con notas de la escala; fuera de escala no cuenta', () => {
   assert.strictEqual(out.bossDamage, 0);
   assert.strictEqual(out.kind, 'hole-idle');
 });
-test('A2: tríada mayor de la tónica = 2×2, con mejora ×1.5 = 6', () => {
+test('A2: tríada mayor de la tónica = 2×2 = 4', () => {
   assert.strictEqual(Spell.resolveHole(on(['C4', 'E4', 'G4']), CMAJ).bossDamage, 4);
   assert.strictEqual(Spell.resolveHole(on(['G4', 'B4', 'D5']), GMAJ).bossDamage, 4);
   assert.strictEqual(Spell.resolveHole(on(['G4', 'B4', 'D5']), CMAJ).bossDamage, 2, 'G-B-D en sala C = base');
-  const buffs = [{ id: 'atk', amount: 0.5, remaining: 2 }];
-  assert.strictEqual(Spell.resolveHole(on(['C4', 'E4', 'G4']), CMAJ, { buffs }).bossDamage, 6);
-  assert.strictEqual(Spell.resolveHole(on(['D4']), CMAJ, { buffs }).bossDamage, 3, 'la mejora también sube el base');
 });
-test('A3: tríada menor de la tónica = mejora, 0 daño (gana a todo)', () => {
+test('A3: tríada menor + su tercera mayor = tríada mayor de la tónica', () => {
   const r = Spell.resolveHole(on(['C4', 'Eb4', 'G4', 'E4']), CMAJ);
-  assert.strictEqual(r.spell.mode, 'minor');
-  assert.strictEqual(r.bossDamage, 0);
-  assert.ok(r.buff && r.buff.amount === 0.5);
+  assert.strictEqual(r.spell.mode, 'major');
+  assert.strictEqual(r.bossDamage, 4);
   assert.strictEqual(Spell.resolveHole(on(['A4', 'C5', 'E5']), CMAJ).spell.mode, 'base', 'La menor no es tónica de sala C');
 });
-test('A4: pentatónica (≥4 pcs de la penta con 2ª o 6ª) cura 3 y gana a tríada mayor', () => {
+test('A4: conjunto de la pentatónica = ataque (con C-E-G es tríada mayor)', () => {
   const r = Spell.resolveHole(on(['C4', 'D4', 'E4', 'G4']), CMAJ);
-  assert.strictEqual(r.spell.mode, 'pentatonic');
-  assert.strictEqual(r.heal, 3);
-  assert.strictEqual(r.bossDamage, 0);
+  assert.strictEqual(r.spell.mode, 'major');
+  assert.strictEqual(r.bossDamage, 4);
   assert.strictEqual(Spell.resolveHole(on(['C4', 'E4', 'G4', 'F4']), CMAJ).spell.mode, 'major', 'con F no es penta');
 });
 test('A5: rejilla rítmica: negra ±0.20, corchea ±0.12, semicorchea ±0.06', () => {

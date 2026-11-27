@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#163056">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23163056'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-size='36'%3E%E2%99%A9%3C/text%3E%3C/svg%3E">
   <title>piano-magic — Parade Feather</title>
-  <link rel="stylesheet" href="css/ui.css?v=0.1.63">
+  <link rel="stylesheet" href="css/ui.css?v=0.1.64">
 </head>
 <body class="picking">
   <div id="frame">
@@ -32,118 +32,124 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M7 10h.01M11 10h.01M15 10h.01M19 10h.01M8 14.5h8"/></svg>
           </button>
           <button id="btnHelp" type="button" aria-label="Tutorial" title="Tutorial">?</button>
-        </div>
-
-        <div id="roomCard" class="room-card" aria-label="Agua">
-          <div class="room-mark">
-            <img id="roomIcon" src="assets/ui/room-water-icon.png?v=0.1.63" alt="">
-            <span id="roomEmoji" class="room-emoji" hidden></span>
-            <span id="roomKeyTag">C</span>
-          </div>
-          <span id="roomName" class="vh">Agua</span>
-          <div class="player-hp">
-            <div class="hp-chrome">
-              <img src="assets/ui/hp-bar-style.png?v=0.1.63" alt="">
-              <span id="playerHpMask" class="hp-mask"></span>
-              <span id="playerHpVal" class="hp-num">4 / 4</span>
+          <span class="utility-sep" aria-hidden="true"></span>
+          <div class="fight-actions">
+            <button id="btnStart" type="button" aria-label="Empezar" title="Empezar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l12-7z"/></svg>
+            </button>
+            <button id="btnPause" type="button" hidden aria-pressed="false" aria-label="Pausa" title="Pausa">
+              <svg class="ico-pause" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+              <svg class="ico-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l12-7z"/></svg>
+            </button>
+            <div class="pause-actions">
+              <button id="btnPauseRestart" type="button" hidden aria-label="Reiniciar" title="Reiniciar">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6.5 12 11V8a5 5 0 1 1-4.6 3H5.3A7 7 0 1 0 12 5z"/></svg>
+              </button>
+              <button id="btnPauseRival" type="button" hidden aria-label="Cambiar rival" title="Cambiar rival">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="3.1" fill="currentColor"/><circle cx="16" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+              </button>
             </div>
           </div>
+          <span id="version">v0.1.64</span>
+        </div>
+      </section>
+
+      <div id="mid">
+        <div id="playerCol">
+          <div id="roomCard" class="room-card" aria-label="Agua">
+            <div class="player-hp">
+              <div class="hp-chrome bar-hp">
+                <img src="assets/ui/hp-bar-style.png?v=0.1.64" alt="">
+                <span id="playerHpMask" class="hp-mask"></span>
+                <span id="playerHpVal" class="hp-num">1000 / 1000</span>
+              </div>
+              <div class="hp-chrome bar-mp">
+                <img src="assets/ui/hp-bar-style.png?v=0.1.64" alt="">
+                <span id="playerManaMask" class="hp-mask"></span>
+                <span id="playerManaVal" class="hp-num">4 / 4</span>
+              </div>
+            </div>
+            <span id="roomName" class="vh">Agua</span>
+          </div>
         </div>
 
-        <div id="bossCard" class="boss-card">
-          <h1 id="songTitle" class="vh">Parade Feather</h1>
-          <div class="boss-stage">
-            <img id="bossPortrait" src="assets/ui/boss-portrait.png?v=0.1.63" alt="Jefe">
-            <canvas id="bossSprite" width="876" height="276" hidden aria-hidden="true"></canvas>
-            <div class="boss-hp hp-chrome" id="bossHpChrome">
-              <img src="assets/ui/hp-bar-style.png?v=0.1.63" alt="">
-              <span id="bossHpMask" class="hp-mask"></span>
-              <span id="bossHpVal" class="hp-num">20 / 20</span>
+        <div id="tapeFrame">
+          <canvas id="tape" width="720" height="176" aria-label="Cinta de compases"></canvas>
+          <div id="sheet" hidden>
+            <div id="sheetScroll">
+              <canvas id="sheetStaff" height="176" aria-label="Partitura"></canvas>
+            </div>
+            <div id="sheetTools">
+              <div id="sheetTempos" role="radiogroup" aria-label="Tempo"></div>
+              <div id="sheetPick">
+                <div id="sheetSections" role="radiogroup" aria-label="Secciones"></div>
+              </div>
+              <button id="btnSheetLoop" type="button" aria-pressed="false" aria-label="Reproducir sección" title="Reproducir sección">
+                <svg class="ico-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l12-7z"/></svg>
+                <svg class="ico-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>
+              </button>
+              <button id="btnPractice" type="button" aria-label="Practicar" title="Practicar">Practicar</button>
+              <button id="btnSheetClose" type="button" aria-label="Cerrar" title="Cerrar">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+              </button>
+            </div>
+          </div>
+          <div id="pauseBanner" aria-live="polite" aria-label="En pausa"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></span></div>
+        </div>
+
+        <div id="bossCol">
+          <div id="bossCard" class="boss-card">
+            <h1 id="songTitle" class="vh">Parade Feather</h1>
+            <div class="boss-top">
+              <div id="bpmOrb" class="bpm-orb" aria-label="BPM">
+                <div class="orb-face">
+                  <img src="assets/ui/bpm-orb.png?v=0.1.64" alt="">
+                  <span id="bpmVal">60</span>
+                </div>
+                <div class="beats" id="beats" aria-label="Metrónomo">
+                  <i></i><i></i><i></i><i></i>
+                </div>
+              </div>
+              <div class="boss-stage">
+                <img id="bossPortrait" src="assets/ui/boss-portrait.png?v=0.1.64" alt="Jefe">
+                <canvas id="bossSprite" width="876" height="276" hidden aria-hidden="true"></canvas>
+              </div>
+            </div>
+            <div class="boss-hp">
+              <div class="hp-chrome bar-hp">
+                <img src="assets/ui/hp-bar-style.png?v=0.1.64" alt="">
+                <span id="bossHpMask" class="hp-mask"></span>
+                <span id="bossHpVal" class="hp-num">20 / 20</span>
+              </div>
+              <div class="hp-chrome bar-mp">
+                <img src="assets/ui/hp-bar-style.png?v=0.1.64" alt="">
+                <span id="bossManaMask" class="hp-mask"></span>
+                <span id="bossManaVal" class="hp-num">8 / 8</span>
+              </div>
             </div>
             <p id="dmgStats" class="dmg-stats" hidden aria-live="polite"></p>
             <div id="dmgPops" class="dmg-pops" aria-hidden="true"></div>
           </div>
         </div>
-
-        <div id="bpmOrb" class="bpm-orb" aria-label="BPM">
-          <div class="orb-face">
-            <img src="assets/ui/bpm-orb.png?v=0.1.63" alt="">
-            <span id="bpmVal">60</span>
-          </div>
-          <div class="beats" id="beats" aria-label="Metrónomo">
-            <i></i><i></i><i></i><i></i>
-          </div>
-        </div>
-      </section>
-
-      <div id="tapeFrame">
-        <canvas id="tape" width="720" height="176" aria-label="Cinta de compases"></canvas>
-        <div id="sheet" hidden>
-          <div id="sheetScroll">
-            <canvas id="sheetStaff" height="176" aria-label="Partitura"></canvas>
-          </div>
-          <div id="sheetTools">
-            <div id="sheetTempos" role="radiogroup" aria-label="Tempo"></div>
-            <div id="sheetPick">
-              <div id="sheetSections" role="radiogroup" aria-label="Secciones"></div>
-            </div>
-            <button id="btnSheetLoop" type="button" aria-pressed="false" aria-label="Reproducir sección" title="Reproducir sección">
-              <svg class="ico-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l12-7z"/></svg>
-              <svg class="ico-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>
-            </button>
-            <button id="btnPractice" type="button" aria-label="Practicar" title="Practicar">Practicar</button>
-            <button id="btnSheetClose" type="button" aria-label="Cerrar" title="Cerrar">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
-            </button>
-          </div>
-        </div>
-        <div id="pauseBanner" aria-live="polite" aria-label="En pausa"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></span></div>
       </div>
 
-      <div id="gestureLegend" class="gesture-legend" aria-label="Gestos del ataque">
-        <div class="chip major" aria-label="Mayor ataque" title="Mayor ataque">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 2 4 14h7l-1 8 10-14h-7z"/></svg>
-        </div>
-        <div class="chip minor" aria-label="Menor mejora" title="Menor mejora">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M6 14.5 12 7l6 7.5"/></svg>
-        </div>
-        <div class="chip penta" aria-label="Pentatónica cura" title="Pentatónica cura">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-        </div>
-      </div>
-      <div id="buffs" class="buff-live" aria-label="Mejoras activas"></div>
-    </div>
-
-    <footer>
-      <div id="rivalPicker" class="rival-picker" role="radiogroup" aria-label="Rival"></div>
-      <div id="rivalGate" class="rival-gate" hidden>
-        <button id="btnGateScore" type="button" aria-label="Ver partitura" title="Ver partitura">Partitura</button>
-        <button id="btnGateFight" type="button" aria-label="Jugar" title="Jugar">Jugar</button>
-      </div>
-      <div class="fight-actions">
-        <button id="btnStart" type="button" aria-label="Empezar" title="Empezar">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l12-7z"/></svg>
-        </button>
-        <button id="btnPause" type="button" hidden aria-pressed="false" aria-label="Pausa" title="Pausa">
-          <svg class="ico-pause" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
-          <svg class="ico-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l12-7z"/></svg>
-        </button>
-        <div class="pause-actions">
-          <button id="btnPauseRestart" type="button" hidden aria-label="Reiniciar" title="Reiniciar">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 6.5 12 11V8a5 5 0 1 1-4.6 3H5.3A7 7 0 1 0 12 5z"/></svg>
-          </button>
-          <button id="btnPauseRival" type="button" hidden aria-label="Cambiar rival" title="Cambiar rival">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="3.1" fill="currentColor"/><circle cx="16" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-          </button>
-        </div>
-      </div>
       <div id="midiStatus" class="vh" aria-live="polite"></div>
       <div id="micStatus" class="vh" aria-live="polite"></div>
-      <span id="version">v0.1.63</span>
-    </footer>
+    </div>
 
     <div id="keys">
+      <div class="room-mark">
+        <img id="roomIcon" src="assets/bosses/amen/portrait.png?v=0.1.64" alt="Jugador">
+        <span id="roomKeyTag">C</span>
+      </div>
       <div id="piano" class="piano" aria-label="Teclado en pantalla"></div>
+    </div>
+  </div>
+
+  <div id="rivalModal" hidden>
+    <div class="rival-backdrop" id="rivalBackdrop"></div>
+    <div class="rival-panel" role="dialog" aria-modal="true" aria-label="Elige rival">
+      <div id="rivalList"></div>
     </div>
   </div>
 
@@ -177,18 +183,18 @@
   </div>
 
   <audio id="speakerUnlock" playsinline webkit-playsinline preload="auto"></audio>
-  <script src="js/instrument/translator.js?v=0.1.63"></script>
-  <script src="js/spell/engine.js?v=0.1.63"></script>
-  <script src="js/combat/chart.js?v=0.1.63"></script>
-  <script src="js/combat/score.js?v=0.1.63"></script>
-  <script src="js/combat/rivals.js?v=0.1.63"></script>
-  <script src="js/combat/director.js?v=0.1.63"></script>
-  <script src="js/ui/tape.js?v=0.1.63"></script>
-  <script src="js/ui/hud.js?v=0.1.63"></script>
-  <script src="js/ui/boss-anim.js?v=0.1.63"></script>
-  <script src="js/ui/tutorial.js?v=0.1.63"></script>
-  <script src="js/meta.js?v=0.1.63"></script>
-  <script src="js/progress.js?v=0.1.63"></script>
-  <script src="js/app.js?v=0.1.63"></script>
+  <script src="js/instrument/translator.js?v=0.1.64"></script>
+  <script src="js/spell/engine.js?v=0.1.64"></script>
+  <script src="js/combat/chart.js?v=0.1.64"></script>
+  <script src="js/combat/score.js?v=0.1.64"></script>
+  <script src="js/combat/rivals.js?v=0.1.64"></script>
+  <script src="js/combat/director.js?v=0.1.64"></script>
+  <script src="js/ui/tape.js?v=0.1.64"></script>
+  <script src="js/ui/hud.js?v=0.1.64"></script>
+  <script src="js/ui/boss-anim.js?v=0.1.64"></script>
+  <script src="js/ui/tutorial.js?v=0.1.64"></script>
+  <script src="js/meta.js?v=0.1.64"></script>
+  <script src="js/progress.js?v=0.1.64"></script>
+  <script src="js/app.js?v=0.1.64"></script>
 </body>
 </html>
