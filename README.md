@@ -7,7 +7,7 @@
 <img src="assets/screenshot.png" alt="Pantalla de combate de piano-magic: partitura en curso con cursor, barras de HP y maná, BPM y teclado" width="720">
 
 ## Cómo se juega
-- Elige un rival en el modal: una tarjeta por canción, con su retrato, el tempo, la escala, la dificultad y tus victorias contra ese rival (y el **Modo libre**, sin rival).
+- Elige un rival en el modal: una tarjeta por canción, con su retrato, el tempo, la escala, la dificultad y tus victorias contra ese rival (y el **Modo libre**, sin rival). En la pantalla del teléfono la tarjeta ocupa dos filas para que el nombre se lea completo.
 - El combate alterna compases de **Ataque** y **Defiende** sobre una partitura que avanza al ritmo del metrónomo.
 - En **Ataque** improvisas: cualquier nota de la escala ataca, y la tríada mayor pega doble.
 - En **Defiende** copias las dos manos: la derecha en clave de sol y la izquierda en clave de fa. Un par a la vez es perfecto si suenan las dos notas, y parcial si solo entra una.
